@@ -1,0 +1,4 @@
+{
+  "*.{ts,tsx,js,jsx,mjs,cjs}": "eslint --fix",
+  "{README,CLAUDE}.md": "markdownlint-cli2 --fix"
+}

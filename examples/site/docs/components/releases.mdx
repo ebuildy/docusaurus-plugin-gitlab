@@ -1,0 +1,30 @@
+---
+title: GitlabReleases
+sidebar_position: 3
+---
+
+# `<GitlabReleases>`
+
+Renders a list of a project's releases with name, tag, date, rendered notes, and
+downloadable asset links.
+
+## Usage
+
+```mdx
+<GitlabReleases project="group/repo" limit={5} />
+
+<GitlabReleases project="group/repo" includePrereleases={true} />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `project` | `string \| number` | — | **Required.** Project path or numeric ID. |
+| `limit` | `number` | `10` | Maximum number of releases to show. |
+| `includePrereleases` | `boolean` | `false` | Include upcoming / pre-releases. |
+
+## Notes
+
+- Release notes (markdown) are rendered to sanitized HTML at build time.
+- The tag badge is hidden when it is identical to the release name.

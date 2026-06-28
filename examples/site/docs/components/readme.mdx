@@ -1,0 +1,32 @@
+---
+title: GitlabReadme
+sidebar_position: 2
+---
+
+# `<GitlabReadme>`
+
+Renders a project's `README.md` as themed, sanitized HTML. Images **and badges**
+are downloaded at build time and served from your static assets (offline-safe,
+frozen at build time); links resolve back to GitLab.
+
+## Usage
+
+```mdx
+<GitlabReadme project="group/repo" />
+
+<GitlabReadme project="group/repo" ref="develop" />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `project` | `string \| number` | — | **Required.** Project path or numeric ID. |
+| `ref` | `string` | default branch | Branch, tag, or commit SHA to read the README from. |
+
+## Notes
+
+- README markdown is sanitized at build time before rendering — raw HTML in the
+  repo's README cannot inject scripts.
+- Images and badge SVGs are downloaded to `static/gitlab-assets/` (configurable
+  via the `assetDir` / `assetBaseUrl` plugin options).

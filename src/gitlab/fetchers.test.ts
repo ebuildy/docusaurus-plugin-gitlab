@@ -1,0 +1,191 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, it, expect, vi } from "vitest";
+import { FileCache } from "./cache";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile } from "./fetchers";
+
+function ctx(client: any) {
+  const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
+  return {
+    client,
+    cache: new FileCache(join(dir, "c"), { ttl: 60 }),
+    options: { host: "https://gitlab.com", assetDir: join(dir, "a"), assetBaseUrl: "/gitlab-assets" },
+    assets: { localize: vi.fn(async (src: string) => `/gitlab-assets/${src.replace(/\W/g, "")}.png`) },
+  } as any;
+}
+
+describe("fetchProjectInfo", () => {
+  it("normalizes the project payload", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: ["x"], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+    };
+    const data = await fetchProjectInfo(ctx(client), { project: "g/r" });
+    expect(data).toMatchObject({ id: 7, path: "g/r", starCount: 3, topics: ["x"] });
+    expect(client.getProject).toHaveBeenCalledWith("g/r");
+  });
+});
+
+describe("fetchReleases", () => {
+  it("normalizes releases, renders notes, and respects limit", async () => {
+    const client = {
+      getReleases: vi.fn(async () => [
+        { name: "v1", tag_name: "v1", released_at: "2026-01-01T00:00:00Z", description: "**notes**",
+          upcoming_release: false, assets: { links: [{ name: "bin", url: "https://x/bin" }] } },
+      ]),
+    };
+    const data = await fetchReleases(ctx(client), { project: "g/r", limit: 5, includePrereleases: true });
+    expect(data).toHaveLength(1);
+    expect(data[0].tagName).toBe("v1");
+    expect(data[0].descriptionHtml).toContain("<strong>notes</strong>");
+    expect(data[0].assets).toEqual([{ name: "bin", url: "https://x/bin" }]);
+    expect(client.getReleases).toHaveBeenCalledWith("g/r", 5);
+  });
+
+  it("filters out upcoming releases unless includePrereleases", async () => {
+    const client = {
+      getReleases: vi.fn(async () => [
+        { name: "rc", tag_name: "rc", released_at: "x", description: "", upcoming_release: true, assets: { links: [] } },
+        { name: "v1", tag_name: "v1", released_at: "x", description: "", upcoming_release: false, assets: { links: [] } },
+      ]),
+    };
+    const data = await fetchReleases(ctx(client), { project: "g/r" });
+    expect(data.map((r) => r.tagName)).toEqual(["v1"]);
+  });
+});
+
+describe("fetchIssues", () => {
+  it("normalizes issues and forwards filters", async () => {
+    const client = {
+      getIssues: vi.fn(async () => [
+        { iid: 5, title: "bug", state: "opened", web_url: "https://x/5", labels: ["bug"],
+          author: { name: "Ann", web_url: "https://x/ann" }, created_at: "2026-01-01T00:00:00Z" },
+      ]),
+    };
+    const data = await fetchIssues(ctx(client), { project: "g/r", labels: "bug", state: "opened", limit: 10 });
+    expect(data[0]).toMatchObject({ iid: 5, authorName: "Ann", labels: ["bug"] });
+    expect(client.getIssues).toHaveBeenCalledWith(
+      "g/r",
+      { state: "opened", labels: "bug", milestone: undefined, limit: 10 },
+    );
+  });
+});
+
+describe("fetchReadme", () => {
+  it("resolves default branch, renders html, and localizes images", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "![logo](./logo.png)"),
+    };
+    const c = ctx(client);
+    const data = await fetchReadme(c, { project: "g/r" });
+    expect(data.ref).toBe("main");
+    expect(data.html).toContain('src="/gitlab-assets/');
+    expect(client.getProject).toHaveBeenCalledWith("g/r");
+    expect(client.getFileRaw).toHaveBeenCalledWith("g/r", "README.md", "main");
+    expect(c.assets.localize).toHaveBeenCalledWith("./logo.png", "main", "g/r");
+  });
+
+  it("uses the explicit ref without calling getProject", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "no images here"),
+    };
+    const c = ctx(client);
+    const data = await fetchReadme(c, { project: "g/r", ref: "v2" });
+    expect(data.ref).toBe("v2");
+    expect(client.getProject).not.toHaveBeenCalled();
+    expect(client.getFileRaw).toHaveBeenCalledWith("g/r", "README.md", "v2");
+  });
+});
+
+describe("fetchFile", () => {
+  it("renders a .md path as sanitized html with localized images", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "# Title\n\n![logo](./logo.png)"),
+    };
+    const c = ctx(client);
+    const data = await fetchFile(c, { project: "g/r", path: "docs/GUIDE.md" });
+    expect(data.kind).toBe("markdown");
+    const md = data as Extract<typeof data, { kind: "markdown" }>;
+    expect(md.html).toContain("<h1>Title</h1>");
+    expect(md.html).toContain('src="/gitlab-assets/');
+    expect(md.ref).toBe("main");
+    expect(md.path).toBe("docs/GUIDE.md");
+    expect(client.getFileRaw).toHaveBeenCalledWith("g/r", "docs/GUIDE.md", "main");
+    expect(c.assets.localize).toHaveBeenCalledWith("./logo.png", "main", "g/r");
+  });
+
+  it("renders a .mdx path as markdown too", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "# Hello"),
+    };
+    const data = await fetchFile(ctx(client), { project: "g/r", path: "docs/page.mdx" });
+    expect(data.kind).toBe("markdown");
+  });
+
+  it("returns a code block for a .ts path, using raw content verbatim", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "export const x = 1;\n"),
+    };
+    const data = await fetchFile(ctx(client), { project: "g/r", path: "src/index.ts" });
+    expect(data.kind).toBe("code");
+    const code = data as Extract<typeof data, { kind: "code" }>;
+    expect(code.language).toBe("ts");
+    expect(code.code).toBe("export const x = 1;\n");
+    expect(code.ref).toBe("main");
+    expect(code.path).toBe("src/index.ts");
+  });
+
+  it("applies a 1-based inclusive line range to code files", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "line1\nline2\nline3\nline4\n"),
+    };
+    const data = await fetchFile(ctx(client), { project: "g/r", path: "script.py", lines: "2-3" });
+    expect(data.kind).toBe("code");
+    const code = data as Extract<typeof data, { kind: "code" }>;
+    expect(code.language).toBe("python");
+    expect(code.code).toBe("line2\nline3");
+  });
+
+  it("uses the explicit ref without calling getProject", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "content"),
+    };
+    const c = ctx(client);
+    const data = await fetchFile(c, { project: "g/r", path: "a.txt", ref: "v2" });
+    expect(data.ref).toBe("v2");
+    expect(c.client.getProject).not.toHaveBeenCalled();
+    expect(client.getFileRaw).toHaveBeenCalledWith("g/r", "a.txt", "v2");
+  });
+
+  it("supports a single line number selection", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "line1\nline2\nline3\n"),
+    };
+    const data = await fetchFile(ctx(client), { project: "g/r", path: "a.go", lines: "2" });
+    expect(data.kind).toBe("code");
+    const code = data as Extract<typeof data, { kind: "code" }>;
+    expect(code.code).toBe("line2");
+  });
+
+  it("defaults unknown extensions to text", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "whatever"),
+    };
+    const data = await fetchFile(ctx(client), { project: "g/r", path: "Makefile.weird" });
+    expect(data.kind).toBe("code");
+    const code = data as Extract<typeof data, { kind: "code" }>;
+    expect(code.language).toBe("weird");
+  });
+});

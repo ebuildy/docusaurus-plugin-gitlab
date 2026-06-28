@@ -1,0 +1,43 @@
+---
+title: GitlabFile
+sidebar_position: 5
+---
+
+# `<GitlabFile>`
+
+Embeds **any** file from a repository:
+
+- Markdown files (`.md` / `.mdx`) render as sanitized HTML, with images localized
+  (just like [`GitlabReadme`](./readme.mdx)).
+- Any other file renders as a **syntax-highlighted code block**
+  (via `prism-react-renderer`), with the file path shown as a title.
+
+## Usage
+
+```mdx
+{/* Render a markdown doc from the repo */}
+<GitlabFile project="group/repo" path="docs/architecture.md" />
+
+{/* Render a whole source file as a code snippet */}
+<GitlabFile project="group/repo" path="src/main.ts" />
+
+{/* Render only lines 10–25 of a file */}
+<GitlabFile project="group/repo" path="src/main.ts" lines="10-25" />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `project` | `string \| number` | — | **Required.** Project path or numeric ID. |
+| `path` | `string` | — | **Required.** File path within the repository. |
+| `ref` | `string` | default branch | Branch, tag, or commit SHA. |
+| `lines` | `string` | whole file | Line range for code files, e.g. `"10-25"` (1-based, inclusive). Single line: `"42"`. |
+
+## Notes
+
+- Whether a file renders as markdown or code is decided by its extension
+  (`.md` / `.mdx` → markdown; everything else → code).
+- The code language is inferred from the file extension.
+- `lines` applies only to code files and is resolved at build time, so only the
+  selected snippet is shipped to the page.

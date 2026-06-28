@@ -1,0 +1,31 @@
+---
+title: GitlabIssues
+sidebar_position: 4
+---
+
+# `<GitlabIssues>`
+
+Renders a filtered list of a project's issues: state badge, linked title, labels,
+and author.
+
+## Usage
+
+```mdx
+<GitlabIssues project="group/repo" />
+
+<GitlabIssues project="group/repo" labels="bug,help wanted" state="opened" limit={10} />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `project` | `string \| number` | — | **Required.** Project path or numeric ID. |
+| `state` | `string` | `opened` | `opened`, `closed`, or `all`. |
+| `labels` | `string` | — | Comma-separated label filter. |
+| `milestone` | `string` | — | Milestone title filter. |
+| `limit` | `number` | `20` | Maximum number of issues to show. |
+
+## Notes
+
+- Each issue title links to its GitLab page (`web_url`).

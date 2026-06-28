@@ -1,0 +1,21 @@
+{
+  "name": "example-gitlab",
+  "private": true,
+  "scripts": {
+    "build": "docusaurus build",
+    "start": "docusaurus start",
+    "serve": "docusaurus serve",
+    "clear": "docusaurus clear"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.5.0",
+    "@docusaurus/preset-classic": "^3.5.0",
+    "@ebuildy/docusaurus-plugin-gitlab": "file:../..",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@docusaurus/tsconfig": "^3.5.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  // markdownlint config for the project's hand-written Markdown docs.
+  "config": {
+    "default": true,
+    // Long lines are common in prose, tables, and URLs.
+    "MD013": false,
+    // We reference JSX component names like <GitlabFile> in prose/code.
+    "MD033": false,
+    // Allow duplicate headings under different sections (e.g. repeated "Notes").
+    "MD024": { "siblings_only": true },
+    // Table pipe spacing is purely cosmetic; tables remain valid GFM.
+    "MD060": false
+  },
+  "globs": ["README.md", "CLAUDE.md"],
+  "ignores": ["node_modules", "dist", "examples", "docs/superpowers"]
+}

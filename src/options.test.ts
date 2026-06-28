@@ -1,0 +1,38 @@
+import { describe, it, expect } from "vitest";
+import { resolveOptions } from "./options";
+
+describe("resolveOptions", () => {
+  it("applies defaults for a minimal config", () => {
+    const o = resolveOptions({ host: "https://gitlab.com" }, "production");
+    expect(o.host).toBe("https://gitlab.com");
+    expect(o.strict).toBe(true);
+    expect(o.assetDir).toBe("static/gitlab-assets");
+    expect(o.assetBaseUrl).toBe("/gitlab-assets");
+    expect(o.cache).toEqual({ ttl: 3600 });
+  });
+
+  it("defaults strict to false in development", () => {
+    const o = resolveOptions({ host: "https://gitlab.com" }, "development");
+    expect(o.strict).toBe(false);
+  });
+
+  it("strips a trailing slash from host", () => {
+    const o = resolveOptions({ host: "https://gl.example.com/" }, "production");
+    expect(o.host).toBe("https://gl.example.com");
+  });
+
+  it("allows disabling cache", () => {
+    const o = resolveOptions({ host: "https://gitlab.com", cache: false }, "production");
+    expect(o.cache).toBe(false);
+  });
+
+  it("throws on a missing host", () => {
+    expect(() => resolveOptions({} as any, "production")).toThrow(/host/);
+  });
+
+  it("throws on an unknown option", () => {
+    expect(() =>
+      resolveOptions({ host: "https://gitlab.com", nope: 1 } as any, "production"),
+    ).toThrow();
+  });
+});

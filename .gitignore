@@ -1,0 +1,23 @@
+/bin/
+coverage.out
+*.test
+*.out
+.DS_Store
+
+# AI assistant skill assets (not part of the project)
+/agent/skills/
+/.agents/skills/
+
+# graphify knowledge graph (generated, not part of the project)
+/graphify-out/
+
+/node_modules/
+
+# Build & generated artifacts
+dist/
+coverage/
+examples/*/build/
+examples/*/.docusaurus/
+examples/*/node_modules/
+examples/*/static/gitlab-assets/
+node_modules/.cache/

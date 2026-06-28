@@ -1,0 +1,29 @@
+---
+title: GitlabProjectInfo
+sidebar_position: 1
+---
+
+# `<GitlabProjectInfo>`
+
+Renders a card with a project's name, description, topics, star/fork counts, and
+last activity. Data is fetched at build time.
+
+## Usage
+
+```mdx
+<GitlabProjectInfo project="group/repo" />
+
+<GitlabProjectInfo project={12345} showStats={false} />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `project` | `string \| number` | — | **Required.** Project path (`group/sub/repo`) or numeric ID. |
+| `showStats` | `boolean` | `true` | Show the stars / forks / last-activity row. |
+
+## Notes
+
+- The link in the card points to the project's GitLab page (`web_url`).
+- On a failed fetch in non-strict mode, a fallback notice is rendered instead.
