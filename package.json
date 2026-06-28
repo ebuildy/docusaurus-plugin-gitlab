@@ -82,7 +82,7 @@
     "eslint-plugin-regexp": "^2.10.0",
     "globals": "^17.7.0",
     "husky": "^9.1.7",
-    "jsdom": "^24.0.0",
+    "jsdom": "^29.1.1",
     "lint-staged": "^16.4.0",
     "markdownlint-cli2": "^0.22.1",
     "react": "^18.3.0",
