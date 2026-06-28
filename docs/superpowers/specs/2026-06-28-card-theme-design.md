@@ -1,4 +1,4 @@
-# Card UI theme — design
+# Card UI theme + project avatar — design
 
 ## Goal
 
@@ -15,7 +15,8 @@ Ship a small, opinionated "minimal but beautiful" card theme for the
 - No configurable design tokens (accent, radius, elevation, density). Explicitly
   cut — the theme is one opinionated look.
 - No `{ light, dark }` config pairs and no `--gl-card-*` token system.
-- No changes to the component `.tsx` files or their class names.
+- No changes to the component `.tsx` files or their class names *for theming*
+  (the avatar addition below does touch `GitlabProjectInfo.tsx`).
 - No automatic MDX component registration (users still register components via
   `MDXComponents` as today).
 - No *user-facing* design tokens. The internal `--gl-card-*` CSS variables below
@@ -107,6 +108,32 @@ With `theme: false` the variables are never defined, so the CSS-module fallbacks
 | `tsup.config.ts` | Add `src/plugin/index.ts` entry. |
 | `examples/site/docusaurus.config.ts` | Add the plugin to `plugins: []` with `{ theme: true }`. |
 | `test/packaging.test.ts` | Assert the `/plugin` export resolves and stays ESM-only. |
+| `src/gitlab/fetchers.ts` | `fetchProjectInfo`: localize `p.avatar_url` via `ctx.assets.localize` when present. |
+| `src/components/GitlabProjectInfo.tsx` | Render a small rounded avatar `<img>` when `data.avatarUrl` is set. |
+
+## Addition: project avatar in `GitlabProjectInfo`
+
+Independent of the theme, but bundled into this change: show the project's avatar
+in the project-overview card when one exists.
+
+State today: `ProjectInfoData.avatarUrl` already exists and `fetchProjectInfo`
+already maps `p.avatar_url ?? null` — but as the **raw remote URL**, and no
+component renders it. Two gaps to close:
+
+1. **Localize** (build time, no browser token). In `fetchProjectInfo`, when
+   `p.avatar_url` is present, run it through `ctx.assets.localize(avatarUrl, "",
+   project)` and store the returned local served path in `avatarUrl`. The avatar
+   URL is absolute, so `AssetManager.absolute()` passes it through unchanged and
+   the `ref` argument is unused (pass `""`). `requestBinary` carries the token, so
+   private-project avatars work. Failure semantics match README image
+   localization (no special-casing). When `avatar_url` is null, `avatarUrl` stays
+   null and nothing is localized.
+2. **Render** in `GitlabProjectInfo`: when `data.avatarUrl` is set, show a small
+   rounded avatar `<img>` next to the title (with `alt={data.name}` and explicit
+   width/height to avoid layout shift). When null, render the title as today.
+
+No new domain type or fetcher; this reuses `ProjectInfoData`, `fetchProjectInfo`,
+and `AssetManager`.
 
 ## Error handling
 
@@ -126,6 +153,11 @@ With `theme: false` the variables are never defined, so the CSS-module fallbacks
   enabled and nothing when `theme: false`.
 - `test/packaging.test.ts` — `/plugin` subpath export resolves; ESM-only guard
   still holds.
+- `src/gitlab/fetchers.test.ts` — `fetchProjectInfo` calls `assets.localize` with
+  the avatar URL and returns the localized path; null `avatar_url` skips
+  localization and leaves `avatarUrl` null.
+- `src/components/GitlabProjectInfo.test.tsx` — renders an `img` with the avatar
+  when `avatarUrl` is set; renders no avatar `img` when null.
 - e2e (`test/e2e/build.test.ts`) — example site (now wiring the plugin) builds;
   run explicitly since it is slow.
 
