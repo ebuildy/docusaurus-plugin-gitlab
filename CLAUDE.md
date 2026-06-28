@@ -13,9 +13,12 @@ static HTML. The browser never holds a token or calls the GitLab API.
 
 ## Hard rules
 
-- **DO NOT use git.** Never run any git command (no `init`, `status`, `add`,
-  `commit`, anything). This repo is intentionally not a git repository.
-- **Docusaurus 3 only** (MDX v3, unified ESM, Node 18+ `fetch`).
+- **Git/GitHub:** This is a live GitHub repo (`ebuildy/docusaurus-plugin-gitlab`).
+  Normal git usage is fine. CI runs on PRs and pushes to `main` via GitHub
+  Actions (`.github/workflows/`); releases are automated with release-please and
+  published to npm via OIDC trusted publishing — see CONTRIBUTING.md.
+- **Docusaurus 3 only** (MDX v3, unified ESM, native `fetch`). **Node 20, 22, 24**
+  (Docusaurus 3 requires Node 20+; the e2e build will not run on Node 18).
 - Prefer the latest versions of libraries.
 - ESM-first. Intra-package imports use explicit `.js` extensions
   (e.g. `import { Fallback } from "./Fallback.js"`) — required by the
@@ -25,7 +28,12 @@ static HTML. The browser never holds a token or calls the GitLab API.
 
 ## Commands
 
-- `npm run build` — build the package with tsup (ESM + CJS + d.ts) into `dist/`.
+- `npm run build` — build the package with tsup (ESM + d.ts) into `dist/`.
+  The package is **ESM-only**: every remark/rehype/unified dependency is pure ESM,
+  so a CJS build would `require()` them — which breaks under Node's `require(ESM)`
+  interop (`unified().use()` receives `{ default: fn }` → "empty preset", failing
+  the Docusaurus build). Do not re-add a `cjs` tsup format or a `require` export
+  condition; `test/packaging.test.ts` guards this.
 - `npm run test` — run all tests (Vitest). Use `npx vitest run <file>` for one file.
 - `npm run typecheck` — `tsc --noEmit`.
 

@@ -13,13 +13,22 @@ tokens or network calls ever reach the browser, and pages stay fast.
 - ✅ README images **and badges are downloaded and localized** (offline-safe, frozen at build time)
 - ✅ On-disk caching, theme-aware (Infima) styling, graceful error fallbacks
 
-> Requires Docusaurus **3.x** and Node **18+**.
+> Requires Docusaurus **3.x** and Node **20, 22, or 24** (Docusaurus 3 itself
+> needs Node 20+).
 
 ## Installation
 
 ```bash
 npm install @ebuildy/docusaurus-plugin-gitlab
 ```
+
+> **ESM-only.** This package ships as ES modules (all of its remark/rehype
+> dependencies are ESM). Load it from an ESM config — `docusaurus.config.ts` or
+> `docusaurus.config.mjs` (the examples below use `import`). If your site still
+> uses a CommonJS `docusaurus.config.js` on **Node < 20.19**, either switch the
+> config to ESM or load the plugin with `await import(...)`. On **Node 20.19+**
+> (and 22+) CommonJS configs work too, since Node can `require()` ES modules
+> natively.
 
 ## Setup
 
@@ -189,7 +198,7 @@ components, so you can wrap or restyle them as needed.
 
 ```bash
 npm install
-npm run build       # bundle with tsup (ESM + CJS + types)
+npm run build       # bundle with tsup (ESM-only + types)
 npm run test        # unit tests (Vitest)
 npm run typecheck   # tsc --noEmit
 ```
