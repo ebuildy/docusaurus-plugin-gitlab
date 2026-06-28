@@ -1,0 +1,26 @@
+{
+  "name": "docusaurus-plugin-gitlab",
+
+  // Image ships with nvm preinstalled (default Node 20). We additionally install
+  // the other CI matrix versions so you can switch instantly, e.g. `nvm use 18`.
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20-bookworm",
+
+  // Install the full CI matrix (20 / 22 / 24) and keep 20 (the minimum) as default.
+  "onCreateCommand": "bash -c 'export NVM_DIR=/usr/local/share/nvm && . \"$NVM_DIR/nvm.sh\" && nvm install 20 && nvm install 22 && nvm install 24 && nvm alias default 20'",
+
+  // Install dependencies once the container is up.
+  "postCreateCommand": "npm ci",
+
+  // Docusaurus dev server (used by the example sites) listens here.
+  "forwardPorts": [3000],
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "DavidAnson.vscode-markdownlint",
+        "vitest.explorer"
+      ]
+    }
+  }
+}
