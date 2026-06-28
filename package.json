@@ -70,7 +70,7 @@
     "@testing-library/jest-dom": "^6.4.0",
     "@testing-library/react": "^16.0.0",
     "@types/mdast": "^4.0.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "^26.0.1",
     "@types/react": "^18.3.0",
     "@vitest/eslint-plugin": "^1.6.20",
     "eslint": "^9.39.4",
