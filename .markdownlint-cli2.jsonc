@@ -11,6 +11,6 @@
     // Table pipe spacing is purely cosmetic; tables remain valid GFM.
     "MD060": false
   },
-  "globs": ["README.md", "CLAUDE.md"],
+  "globs": ["README.md", "CLAUDE.md", "CONTRIBUTING.md"],
   "ignores": ["node_modules", "dist", "examples", "docs/superpowers"]
 }
