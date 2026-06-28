@@ -20,4 +20,15 @@ describe("GitlabProjectInfo", () => {
     render(<GitlabProjectInfo error={{ message: "boom", project: "g/r" } as any} />);
     expect(screen.getByRole("alert")).toHaveTextContent("boom");
   });
+
+  it("renders the avatar when avatarUrl is set", () => {
+    render(<GitlabProjectInfo data={{ ...data, avatarUrl: "/gitlab-assets/a.png" } as any} />);
+    const img = screen.getByRole("img", { name: "My Repo" });
+    expect(img).toHaveAttribute("src", "/gitlab-assets/a.png");
+  });
+
+  it("renders no avatar when avatarUrl is null", () => {
+    render(<GitlabProjectInfo data={data as any} />);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
 });

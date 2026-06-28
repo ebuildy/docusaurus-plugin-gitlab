@@ -8,8 +8,19 @@ export function GitlabProjectInfo({ data, error, showStats = true }: ComponentPa
   if (!data) return null;
   return (
     <div className={styles.card}>
-      <div className={styles.title}>
-        <a href={data.webUrl}>{data.name}</a>
+      <div className={styles.header}>
+        {data.avatarUrl && (
+          <img
+            className={styles.avatar}
+            src={data.avatarUrl}
+            alt={data.name}
+            width={32}
+            height={32}
+          />
+        )}
+        <div className={styles.title}>
+          <a href={data.webUrl}>{data.name}</a>
+        </div>
       </div>
       {data.description && <p className={styles.muted}>{data.description}</p>}
       {data.topics.length > 0 && (
