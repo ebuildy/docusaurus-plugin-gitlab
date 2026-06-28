@@ -21,7 +21,7 @@ describe("packaging: ESM-only", () => {
     readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"),
   );
 
-  const subpaths = [".", "./remark", "./components"];
+  const subpaths = [".", "./remark", "./components", "./plugin"];
 
   it("exposes the documented export subpaths", () => {
     for (const sub of subpaths) {
