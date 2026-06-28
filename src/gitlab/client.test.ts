@@ -7,7 +7,9 @@ const showRawMock = vi.fn();
 const gitlabCtor = vi.fn();
 
 vi.mock("@gitbeaker/rest", () => ({
-  Gitlab: vi.fn().mockImplementation((opts: unknown) => {
+  // Vitest 4 invokes the mock implementation as a real constructor under
+  // `new`, so the implementation must be a constructable (non-arrow) function.
+  Gitlab: vi.fn(function (opts: unknown) {
     gitlabCtor(opts);
     return {
       Projects: { show: showMock },

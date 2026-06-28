@@ -234,7 +234,7 @@ into your `src/css/custom.css` and edit freely. The class names you can target:
 
 ```bash
 npm install
-npm run build       # bundle with tsup (ESM-only + types)
+npm run build       # compile with tsc (ESM-only + types)
 npm run test        # unit tests (Vitest)
 npm run typecheck   # tsc --noEmit
 ```
