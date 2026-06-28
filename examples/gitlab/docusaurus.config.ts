@@ -1,5 +1,6 @@
 import type { Config } from "@docusaurus/types";
 import { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
+import docusaurusGitlabTheme from "@ebuildy/docusaurus-plugin-gitlab/plugin";
 
 // Live example: embeds REAL public content from gitlab.com.
 // No token is required for these public projects, but you can set GITLAB_TOKEN
@@ -36,6 +37,7 @@ const config: Config = {
       },
     ],
   ],
+  plugins: [[docusaurusGitlabTheme, { theme: true }]],
 };
 
 export default config;
