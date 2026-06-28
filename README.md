@@ -190,9 +190,45 @@ no tokens shipped, no client-side API calls, no CORS.
 
 ## Styling
 
-Components use [Infima](https://infima.dev/) CSS variables, so they inherit your
-site's theme (including dark mode) automatically. They're exported as normal
-components, so you can wrap or restyle them as needed.
+The components ship **without any bundled CSS** — they render plain, stable class
+names so you stay in full control of the look. The package includes an optional,
+light/dark-aware theme (`theme.css`) you can apply as-is or use as a starting
+point. It's built on [Infima](https://infima.dev/) variables, so it tracks your
+site's active theme automatically.
+
+Apply it from your `classic` preset's `theme.customCss`:
+
+```ts
+// docusaurus.config.ts (ESM)
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+
+// ...inside the classic preset options:
+theme: {
+  customCss: require.resolve("@ebuildy/docusaurus-plugin-gitlab/theme.css"),
+},
+```
+
+Prefer to own the CSS? Copy
+[`theme.css`](https://github.com/ebuildy/docusaurus-plugin-gitlab/blob/main/theme.css)
+into your `src/css/custom.css` and edit freely. The class names you can target:
+
+| Class | Element |
+|---|---|
+| `gitlab-card` | `<GitlabProjectInfo>` container |
+| `gitlab-card-header` | avatar + title row |
+| `gitlab-avatar` | project avatar image |
+| `gitlab-title` | project / release title |
+| `gitlab-muted` | secondary text (dates, authors, descriptions) |
+| `gitlab-badge` | topics, tags, labels, release assets |
+| `gitlab-stats` | stars / forks / updated row |
+| `gitlab-issues` / `gitlab-issue` | issues list + each issue row |
+| `gitlab-issue-state` / `gitlab-issue-title` | issue state badge (`data-state`) + title link |
+| `gitlab-releases` / `gitlab-release` | releases list + each release card |
+| `gitlab-release-notes` / `gitlab-release-assets` | release body + asset links |
+| `gitlab-readme` | rendered README / markdown file |
+| `gitlab-fallback` | error fallback box |
+| `gitlab-code` / `gitlab-code-title` / `gitlab-code-pre` | code file embed |
 
 ## Development
 

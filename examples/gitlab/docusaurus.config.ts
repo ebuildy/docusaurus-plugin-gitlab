@@ -1,5 +1,8 @@
+import { createRequire } from "node:module";
 import type { Config } from "@docusaurus/types";
 import { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
+
+const require = createRequire(import.meta.url);
 
 // Live example: embeds REAL public content from gitlab.com.
 // No token is required for these public projects, but you can set GITLAB_TOKEN
@@ -32,7 +35,9 @@ const config: Config = {
           ],
         },
         blog: false,
-        theme: {},
+        theme: {
+          customCss: require.resolve("@ebuildy/docusaurus-plugin-gitlab/theme.css"),
+        },
       },
     ],
   ],
