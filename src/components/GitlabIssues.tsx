@@ -6,11 +6,11 @@ export function GitlabIssues({ data, error }: ComponentPayload<IssueData[]>) {
   if (error) return <Fallback error={error} />;
   if (!data) return null;
   return (
-    <ul className="gitlab-list">
+    <ul className="gitlab-issues">
       {data.map((i) => (
-        <li key={i.iid} className="gitlab-list-item">
-          <span className="gitlab-badge">{i.state}</span>
-          <a href={i.webUrl}>{i.title}</a>
+        <li key={i.iid} className="gitlab-issue">
+          <span className="gitlab-issue-state" data-state={i.state}>{i.state}</span>
+          <a className="gitlab-issue-title" href={i.webUrl}>{i.title}</a>
           {i.labels.map((l) => (
             <span key={l} className="gitlab-badge">{l}</span>
           ))}

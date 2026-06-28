@@ -58,15 +58,41 @@
   font-size: 0.85em;
 }
 
-/* Generic lists (issues) */
-.gitlab-list {
+/* Issues list */
+.gitlab-issues {
   list-style: none;
   padding: 0;
   margin: 1rem 0;
 }
-.gitlab-list-item {
-  padding: 0.5rem 0;
+.gitlab-issue {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.6rem 0;
   border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+.gitlab-issue:last-child {
+  border-bottom: 0;
+}
+.gitlab-issue-title {
+  font-weight: 500;
+}
+.gitlab-issue-state {
+  display: inline-block;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8em;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #fff;
+  background: var(--ifm-color-emphasis-500);
+}
+.gitlab-issue-state[data-state="opened"] {
+  background: var(--ifm-color-success);
+}
+.gitlab-issue-state[data-state="closed"] {
+  background: var(--ifm-color-danger);
 }
 
 /* Releases: each release renders as its own card */

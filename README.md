@@ -222,7 +222,8 @@ into your `src/css/custom.css` and edit freely. The class names you can target:
 | `gitlab-muted` | secondary text (dates, authors, descriptions) |
 | `gitlab-badge` | topics, tags, labels, release assets |
 | `gitlab-stats` | stars / forks / updated row |
-| `gitlab-list` / `gitlab-list-item` | issues list |
+| `gitlab-issues` / `gitlab-issue` | issues list + each issue row |
+| `gitlab-issue-state` / `gitlab-issue-title` | issue state badge (`data-state`) + title link |
 | `gitlab-releases` / `gitlab-release` | releases list + each release card |
 | `gitlab-release-notes` / `gitlab-release-assets` | release body + asset links |
 | `gitlab-readme` | rendered README / markdown file |
