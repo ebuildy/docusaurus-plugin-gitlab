@@ -43,6 +43,8 @@ export function renderThemeCss(): string {
   --gl-card-badge-bg: var(--ifm-color-emphasis-100);
 }
 [data-theme='dark'] {
+  /* Most vars resolve to --ifm-* tokens that already swap per theme; only shadow
+     and border need a dark-specific tweak. */
   --gl-card-border: var(--ifm-color-emphasis-300);
   --gl-card-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 10px rgb(0 0 0 / 0.25);
 }
