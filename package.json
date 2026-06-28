@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "MDX extensions to embed GitLab resources in Docusaurus 3 docs",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     ".": {
