@@ -150,7 +150,7 @@ jobs:
             package-lock.json
             examples/site/package-lock.json
       - run: npm ci
-      - name: Build package (needed by the example site file: link)
+      - name: "Build package (needed by the example site file: link)"
         run: npm run build
       - name: Install example site deps
         working-directory: examples/site
