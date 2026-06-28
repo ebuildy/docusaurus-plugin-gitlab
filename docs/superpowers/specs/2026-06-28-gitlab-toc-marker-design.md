@@ -17,8 +17,8 @@ headings.
 - **Marker recognized:** `[[_TOC_]]` only (GitLab's official marker). The
   `_TOC_` token is matched case-insensitively (`[[_toc_]]` also works). The legacy
   `[TOC]` and the `[[TOC]]` variant are intentionally **not** supported.
-- **Heading depth:** the TOC includes `h2` and `h3` only (sidebar-style depth).
-  `h1` (typically the document title) and `h4`–`h6` are excluded.
+- **Heading depth:** the TOC includes `h2` to `h5` only (sidebar-style depth).
+  `h1` (typically the document title) and `h6` are excluded.
 - **Heading ids:** slug `id`s are added to headings **only when a `[[_TOC_]]` marker
   is present** in that document. Documents without the marker are rendered exactly as
   before (no ids added).
@@ -63,21 +63,24 @@ Both satisfy the package's ESM-only constraint.
    content equals `[[_TOC_]]` (case-insensitive on `_TOC_`). Record the node and its
    parent + index. If no such paragraph exists, return the tree unchanged — no
    slugging, no TOC (preserves the scoped-ids decision).
-2. **Slug headings.** With a marker present, walk all `h2`/`h3` elements in document
+2. **Slug headings.** With a marker present, walk all `h2`–`h5` elements in document
    order. For each, derive text via `hast-util-to-string`, generate a unique slug
    with a single shared `GithubSlugger` instance, and set `properties.id`. Do **not**
    overwrite an author-supplied `id` if one already exists (still feed its text to the
    slugger so later slugs dedupe correctly).
-3. **Build the TOC.** From the ordered `h2`/`h3` list, build a nested list: one
-   top-level `<li>` per `h2`, with a nested `<ul>` of its following `h3`s. Each entry
-   is `<a href="#slug">{text}</a>`. `h3`s appearing before any `h2` attach at the top
-   level.
+3. **Build the TOC.** From the ordered `h2`–`h5` list, build a list nested by heading
+   level. Walk the headings in document order keeping a stack of the currently open
+   `<ul>` per level: a heading deeper than the previous opens nested `<ul>`s; a
+   shallower one pops back up. Each entry is `<li><a href="#slug">{text}</a></li>`.
+   The shallowest heading present anchors the top level, so a document whose headings
+   start at `h3` still produces a sensible top-level list (levels are relative, not
+   absolute to `h2`).
 4. **Replace in place.** Replace the marker `<p>` node with
    `<nav class="gitlab-md-toc"><ul>…</ul></nav>`.
 
 ## Edge cases
 
-- **Marker present, no `h2`/`h3` headings** → remove the marker paragraph entirely
+- **Marker present, no `h2`/`h5` headings** → remove the marker paragraph entirely
   (replace with nothing); a stray `[[_TOC_]]` must never render as literal text.
 - **Inline marker** (e.g. `foo [[_TOC_]] bar` within a paragraph of other text) → not
   treated as a TOC; only a paragraph whose *entire* trimmed text is the marker
@@ -111,7 +114,9 @@ document whose headings contain malicious markup still yields a clean, escaped T
 New `src/gitlab/toc.test.ts` driving `renderMarkdown`:
 
 - marker + `## A` / `### B` → `<nav class="gitlab-md-toc">` containing `<a href="#a">`
-  and a nested `<a href="#b">`; the `h2`/`h3` get matching `id`s.
+  and a nested `<a href="#b">`; the `h2`–`h5` get matching `id`s.
+- deep nesting: `## A` / `### B` / `#### C` / `##### D` → correctly nested `<ul>`s,
+  one level per heading depth.
 - no marker → headings receive **no** `id` (scoped behavior preserved).
 - duplicate heading text → deduped slugs in both ids and hrefs.
 - marker present, no headings → marker paragraph removed, no leftover literal text.
@@ -121,6 +126,6 @@ New `src/gitlab/toc.test.ts` driving `renderMarkdown`:
 
 ## Out of scope (YAGNI)
 
-- Configurable heading depth or marker syntax (hardcoded `h2`–`h3`, `[[_TOC_]]`).
+- Configurable heading depth or marker syntax (hardcoded `h2`–`h5`, `[[_TOC_]]`).
 - Default CSS styling for the TOC.
 - A standalone `<GitlabToc>` component (the marker-in-markdown flow covers the need).
