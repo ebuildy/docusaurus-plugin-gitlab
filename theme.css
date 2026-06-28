@@ -1,6 +1,13 @@
-/* GitLab embeds — minimal card theme.
-   Mirrors the snippet documented in the package README. Adapts to light/dark
-   via Infima variables. */
+/*
+ * @ebuildy/docusaurus-plugin-gitlab — optional card theme.
+ *
+ * Minimal, light/dark-aware styling for the <Gitlab*> components. It uses
+ * Infima (Docusaurus) CSS variables, so it tracks your site's active theme
+ * automatically. Apply it by adding this file to your preset's
+ * `theme.customCss`, or copy it into your own stylesheet and tweak freely.
+ */
+
+/* Project overview card */
 .gitlab-card {
   border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: 10px;
@@ -39,6 +46,8 @@
   gap: 1rem;
   margin-top: 0.5rem;
 }
+
+/* Badges: topics, tags, labels, release assets */
 .gitlab-badge {
   display: inline-block;
   padding: 0 0.5rem;
@@ -48,6 +57,8 @@
   color: var(--ifm-color-primary);
   font-size: 0.85em;
 }
+
+/* Generic lists (issues) */
 .gitlab-list {
   list-style: none;
   padding: 0;
@@ -57,15 +68,57 @@
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--ifm-color-emphasis-200);
 }
+
+/* Releases: each release renders as its own card */
+.gitlab-releases {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.gitlab-release {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  background: var(--ifm-background-surface-color);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.04);
+}
+.gitlab-release-notes {
+  margin-top: 0.5rem;
+  color: var(--ifm-color-emphasis-800);
+}
+.gitlab-release-notes > :first-child {
+  margin-top: 0;
+}
+.gitlab-release-notes > :last-child {
+  margin-bottom: 0;
+}
+.gitlab-release-notes img {
+  max-width: 100%;
+}
+.gitlab-release-assets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+/* README / markdown file embed */
 .gitlab-readme img {
   max-width: 100%;
 }
+
+/* Error fallback */
 .gitlab-fallback {
   border-left: 4px solid var(--ifm-color-warning);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
   background: var(--ifm-color-warning-contrast-background);
 }
+
+/* Code file embed */
 .gitlab-code {
   margin: 1rem 0;
   border: 1px solid var(--ifm-color-emphasis-200);
@@ -87,7 +140,8 @@
   font-size: var(--ifm-code-font-size, 90%);
 }
 
-/* Slightly stronger shadow so cards stay legible in dark mode */
-[data-theme='dark'] .gitlab-card {
+/* Slightly stronger shadows so cards stay legible in dark mode */
+[data-theme='dark'] .gitlab-card,
+[data-theme='dark'] .gitlab-release {
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 10px rgb(0 0 0 / 0.25);
 }

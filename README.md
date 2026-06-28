@@ -191,11 +191,27 @@ no tokens shipped, no client-side API calls, no CORS.
 ## Styling
 
 The components ship **without any bundled CSS** — they render plain, stable class
-names so you stay in full control of the look. Style them by adding CSS to your
-site's custom stylesheet (`src/css/custom.css`, already wired up by the Docusaurus
-`classic` preset).
+names so you stay in full control of the look. The package includes an optional,
+light/dark-aware theme (`theme.css`) you can apply as-is or use as a starting
+point. It's built on [Infima](https://infima.dev/) variables, so it tracks your
+site's active theme automatically.
 
-The class names are:
+Apply it from your `classic` preset's `theme.customCss`:
+
+```ts
+// docusaurus.config.ts (ESM)
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+
+// ...inside the classic preset options:
+theme: {
+  customCss: require.resolve("@ebuildy/docusaurus-plugin-gitlab/theme.css"),
+},
+```
+
+Prefer to own the CSS? Copy
+[`theme.css`](https://github.com/ebuildy/docusaurus-plugin-gitlab/blob/main/theme.css)
+into your `src/css/custom.css` and edit freely. The class names you can target:
 
 | Class | Element |
 |---|---|
@@ -206,110 +222,12 @@ The class names are:
 | `gitlab-muted` | secondary text (dates, authors, descriptions) |
 | `gitlab-badge` | topics, tags, labels, release assets |
 | `gitlab-stats` | stars / forks / updated row |
-| `gitlab-list` / `gitlab-list-item` | releases & issues lists |
+| `gitlab-list` / `gitlab-list-item` | issues list |
+| `gitlab-releases` / `gitlab-release` | releases list + each release card |
+| `gitlab-release-notes` / `gitlab-release-assets` | release body + asset links |
 | `gitlab-readme` | rendered README / markdown file |
 | `gitlab-fallback` | error fallback box |
 | `gitlab-code` / `gitlab-code-title` / `gitlab-code-pre` | code file embed |
-
-### A minimal, light/dark-aware theme
-
-Copy this into `src/css/custom.css` for a clean default look. It uses
-[Infima](https://infima.dev/) variables, so it tracks your site's active
-light/dark mode automatically. Tweak freely.
-
-```css
-/* GitLab embeds — minimal card theme */
-.gitlab-card {
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 10px;
-  padding: 1rem;
-  margin: 1rem 0;
-  background: var(--ifm-background-surface-color);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.04);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.gitlab-card:hover {
-  border-color: var(--ifm-color-primary);
-}
-.gitlab-card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.gitlab-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  object-fit: cover;
-  flex: none;
-}
-.gitlab-title {
-  font-weight: 600;
-}
-.gitlab-title a {
-  color: var(--ifm-color-primary);
-}
-.gitlab-muted {
-  color: var(--ifm-color-emphasis-600);
-}
-.gitlab-stats {
-  display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
-}
-.gitlab-badge {
-  display: inline-block;
-  padding: 0 0.5rem;
-  margin-right: 0.25rem;
-  border-radius: 999px;
-  background: var(--ifm-color-emphasis-100);
-  color: var(--ifm-color-primary);
-  font-size: 0.85em;
-}
-.gitlab-list {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0;
-}
-.gitlab-list-item {
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--ifm-color-emphasis-200);
-}
-.gitlab-readme img {
-  max-width: 100%;
-}
-.gitlab-fallback {
-  border-left: 4px solid var(--ifm-color-warning);
-  padding: 0.75rem 1rem;
-  margin: 1rem 0;
-  background: var(--ifm-color-warning-contrast-background);
-}
-.gitlab-code {
-  margin: 1rem 0;
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 8px;
-  overflow: hidden;
-}
-.gitlab-code-title {
-  padding: 0.4rem 1rem;
-  font-family: var(--ifm-font-family-monospace);
-  font-size: 0.85em;
-  color: var(--ifm-color-emphasis-700);
-  background: var(--ifm-color-emphasis-100);
-  border-bottom: 1px solid var(--ifm-color-emphasis-200);
-}
-.gitlab-code-pre {
-  margin: 0;
-  padding: 1rem;
-  overflow: auto;
-  font-size: var(--ifm-code-font-size, 90%);
-}
-
-/* Slightly stronger shadow so cards stay legible in dark mode */
-[data-theme='dark'] .gitlab-card {
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 10px rgb(0 0 0 / 0.25);
-}
-```
 
 ## Development
 
