@@ -31,6 +31,9 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
   const project = String(attrs.project);
   return memo(ctx, `projectInfo:${project}`, async () => {
     const p = await ctx.client.getProject(attrs.project as string | number);
+    const avatarUrl = p.avatar_url
+      ? await ctx.assets.localize(p.avatar_url, "", project)
+      : null;
     return {
       id: p.id,
       path: p.path_with_namespace,
@@ -41,7 +44,7 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
       forksCount: p.forks_count,
       topics: p.topics ?? [],
       lastActivityAt: p.last_activity_at,
-      avatarUrl: p.avatar_url ?? null,
+      avatarUrl,
     } satisfies ProjectInfoData;
   }).then((v) => ({ ...v, path: v.path || project }));
 }

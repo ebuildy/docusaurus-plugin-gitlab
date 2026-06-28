@@ -23,9 +23,26 @@ describe("fetchProjectInfo", () => {
         star_count: 3, forks_count: 1, topics: ["x"], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
       })),
     };
-    const data = await fetchProjectInfo(ctx(client), { project: "g/r" });
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r" });
     expect(data).toMatchObject({ id: 7, path: "g/r", starCount: 3, topics: ["x"] });
+    expect(data.avatarUrl).toBeNull();
+    expect(c.assets.localize).not.toHaveBeenCalled();
     expect(client.getProject).toHaveBeenCalledWith("g/r");
+  });
+
+  it("localizes the avatar when the project has one", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: ["x"], last_activity_at: "2026-01-01T00:00:00Z",
+        avatar_url: "https://gitlab.com/uploads/avatar.png",
+      })),
+    };
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r" });
+    expect(c.assets.localize).toHaveBeenCalledWith("https://gitlab.com/uploads/avatar.png", "", "g/r");
+    expect(data.avatarUrl).toBe("/gitlab-assets/httpsgitlabcomuploadsavatarpng.png");
   });
 });
 
