@@ -1,5 +1,6 @@
 import React from "react";
 import { Fallback } from "./Fallback.js";
+import { formatCount } from "./format.js";
 import type { ComponentPayload, ProjectInfoData } from "./types.js";
 
 export function GitlabProjectInfo({ data, error, showStats = true }: ComponentPayload<ProjectInfoData> & { showStats?: boolean }) {
@@ -31,8 +32,8 @@ export function GitlabProjectInfo({ data, error, showStats = true }: ComponentPa
       )}
       {showStats && (
         <div className="gitlab-stats">
-          <span>★ {data.starCount}</span>
-          <span>⑂ {data.forksCount}</span>
+          <span>★ {formatCount(data.starCount)}</span>
+          <span>⑂ {formatCount(data.forksCount)}</span>
           <span className="gitlab-muted">updated {new Date(data.lastActivityAt).toLocaleDateString()}</span>
         </div>
       )}

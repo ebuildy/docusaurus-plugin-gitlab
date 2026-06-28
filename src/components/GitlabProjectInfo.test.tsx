@@ -16,6 +16,12 @@ describe("GitlabProjectInfo", () => {
     expect(screen.getByText(/12/)).toBeInTheDocument();
   });
 
+  it("humanizes large star and fork counts", () => {
+    render(<GitlabProjectInfo data={{ ...data, starCount: 6000, forksCount: 1500 } as any} />);
+    expect(screen.getByText(/6k/)).toBeInTheDocument();
+    expect(screen.getByText(/1.5k/)).toBeInTheDocument();
+  });
+
   it("renders the fallback when given an error", () => {
     render(<GitlabProjectInfo error={{ message: "boom", project: "g/r" } as any} />);
     expect(screen.getByRole("alert")).toHaveTextContent("boom");
