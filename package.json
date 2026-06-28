@@ -25,11 +25,6 @@
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.js",
       "default": "./dist/components/index.js"
-    },
-    "./plugin": {
-      "types": "./dist/plugin/index.d.ts",
-      "import": "./dist/plugin/index.js",
-      "default": "./dist/plugin/index.js"
     }
   },
   "files": [
