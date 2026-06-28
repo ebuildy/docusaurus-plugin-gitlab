@@ -32,7 +32,9 @@ const config: Config = {
           ],
         },
         blog: false,
-        theme: {},
+        theme: {
+          customCss: "./src/css/custom.css",
+        },
       },
     ],
   ],
