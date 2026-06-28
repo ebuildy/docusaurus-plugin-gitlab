@@ -27,7 +27,12 @@ static HTML. The browser never holds a token or calls the GitLab API.
 
 ## Commands
 
-- `npm run build` — build the package with tsup (ESM + CJS + d.ts) into `dist/`.
+- `npm run build` — build the package with tsup (ESM + d.ts) into `dist/`.
+  The package is **ESM-only**: every remark/rehype/unified dependency is pure ESM,
+  so a CJS build would `require()` them — which breaks under Node's `require(ESM)`
+  interop (`unified().use()` receives `{ default: fn }` → "empty preset", failing
+  the Docusaurus build). Do not re-add a `cjs` tsup format or a `require` export
+  condition; `test/packaging.test.ts` guards this.
 - `npm run test` — run all tests (Vitest). Use `npx vitest run <file>` for one file.
 - `npm run typecheck` — `tsc --noEmit`.
 

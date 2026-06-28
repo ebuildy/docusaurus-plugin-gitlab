@@ -11,17 +11,17 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "default": "./dist/index.js"
     },
     "./remark": {
       "types": "./dist/remark/index.d.ts",
       "import": "./dist/remark/index.js",
-      "require": "./dist/remark/index.cjs"
+      "default": "./dist/remark/index.js"
     },
     "./components": {
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.js",
-      "require": "./dist/components/index.cjs"
+      "default": "./dist/components/index.js"
     }
   },
   "files": [

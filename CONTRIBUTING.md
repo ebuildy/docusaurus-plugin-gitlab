@@ -27,7 +27,7 @@ npm run build      # bundle the package into dist/
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint + markdownlint |
 | `npm run lint:fix` | Auto-fix lint issues |
-| `npm run build` | Build with tsup (ESM + CJS + types) |
+| `npm run build` | Build with tsup (ESM-only + types) |
 
 The example sites have their own READMEs:
 [`examples/site`](./examples/site/README.md) (mocked, drives the e2e) and

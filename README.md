@@ -189,7 +189,7 @@ components, so you can wrap or restyle them as needed.
 
 ```bash
 npm install
-npm run build       # bundle with tsup (ESM + CJS + types)
+npm run build       # bundle with tsup (ESM-only + types)
 npm run test        # unit tests (Vitest)
 npm run typecheck   # tsc --noEmit
 ```
