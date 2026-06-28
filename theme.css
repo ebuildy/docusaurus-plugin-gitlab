@@ -95,21 +95,66 @@
   background: var(--ifm-color-danger);
 }
 
-/* Releases: each release renders as its own card */
+/* Releases: a vertical timeline of release cards */
 .gitlab-releases {
+  position: relative;
   list-style: none;
-  padding: 0;
-  margin: 1rem 0;
+  margin: 1.5rem 0;
+  padding: 0 0 0 28px;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1.25rem;
+}
+/* the timeline rail */
+.gitlab-releases::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to bottom, var(--ifm-color-primary), var(--ifm-color-emphasis-300));
 }
 .gitlab-release {
+  position: relative;
   border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: 10px;
   padding: 1rem 1.25rem;
   background: var(--ifm-background-surface-color);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.gitlab-release:hover {
+  border-color: var(--ifm-color-primary);
+  transform: translateX(2px);
+}
+/* the node sitting on the rail */
+.gitlab-release::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: -28px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ifm-color-primary);
+  border: 2px solid var(--ifm-background-surface-color);
+  box-shadow: 0 0 0 2px var(--ifm-color-primary);
+}
+/* the connector from the rail to the card */
+.gitlab-release::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  left: -14px;
+  width: 14px;
+  height: 2px;
+  background: var(--ifm-color-emphasis-300);
+}
+/* make the latest release pop */
+.gitlab-release:first-child::before {
+  box-shadow: 0 0 0 2px var(--ifm-color-primary), 0 0 9px 1px var(--ifm-color-primary);
 }
 .gitlab-release-notes {
   margin-top: 0.5rem;
