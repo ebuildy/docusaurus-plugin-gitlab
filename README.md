@@ -13,7 +13,8 @@ tokens or network calls ever reach the browser, and pages stay fast.
 - ✅ README images **and badges are downloaded and localized** (offline-safe, frozen at build time)
 - ✅ On-disk caching, theme-aware (Infima) styling, graceful error fallbacks
 
-> Requires Docusaurus **3.x** and Node **18+** (Node **20.19+** recommended).
+> Requires Docusaurus **3.x** and Node **20, 22, or 24** (Docusaurus 3 itself
+> needs Node 20+).
 
 ## Installation
 

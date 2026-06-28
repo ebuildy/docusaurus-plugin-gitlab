@@ -5,8 +5,10 @@ you from clone to a green build.
 
 ## Prerequisites
 
-- **Node 18+** and **npm**
+- **Node 20, 22, or 24** and **npm** (Docusaurus 3 requires Node 20+)
 - A GitLab token is **not** required for development (the tests mock the API).
+- Optionally, a **Dev Container** (`.devcontainer/`) — open the repo in a container
+  with nvm preloaded with Node 20/22/24; switch with `nvm use 22`.
 
 ## Setup
 

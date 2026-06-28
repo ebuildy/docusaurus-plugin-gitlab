@@ -17,7 +17,8 @@ static HTML. The browser never holds a token or calls the GitLab API.
   Normal git usage is fine. CI runs on PRs and pushes to `main` via GitHub
   Actions (`.github/workflows/`); releases are automated with release-please and
   published to npm via OIDC trusted publishing — see CONTRIBUTING.md.
-- **Docusaurus 3 only** (MDX v3, unified ESM, Node 18+ `fetch`).
+- **Docusaurus 3 only** (MDX v3, unified ESM, native `fetch`). **Node 20, 22, 24**
+  (Docusaurus 3 requires Node 20+; the e2e build will not run on Node 18).
 - Prefer the latest versions of libraries.
 - ESM-first. Intra-package imports use explicit `.js` extensions
   (e.g. `import { Fallback } from "./Fallback.js"`) — required by the
