@@ -9,6 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "declaration": true,
+    "noEmit": true,
     "resolveJsonModule": true,
     "types": ["node", "vitest/globals"]
   },

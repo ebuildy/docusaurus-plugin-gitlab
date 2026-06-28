@@ -28,12 +28,14 @@ static HTML. The browser never holds a token or calls the GitLab API.
 
 ## Commands
 
-- `npm run build` — build the package with tsup (ESM + d.ts) into `dist/`.
-  The package is **ESM-only**: every remark/rehype/unified dependency is pure ESM,
-  so a CJS build would `require()` them — which breaks under Node's `require(ESM)`
-  interop (`unified().use()` receives `{ default: fn }` → "empty preset", failing
-  the Docusaurus build). Do not re-add a `cjs` tsup format or a `require` export
-  condition; `test/packaging.test.ts` guards this.
+- `npm run build` — compile with `tsc -p tsconfig.build.json` (ESM `.js` + `.d.ts`)
+  into `dist/`. The base `tsconfig.json` sets `noEmit: true` so a stray `tsc` can't
+  pollute `src/`; the build config flips `noEmit` off with `outDir: ./dist`.
+  The package is **ESM-only** (`module: ESNext`): every remark/rehype/unified
+  dependency is pure ESM, so a CJS build would `require()` them — which breaks
+  under Node's `require(ESM)` interop (`unified().use()` receives `{ default: fn }`
+  → "empty preset", failing the Docusaurus build). Do not add a CJS build or a
+  `require` export condition; `test/packaging.test.ts` guards this.
 - `npm run test` — run all tests (Vitest). Use `npx vitest run <file>` for one file.
 - `npm run typecheck` — `tsc --noEmit`.
 
@@ -85,8 +87,8 @@ docusaurus build
 - **Code highlighting** uses `prism-react-renderer` (a normal, SSR-safe npm
   dependency), NOT `@theme/CodeBlock`. Importing Docusaurus theme aliases
   (`@theme/*`) from this pre-bundled package breaks the Docusaurus SSR build with
-  `require.resolveWeak is not a function` — avoid them. (`tsup.config.ts` still
-  externalizes `@theme/*` / `@docusaurus/*` defensively.)
+  `require.resolveWeak is not a function` — avoid them. (The `tsc` build does not
+  bundle, so `@theme/*` / `@docusaurus/*` imports stay external automatically.)
 - **Component attribute values must be static literals** (`project="x/y"`,
   `limit={5}`, `lines="10-25"`). Dynamic expressions are rejected at build time
   so data can be fetched deterministically.
