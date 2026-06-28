@@ -176,6 +176,22 @@ syntax-highlighted code block (via `prism-react-renderer`).
 The token is read at build time only. Provide it via an environment variable
 (`GITLAB_TOKEN`) — never commit it.
 
+## Card theme
+
+The package ships an optional Docusaurus plugin that styles the embedded GitLab
+cards with a minimal, light/dark-aware theme. Register it in `plugins`:
+
+```ts
+import docusaurusGitlabTheme from "@ebuildy/docusaurus-plugin-gitlab/plugin";
+
+// docusaurus.config.ts
+plugins: [[docusaurusGitlabTheme, { theme: true }]],
+```
+
+`theme` defaults to `true`. Set it to `false` to opt out and keep the plain
+fallback styling. The theme follows your site's active light/dark mode — it reads
+Docusaurus's own `--ifm-*` variables and ships no client-side JavaScript.
+
 ## How it works
 
 A remark plugin walks the MDX syntax tree during `docusaurus build`, finds the

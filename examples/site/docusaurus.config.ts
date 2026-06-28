@@ -1,5 +1,6 @@
 import type { Config } from "@docusaurus/types";
 import { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
+import docusaurusGitlabTheme from "@ebuildy/docusaurus-plugin-gitlab/plugin";
 
 const config: Config = {
   title: "GitLab MDX Example",
@@ -31,6 +32,7 @@ const config: Config = {
       },
     ],
   ],
+  plugins: [[docusaurusGitlabTheme, { theme: true }]],
 };
 
 export default config;
