@@ -24,6 +24,11 @@ describe("resolveTheme", () => {
       /@ebuildy\/docusaurus-plugin-gitlab/,
     );
   });
+
+  it("ignores the id key that Docusaurus injects", () => {
+    expect(resolveTheme({ id: "default", theme: false } as any)).toEqual({ enabled: false });
+    expect(resolveTheme({ id: "default" } as any)).toEqual({ enabled: true });
+  });
 });
 
 describe("renderThemeCss", () => {

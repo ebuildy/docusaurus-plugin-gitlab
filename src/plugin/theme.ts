@@ -21,6 +21,8 @@ export const GL_CARD_VARS = [
 
 const schema = Joi.object({
   theme: Joi.boolean().optional(),
+  // Docusaurus injects `id` into every plugin's options; accept it.
+  id: Joi.string().optional(),
 });
 
 export function resolveTheme(input: GitlabThemeOptions | undefined): ResolvedTheme {
