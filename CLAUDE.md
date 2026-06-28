@@ -13,8 +13,10 @@ static HTML. The browser never holds a token or calls the GitLab API.
 
 ## Hard rules
 
-- **DO NOT use git.** Never run any git command (no `init`, `status`, `add`,
-  `commit`, anything). This repo is intentionally not a git repository.
+- **Git/GitHub:** This is a live GitHub repo (`ebuildy/docusaurus-plugin-gitlab`).
+  Normal git usage is fine. CI runs on PRs and pushes to `main` via GitHub
+  Actions (`.github/workflows/`); releases are automated with release-please and
+  published to npm via OIDC trusted publishing — see CONTRIBUTING.md.
 - **Docusaurus 3 only** (MDX v3, unified ESM, Node 18+ `fetch`).
 - Prefer the latest versions of libraries.
 - ESM-first. Intra-package imports use explicit `.js` extensions
