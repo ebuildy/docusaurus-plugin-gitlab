@@ -78,4 +78,51 @@ describe("rehypeGitlabToc", () => {
     // TOC link text is the heading's plain text, anchored to its slug.
     expect(html).toContain('<a href="#danger">Danger</a>');
   });
+
+  it("sidebar mode: assigns ids, emits no inline nav, strips the marker", async () => {
+    const md = "[[_TOC_]]\n\n## Install\n\n### Steps\n";
+    const html = await renderMarkdown(md, { tocMode: "sidebar" });
+    expect(html).toContain('<h2 id="install">');
+    expect(html).toContain('<h3 id="steps">');
+    expect(html).not.toContain("gitlab-md-toc");
+    expect(html).not.toContain("GITLAB_MD_TOC_PLACEHOLDER");
+  });
+
+  it("sidebar mode: assigns ids even without a marker", async () => {
+    const html = await renderMarkdown("## Install\n\n### Steps\n", { tocMode: "sidebar" });
+    expect(html).toContain('<h2 id="install">');
+    expect(html).toContain('<h3 id="steps">');
+    expect(html).not.toContain("gitlab-md-toc");
+  });
+
+  it("sidebar mode: collects heading entries into the provided array", async () => {
+    const collectToc: { level: number; id: string; text: string }[] = [];
+    await renderMarkdown("## Install\n\n### Steps\n", { tocMode: "sidebar", collectToc });
+    expect(collectToc).toEqual([
+      { level: 2, id: "install", text: "Install" },
+      { level: 3, id: "steps", text: "Steps" },
+    ]);
+  });
+
+  it("hidden mode: assigns ids but renders no nav and strips the marker", async () => {
+    const html = await renderMarkdown("[[_TOC_]]\n\n## Install\n", { tocMode: "hidden" });
+    expect(html).toContain('<h2 id="install">');
+    expect(html).not.toContain("gitlab-md-toc");
+    expect(html).not.toContain("GITLAB_MD_TOC_PLACEHOLDER");
+  });
+
+  it("inline mode: renders the nav above the first heading when no marker is present", async () => {
+    const html = await renderMarkdown("intro text\n\n## Install\n\n### Steps\n", { tocMode: "inline" });
+    expect(html).toContain('<nav class="gitlab-md-toc">');
+    expect(html).toContain('<a href="#install">Install</a>');
+    expect(html).toContain('<h2 id="install">');
+    expect(html.indexOf("gitlab-md-toc")).toBeLessThan(html.indexOf('<h2 id="install">'));
+  });
+
+  it("inline mode: replaces the marker in place when present", async () => {
+    const html = await renderMarkdown("## A\n\n[[_TOC_]]\n\n## B\n", { tocMode: "inline" });
+    expect(html).toContain('<nav class="gitlab-md-toc">');
+    expect(html.indexOf("gitlab-md-toc")).toBeGreaterThan(html.indexOf('<h2 id="a">'));
+    expect(html.indexOf("gitlab-md-toc")).toBeLessThan(html.indexOf('<h2 id="b">'));
+  });
 });
