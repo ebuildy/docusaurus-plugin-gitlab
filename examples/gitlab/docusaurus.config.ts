@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import type { Config } from "@docusaurus/types";
 import { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
+import remarkGemoji from "remark-gemoji";
 
 const require = createRequire(import.meta.url);
 
