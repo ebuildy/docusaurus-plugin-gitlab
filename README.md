@@ -111,11 +111,26 @@ localized; links resolve back to GitLab.
 |---|---|---|---|
 | `project` | string \| number | — | **Required.** |
 | `ref` | string | default branch | Branch, tag, or commit SHA |
+| `toc` | `"hidden" \| "inline" \| "sidebar"` | _auto_ | Where to render the table of contents |
 
 > **Table of contents:** if the README contains a GitLab `[[_TOC_]]` marker on its
 > own line, it is replaced at build time with a generated table of contents linking
 > to the document's `h2`–`h5` headings (which receive slug `id`s). This also works
-> for markdown embedded via `<GitlabFile>` and for release notes.
+> for markdown embedded via `<GitlabFile>` and for release notes. The `toc` prop
+> overrides this default: `toc="inline"` always renders the inline TOC (even without
+> a marker); `toc="sidebar"` renders the README's headings in the page's native
+> right-hand sidebar instead (merged with the page's own headings) and suppresses
+> the inline TOC; `toc="hidden"` renders no TOC and strips any marker. Omitting `toc`
+> keeps today's marker-driven behavior.
+>
+> ```mdx
+> <GitlabReadme project="group/repo" toc="sidebar" />
+> ```
+>
+> Note: in `sidebar` mode the README is injected as pre-rendered HTML, so
+> Docusaurus' broken-anchor checker can't see its heading anchors — harmless at the
+> default `onBrokenAnchors: "warn"` (build succeeds, links work), but would fail a
+> build configured with `onBrokenAnchors: "throw"`.
 
 <!-- -->
 

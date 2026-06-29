@@ -23,6 +23,7 @@ frozen at build time); links resolve back to GitLab.
 |---|---|---|---|
 | `project` | `string \| number` | — | **Required.** Project path or numeric ID. |
 | `ref` | `string` | default branch | Branch, tag, or commit SHA to read the README from. |
+| `toc` | `"hidden" \| "inline" \| "sidebar"` | _auto_ | Where to render the table of contents. Omitted = today's behavior (inline only if the README has a `[[_TOC_]]` marker). |
 
 ## Notes
 
@@ -33,5 +34,23 @@ frozen at build time); links resolve back to GitLab.
 
 ## Table of contents
 
-A `[[_TOC_]]` marker in the README is expanded into a real table of contents
-linking to the project's headings.
+By default a `[[_TOC_]]` marker in the README is expanded into an inline table of
+contents linking to the project's headings. The `toc` prop overrides this:
+
+- `toc="inline"` — always render the inline TOC, even without a `[[_TOC_]]` marker.
+- `toc="sidebar"` — render the README's headings in the page's right-hand sidebar,
+  like a normal Docusaurus page (merged with the page's own headings in document
+  order). No inline TOC is rendered.
+- `toc="hidden"` — never render a TOC; any `[[_TOC_]]` marker is stripped.
+
+```mdx
+<GitlabReadme project="group/repo" toc="sidebar" />
+```
+
+:::note Sidebar mode and broken-anchor checks
+In `sidebar` mode the README is injected as pre-rendered HTML, so Docusaurus'
+built-in anchor checker can't see the README's heading anchors. With the default
+`onBrokenAnchors: "warn"` the build still succeeds and the links work; if your site
+sets `onBrokenAnchors: "throw"`, use `inline` or `hidden` mode instead, or relax the
+setting.
+:::
