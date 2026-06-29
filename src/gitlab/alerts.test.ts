@@ -15,4 +15,20 @@ describe("rehypeGitlabAlerts", () => {
     expect(html).not.toContain("[!note]");
     expect(html).not.toContain("<blockquote>");
   });
+
+  it("reduces an inline-formatted custom title to plain text without leaking markup", async () => {
+    const md = "> [!note] **Bold Title**\n> Body text.\n";
+    const html = await renderMarkdown(md, {});
+    expect(html).toContain('<p class="gitlab-md-alert-title">Bold Title</p>');
+    expect(html).toContain("<p>Body text.</p>");
+    expect(html).not.toContain("<strong>");
+  });
+
+  it("does not leave a stray <br> when the marker line has trailing whitespace", async () => {
+    const md = "> [!note]   \n> Body text.\n";
+    const html = await renderMarkdown(md, {});
+    expect(html).toContain('<p class="gitlab-md-alert-title">Note</p>');
+    expect(html).toContain("<p>Body text.</p>");
+    expect(html).not.toContain("<br>");
+  });
 });
