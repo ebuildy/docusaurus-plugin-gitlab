@@ -2,7 +2,7 @@ import type { AssetManager } from "./assets";
 import type { FileCache } from "./cache";
 import type { GitLabClient } from "./client";
 import { renderMarkdown } from "./markdown";
-import type { TocEntry, TocMode } from "./toc";
+import type { TocEntry, TocMode } from "./toc.js";
 import type {
   FileData,
   IssueData,

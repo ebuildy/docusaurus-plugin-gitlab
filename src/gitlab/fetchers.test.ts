@@ -162,6 +162,7 @@ describe("fetchReadme", () => {
     expect(sidebar.toc).toBeDefined();
     expect(inline.toc).toBeUndefined();
     expect(inline.html).toContain("gitlab-md-toc");
+    expect(client.getFileRaw).toHaveBeenCalledTimes(2);
   });
 });
 
