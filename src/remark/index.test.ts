@@ -2,6 +2,7 @@ import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { describe, it, expect, vi } from "vitest";
+import { findTocExport, readTocItems } from "./toc-export";
 import remarkGitlab from "./index";
 
 vi.mock("../gitlab/fetchers.js", () => ({
@@ -56,5 +57,35 @@ describe("remarkGitlab", () => {
     const node = tree.children.find((c: any) => c.name === "GitlabIssues");
     const errAttr = node.attributes.find((a: any) => a.name === "error");
     expect(errAttr.value.value).toContain("api down");
+  });
+
+  it("merges sidebar README headings into the page toc export", async () => {
+    const { fetchReadme } = await import("../gitlab/fetchers.js");
+    (fetchReadme as any).mockResolvedValue({
+      ref: "main",
+      html: '<h2 id="install">Install</h2>',
+      toc: [{ level: 2, id: "install", text: "Install" }],
+    });
+    const src = [
+      'export const toc = [{ value: "Intro", id: "intro", level: 2, children: [] }];',
+      "",
+      '<GitlabReadme project="g/r" toc="sidebar" />',
+    ].join("\n");
+    const tree = await transform(src, { host: "https://gitlab.com", strict: true });
+    const found = findTocExport(tree)!;
+    expect(readTocItems(found.declarator.init).map((i: any) => i.id)).toContain("install");
+  });
+
+  it("does not touch the toc export for non-sidebar readmes", async () => {
+    const { fetchReadme } = await import("../gitlab/fetchers.js");
+    (fetchReadme as any).mockResolvedValue({ ref: "main", html: "<p>x</p>" });
+    const src = [
+      'export const toc = [{ value: "Intro", id: "intro", level: 2, children: [] }];',
+      "",
+      '<GitlabReadme project="g/r" toc="inline" />',
+    ].join("\n");
+    const tree = await transform(src, { host: "https://gitlab.com", strict: true });
+    const found = findTocExport(tree)!;
+    expect(readTocItems(found.declarator.init).map((i: any) => i.id)).toEqual(["intro"]);
   });
 });
