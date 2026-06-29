@@ -7,6 +7,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
+import { rehypeGitlabAlerts } from "./alerts.js";
 import { rehypeGitlabToc, TOC_PLACEHOLDER } from "./toc.js";
 
 export interface RenderOptions {
@@ -40,6 +41,7 @@ export async function renderMarkdown(md: string, opts: RenderOptions): Promise<s
     .use(rehypeRaw)
     .use(rehypeSanitize)
     .use(rehypeGitlabToc)
+    .use(rehypeGitlabAlerts)
     .use(collect)
     .use(rehypeStringify);
 

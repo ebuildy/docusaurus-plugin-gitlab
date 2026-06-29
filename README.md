@@ -117,6 +117,15 @@ localized; links resolve back to GitLab.
 > to the document's `h2`–`h5` headings (which receive slug `id`s). This also works
 > for markdown embedded via `<GitlabFile>` and for release notes.
 
+<!-- -->
+
+> **Alerts:** GitLab alert blockquotes are rendered as themed callouts. A blockquote
+> whose first line is `> [!note]`, `> [!tip]`, `> [!important]`, `> [!caution]`, or
+> `> [!warning]` becomes a `<div>` carrying both `gitlab-md-alert*` hook classes and
+> the Docusaurus/Infima `alert alert--<variant>` classes (so it inherits theme colors).
+> Type matching is case-insensitive; add text after the marker for a custom title, e.g.
+> `> [!warning] Data deletion`. This also works for `<GitlabFile>` markdown and release notes.
+
 ### `<GitlabReleases>`
 
 A list of releases with notes, dates, and asset links.
@@ -233,6 +242,8 @@ into your `src/css/custom.css` and edit freely. The class names you can target:
 | `gitlab-release-notes` / `gitlab-release-assets` | release body + asset links |
 | `gitlab-readme` | rendered README / markdown file |
 | `gitlab-md-toc` | generated `[[_TOC_]]` table of contents (`<nav>`) |
+| `gitlab-md-alert` / `gitlab-md-alert--<type>` | alert callout container + per-type modifier (also gets Infima `alert alert--<variant>`) |
+| `gitlab-md-alert-title` | alert title row |
 | `gitlab-fallback` | error fallback box |
 | `gitlab-code` / `gitlab-code-title` / `gitlab-code-pre` | code file embed |
 
