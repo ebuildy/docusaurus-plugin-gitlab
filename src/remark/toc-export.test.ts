@@ -24,6 +24,21 @@ describe("readTocItems / writeTocItems", () => {
     const arr = { type: "ArrayExpression", elements: [{ type: "SpreadElement" }] };
     expect(() => readTocItems(arr)).toThrow(TocSliceError);
   });
+
+  it("throws TocSliceError when a property value is not a literal", () => {
+    const arr = {
+      type: "ArrayExpression",
+      elements: [
+        {
+          type: "ObjectExpression",
+          properties: [
+            { type: "Property", key: { type: "Literal", value: "id" }, value: { type: "Identifier", name: "x" } },
+          ],
+        },
+      ],
+    };
+    expect(() => readTocItems(arr)).toThrow(TocSliceError);
+  });
 });
 
 describe("findTocExport / makeTocExportNode", () => {
