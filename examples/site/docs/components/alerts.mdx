@@ -4,9 +4,13 @@ title: Markdown alerts
 
 # Markdown alerts
 
-GitLab alert blockquotes embedded via `<GitlabReadme>` or `<GitlabFile>` render as
-themed callouts. The source markdown looks like this:
+When a GitLab README or file embedded via `<GitlabReadme>` or `<GitlabFile>` (or a
+release's notes) contains an *alert* blockquote, it is rendered at build time as a
+themed callout that reuses your theme's Infima `alert` classes.
 
+The alert source — written in the GitLab project, not on this page — looks like this:
+
+```markdown
 > [!note]
 > The following information is useful.
 
@@ -21,5 +25,9 @@ themed callouts. The source markdown looks like this:
 
 > [!warning] Data deletion
 > The following instructions will make your data unrecoverable.
+```
 
-Type matching is case-insensitive, and any text after the marker becomes a custom title.
+Type matching is case-insensitive, and any text after the marker becomes a custom
+title (for example, `Data deletion` above). Each alert renders as a
+`<div class="gitlab-md-alert gitlab-md-alert--<type> alert alert--<variant>">`, so it
+inherits your theme's callout colors.
