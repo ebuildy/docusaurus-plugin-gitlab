@@ -1,7 +1,7 @@
 import GithubSlugger from "github-slugger";
 import type { Root, Element, RootContent } from "hast";
 import { toString } from "hast-util-to-string";
-import { visit, EXIT } from "unist-util-visit";
+import { visit } from "unist-util-visit";
 
 /**
  * Token we substitute for a standalone `[[_TOC_]]` line BEFORE markdown parsing.
@@ -14,6 +14,16 @@ export const TOC_PLACEHOLDER = "GITLAB_MD_TOC_PLACEHOLDER";
 export type TocMode = "auto" | "inline" | "sidebar" | "hidden";
 
 const HEADING_LEVELS: Record<string, number> = { h2: 2, h3: 3, h4: 4, h5: 5 };
+
+function findFirstHeadingPosition(tree: Root): { parent: Root; index: number } | null {
+  for (let index = 0; index < tree.children.length; index++) {
+    const child = tree.children[index];
+    if (child.type === "element" && HEADING_LEVELS[child.tagName]) {
+      return { parent: tree, index };
+    }
+  }
+  return null;
+}
 
 export interface TocEntry {
   level: number;
@@ -102,18 +112,10 @@ export function rehypeGitlabToc(options: RehypeGitlabTocOptions = {}) {
       return;
     }
 
-    // inline without a marker: insert the nav above the first heading.
+    // inline without a marker: insert the nav above the first top-level heading.
     if (nav) {
-      let firstHeading: { parent: Root | Element; index: number } | null = null;
-      visit(tree, "element", (n: Element, idx, parent) => {
-        if (HEADING_LEVELS[n.tagName] && parent && typeof idx === "number") {
-          firstHeading = { parent: parent as Root | Element, index: idx };
-          return EXIT;
-        }
-        return undefined;
-      });
-      if (firstHeading !== null) {
-        const target: { parent: Root | Element; index: number } = firstHeading;
+      const target = findFirstHeadingPosition(tree);
+      if (target) {
         target.parent.children.splice(target.index, 0, structuredClone(nav) as RootContent);
       }
     }

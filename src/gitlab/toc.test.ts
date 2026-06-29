@@ -119,6 +119,14 @@ describe("rehypeGitlabToc", () => {
     expect(html.indexOf("gitlab-md-toc")).toBeLessThan(html.indexOf('<h2 id="install">'));
   });
 
+  it("inline mode: anchors the nav to the first top-level heading, not one inside a blockquote", async () => {
+    const html = await renderMarkdown("> ## Quoted\n\nintro\n\n## Real\n", { tocMode: "inline" });
+    // The nav must not be injected inside the blockquote.
+    const blockquote = html.slice(html.indexOf("<blockquote>"), html.indexOf("</blockquote>"));
+    expect(blockquote).not.toContain("gitlab-md-toc");
+    expect(html.indexOf("gitlab-md-toc")).toBeLessThan(html.indexOf('<h2 id="real">'));
+  });
+
   it("inline mode: replaces the marker in place when present", async () => {
     const html = await renderMarkdown("## A\n\n[[_TOC_]]\n\n## B\n", { tocMode: "inline" });
     expect(html).toContain('<nav class="gitlab-md-toc">');
