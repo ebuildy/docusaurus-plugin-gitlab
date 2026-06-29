@@ -35,10 +35,14 @@ function readItem(el: any): TocItem {
   for (const prop of el.properties) {
     if (prop.type !== "Property") throw new TocSliceError();
     const key = prop.key.type === "Identifier" ? prop.key.name : prop.key.value;
-    if (key === "value") item.value = String(prop.value.value);
-    else if (key === "id") item.id = String(prop.value.value);
-    else if (key === "level") item.level = Number(prop.value.value);
-    else if (key === "children") item.children = (prop.value.elements ?? []).map(readItem);
+    if (key === "children") {
+      item.children = (prop.value.elements ?? []).map(readItem);
+    } else if (key === "value" || key === "id" || key === "level") {
+      if (prop.value.type !== "Literal") throw new TocSliceError();
+      if (key === "value") item.value = String(prop.value.value);
+      else if (key === "id") item.id = String(prop.value.value);
+      else item.level = Number(prop.value.value);
+    }
   }
   return item;
 }
