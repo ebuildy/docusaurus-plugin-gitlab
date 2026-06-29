@@ -112,6 +112,11 @@ localized; links resolve back to GitLab.
 | `project` | string \| number | — | **Required.** |
 | `ref` | string | default branch | Branch, tag, or commit SHA |
 
+> **Table of contents:** if the README contains a GitLab `[[_TOC_]]` marker on its
+> own line, it is replaced at build time with a generated table of contents linking
+> to the document's `h2`–`h5` headings (which receive slug `id`s). This also works
+> for markdown embedded via `<GitlabFile>` and for release notes.
+
 ### `<GitlabReleases>`
 
 A list of releases with notes, dates, and asset links.
@@ -227,6 +232,7 @@ into your `src/css/custom.css` and edit freely. The class names you can target:
 | `gitlab-releases` / `gitlab-release` | releases list + each release card |
 | `gitlab-release-notes` / `gitlab-release-assets` | release body + asset links |
 | `gitlab-readme` | rendered README / markdown file |
+| `gitlab-md-toc` | generated `[[_TOC_]]` table of contents (`<nav>`) |
 | `gitlab-fallback` | error fallback box |
 | `gitlab-code` / `gitlab-code-title` / `gitlab-code-pre` | code file embed |
 
