@@ -71,4 +71,13 @@ describe("e2e: docusaurus build", () => {
     // README heading ids are present in the rendered body for the anchors to resolve.
     expect(html).toContain('id="install"');
   });
+
+  it("interleaves sidebar README headings after the page's own heading in document order", () => {
+    const html = readFileSync(join(siteDir, "build", "index.html"), "utf8");
+    // The page's own heading and the README headings all appear in the right-hand TOC...
+    expect(html).toContain('href="#overview"');
+    expect(html).toContain('href="#install"');
+    // ...and the README headings come AFTER the page heading that precedes the component.
+    expect(html.indexOf('href="#overview"')).toBeLessThan(html.indexOf('href="#install"'));
+  });
 });
