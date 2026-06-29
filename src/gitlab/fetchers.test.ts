@@ -117,6 +117,52 @@ describe("fetchReadme", () => {
     expect(client.getProject).not.toHaveBeenCalled();
     expect(client.getFileRaw).toHaveBeenCalledWith("g/r", "README.md", "v2");
   });
+
+  it("sidebar mode returns toc entries and assigns heading ids", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "## Install\n\n### Steps\n"),
+    };
+    const data = await fetchReadme(ctx(client), { project: "g/r", toc: "sidebar" });
+    expect(data.toc).toEqual([
+      { level: 2, id: "install", text: "Install" },
+      { level: 3, id: "steps", text: "Steps" },
+    ]);
+    expect(data.html).toContain('<h2 id="install">');
+  });
+
+  it("does not attach toc entries when toc is not 'sidebar'", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "## Install\n"),
+    };
+    const data = await fetchReadme(ctx(client), { project: "g/r", toc: "inline" });
+    expect(data.toc).toBeUndefined();
+    expect(data.html).toContain("gitlab-md-toc");
+  });
+
+  it("rejects an invalid toc value", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "## Install\n"),
+    };
+    await expect(fetchReadme(ctx(client), { project: "g/r", toc: "left" })).rejects.toThrow(
+      /"toc" must be one of/,
+    );
+  });
+
+  it("keys the cache by toc mode so different modes do not collide", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "## Install\n"),
+    };
+    const c = ctx(client);
+    const sidebar = await fetchReadme(c, { project: "g/r", toc: "sidebar" });
+    const inline = await fetchReadme(c, { project: "g/r", toc: "inline" });
+    expect(sidebar.toc).toBeDefined();
+    expect(inline.toc).toBeUndefined();
+    expect(inline.html).toContain("gitlab-md-toc");
+  });
 });
 
 describe("fetchFile", () => {

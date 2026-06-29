@@ -2,6 +2,7 @@ import type { AssetManager } from "./assets";
 import type { FileCache } from "./cache";
 import type { GitLabClient } from "./client";
 import { renderMarkdown } from "./markdown";
+import type { TocEntry, TocMode } from "./toc";
 import type {
   FileData,
   IssueData,
@@ -92,17 +93,32 @@ export async function fetchIssues(ctx: GitLabContext, attrs: Attrs): Promise<Iss
   });
 }
 
+function readTocMode(value: unknown): TocMode {
+  if (value === undefined) return "auto";
+  if (value === "hidden" || value === "inline" || value === "sidebar") return value;
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabReadme> "toc" must be one of ` +
+      `"hidden", "inline", "sidebar"; got ${JSON.stringify(value)}.`,
+  );
+}
+
 export async function fetchReadme(ctx: GitLabContext, attrs: Attrs): Promise<ReadmeData> {
   const project = String(attrs.project);
   const explicitRef = attrs.ref as string | undefined;
-  return memo(ctx, `readme:${project}:${explicitRef ?? "default"}`, async () => {
+  const tocMode = readTocMode(attrs.toc);
+  return memo(ctx, `readme:${project}:${explicitRef ?? "default"}:${tocMode}`, async () => {
     const ref =
       explicitRef ?? (await ctx.client.getProject(attrs.project as string | number)).default_branch;
     const md = await ctx.client.getFileRaw(attrs.project as string | number, "README.md", ref);
+    const collectToc: TocEntry[] = [];
     const html = await renderMarkdown(md, {
+      tocMode,
+      collectToc,
       transformImageSrc: (src) => ctx.assets.localize(src, ref, project),
     });
-    return { ref, html } satisfies ReadmeData;
+    const result: ReadmeData = { ref, html };
+    if (tocMode === "sidebar") result.toc = collectToc;
+    return result;
   });
 }
 
