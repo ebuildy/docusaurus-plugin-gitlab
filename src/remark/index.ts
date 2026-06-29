@@ -41,10 +41,10 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
       }
     });
 
-    const sidebarReadmes: { node: any; entries: any[] }[] = [];
+    const sidebarReadmes: { node: any; entries: any[]; order: number }[] = [];
 
     await Promise.all(
-      jobs.map(async ({ node }) => {
+      jobs.map(async ({ node }, order) => {
         const fetcher = COMPONENT_REGISTRY[node.name];
         const filePath = file?.path ?? "unknown.mdx";
         const attrs = parseAttributes(node.attributes ?? [], filePath);
@@ -52,7 +52,7 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
           const data = await fetcher(ctx, attrs);
           injectProp(node, "data", data);
           if (node.name === "GitlabReadme" && Array.isArray((data as any)?.toc)) {
-            sidebarReadmes.push({ node, entries: (data as any).toc });
+            sidebarReadmes.push({ node, entries: (data as any).toc, order });
           }
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -67,6 +67,9 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
       }),
     );
 
+    // Feed READMEs to the merge in document order, not fetch-completion order,
+    // so the merged sidebar TOC is deterministic across builds.
+    sidebarReadmes.sort((a, b) => a.order - b.order);
     mergeReadmeTocs(tree, sidebarReadmes);
   };
 }
