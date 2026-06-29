@@ -38,7 +38,10 @@ export async function startGitlabStub(): Promise<{ url: string; stop: () => Prom
       ]);
     }
     if (url.includes("/repository/files/README.md/raw")) {
-      return send("# Hello\n\nReadme body.\n\n![logo](./logo.png)", "text/plain");
+      return send(
+        "# Hello\n\nReadme body.\n\n## Install\n\nsetup\n\n## Usage\n\ngo\n\n![logo](./logo.png)",
+        "text/plain",
+      );
     }
     if (url.startsWith("/api/v4/projects/group%2Frepo")) {
       return send({
