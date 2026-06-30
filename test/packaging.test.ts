@@ -42,3 +42,12 @@ describe("packaging: ESM-only", () => {
     }
   });
 });
+
+describe("packaging: plugin default export", () => {
+  it("exposes a Docusaurus plugin as the package default export", async () => {
+    const mod = await import("../dist/index.js");
+    expect(typeof mod.default).toBe("function");
+    const plugin = mod.default({}, { host: "https://gitlab.example.com", cache: false });
+    expect(plugin.name).toBe("@ebuildy/docusaurus-plugin-gitlab");
+  });
+});
