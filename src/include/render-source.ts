@@ -3,6 +3,8 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
+import { applyLineRange, languageFromPath } from "../gitlab/code.js";
+import type { GitLabContext } from "../gitlab/fetchers.js";
 
 /** Remove a single leading YAML frontmatter block (--- … ---). */
 export function stripFrontmatter(md: string): string {
@@ -76,4 +78,52 @@ export async function transformProse(text: string, h: ProseHelpers): Promise<str
     return `[${label}](${h.absolutizeLink(url)}${title})`;
   });
   return escapeMdx(out);
+}
+
+const MD_EXT = /\.(?:md|mdx|markdown)$/i;
+
+function absolutizeFactory(host: string, project: string, ref: string) {
+  return (url: string) => {
+    const clean = url.replace(/^\.?\//, "");
+    return `${host}/${project}/-/blob/${ref}/${clean}`;
+  };
+}
+
+/** Walk code ranges verbatim, transform prose between them. */
+export async function processMarkdownSource(md: string, h: ProseHelpers): Promise<string> {
+  const ranges = codeRanges(md);
+  const out: string[] = [];
+  let cursor = 0;
+  for (const [start, end] of ranges) {
+    if (start < cursor) continue; // skip nested/overlapping ranges
+    out.push(await transformProse(md.slice(cursor, start), h));
+    out.push(md.slice(start, end));
+    cursor = end;
+  }
+  out.push(await transformProse(md.slice(cursor), h));
+  return out.join("");
+}
+
+export interface RenderSourceOptions {
+  ctx: GitLabContext;
+  project: string;
+  ref: string;
+  kind: "readme" | "file";
+  path?: string;
+  lineRange?: string;
+}
+
+/** Turn fetched GitLab content into MDX-safe markdown source text. */
+export async function renderSource(raw: string, o: RenderSourceOptions): Promise<string> {
+  const isMarkdown = o.kind === "readme" || (o.path != null && MD_EXT.test(o.path));
+  if (isMarkdown) {
+    const body = stripFrontmatter(raw);
+    return processMarkdownSource(body, {
+      localizeImage: (u) => o.ctx.assets.localize(u, o.ref, o.project),
+      absolutizeLink: absolutizeFactory(o.ctx.options.host, o.project, o.ref),
+    });
+  }
+  const sliced = applyLineRange(raw, o.lineRange);
+  const lang = languageFromPath(o.path ?? "");
+  return `\n\`\`\`${lang}\n${sliced}\n\`\`\`\n`;
 }
