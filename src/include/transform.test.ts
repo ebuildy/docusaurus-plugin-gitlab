@@ -107,6 +107,24 @@ describe("transformIncludes", () => {
     expect(out).not.toMatch(/<br>/);
   });
 
+  it("converts inline style attributes in a markdown include via the built-in fix", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => '<p style="color: red;">Red</p>',
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, {
+      strict: true,
+      fixInlineStyles: true,
+    });
+    expect(out).toContain('style={{ color: "red" }}');
+    expect(out).not.toContain('style="color: red;"');
+  });
+
   it("strips a Table of Contents section when stripToc is enabled", async () => {
     const ctx = {
       client: {

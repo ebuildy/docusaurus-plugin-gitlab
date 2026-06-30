@@ -59,6 +59,14 @@ describe("resolveOptions", () => {
     ).toBe(false);
   });
 
+  it("enables fixInlineStyles by default and lets it be disabled", () => {
+    expect(resolveOptions({ host: "https://gitlab.com" }, "production").fixInlineStyles).toBe(true);
+    expect(
+      resolveOptions({ host: "https://gitlab.com", fixInlineStyles: false }, "production")
+        .fixInlineStyles,
+    ).toBe(false);
+  });
+
   it("disables stripToc by default and lets it be enabled", () => {
     expect(resolveOptions({ host: "https://gitlab.com" }, "production").stripToc).toBe(false);
     expect(

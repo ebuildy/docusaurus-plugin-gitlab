@@ -4,6 +4,7 @@ import { parseInclude } from "./grammar.js";
 import {
   applyOutProcessors,
   fixAutolinks,
+  fixInlineStyles,
   fixVoidTags,
   stripTableOfContents,
   type OutProcessor,
@@ -18,6 +19,8 @@ export interface TransformOptions {
   fixAutolinks?: boolean;
   /** Prepend the built-in void-tag fix to the processors applied per markdown include. */
   fixVoidTags?: boolean;
+  /** Prepend the built-in inline-style fix to the processors applied per markdown include. */
+  fixInlineStyles?: boolean;
   /** Remove a redundant Table of Contents section from each markdown include. */
   stripToc?: boolean;
   /** Extra post-processors applied to the generated markdown of each markdown include. */
@@ -38,6 +41,7 @@ export async function transformIncludes(
     ...(options.stripToc ? [stripTableOfContents] : []),
     ...(options.fixAutolinks ? [fixAutolinks] : []),
     ...(options.fixVoidTags ? [fixVoidTags] : []),
+    ...(options.fixInlineStyles ? [fixInlineStyles] : []),
     ...(options.outProcessors ?? []),
   ];
 

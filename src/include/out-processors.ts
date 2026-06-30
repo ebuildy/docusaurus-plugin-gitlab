@@ -55,6 +55,48 @@ function selfCloseVoidTags(text: string): string {
  */
 export const fixVoidTags: OutProcessor = (md) => mapProseRegions(md, selfCloseVoidTags);
 
+// MDX treats raw HTML as JSX, where `style` must be an object, not a CSS string
+// (React: "The `style` prop expects a mapping … not a string"). Convert
+// `style="color: red"` into `style={{ color: "red" }}`.
+const STYLE_ATTR_RE = /style\s*=\s*"([^"]*)"|style\s*=\s*'([^']*)'/gi;
+
+function cssPropToJsKey(prop: string): string {
+  if (prop.startsWith("--")) return JSON.stringify(prop); // CSS custom property → quoted key
+  const camel = prop
+    .toLowerCase()
+    .replace(/^-ms-/, "ms-") // vendor `ms` prefix stays lowercase in React
+    .replace(/^-(webkit|moz|o)-/, (_m, v: string) => `${v[0].toUpperCase()}${v.slice(1)}-`)
+    .replace(/^-/, "")
+    .replace(/-([a-z])/g, (_m, c: string) => c.toUpperCase());
+  return camel;
+}
+
+function cssToStyleObject(css: string): string {
+  const entries: string[] = [];
+  for (const decl of css.split(";")) {
+    const colon = decl.indexOf(":");
+    if (colon === -1) continue;
+    const prop = decl.slice(0, colon).trim();
+    const value = decl.slice(colon + 1).trim();
+    if (!prop || !value) continue;
+    entries.push(`${cssPropToJsKey(prop)}: ${JSON.stringify(value)}`);
+  }
+  return `{{ ${entries.join(", ")} }}`;
+}
+
+function convertInlineStyles(text: string): string {
+  return text.replace(STYLE_ATTR_RE, (_m, dq?: string, sq?: string) => {
+    return `style=${cssToStyleObject(dq ?? sq ?? "")}`;
+  });
+}
+
+/**
+ * Built-in processor: convert HTML string `style="…"` attributes into JSX style
+ * objects (`style={{ … }}`) so MDX/React accepts them, leaving fenced/inline code
+ * untouched.
+ */
+export const fixInlineStyles: OutProcessor = (md) => mapProseRegions(md, convertInlineStyles);
+
 // A README's own "Table of Contents" is redundant with the one Docusaurus renders
 // in the right sidebar. Recognize a heading whose text is one of these.
 const TOC_TITLES = new Set(["table of contents", "contents", "toc"]);

@@ -39,7 +39,7 @@ export async function startGitlabStub(): Promise<{ url: string; stop: () => Prom
     }
     if (url.includes("/repository/files/README.md/raw")) {
       return send(
-        "# Hello :rocket:\n\nReadme body.\n\n## Table of Contents\n\n- [Jump to install](#install)\n- [Jump to usage](#usage)\n\n## Install\n\nsetup\n\n## Usage\n\ngo\n\nEmail: <contact@example.com>\n\n| Notes |\n| --- |\n| one<br>two |\n\n![logo](./logo.png)",
+        "# Hello :rocket:\n\nReadme body.\n\n## Table of Contents\n\n- [Jump to install](#install)\n- [Jump to usage](#usage)\n\n## Install\n\nsetup\n\n## Usage\n\ngo\n\nEmail: <contact@example.com>\n\n<p style=\"color: red;\">Red text via HTML</p>\n\n| Notes |\n| --- |\n| one<br>two |\n\n![logo](./logo.png)",
         "text/plain",
       );
     }

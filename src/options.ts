@@ -14,6 +14,9 @@ export interface PluginOptions {
   /** Self-close HTML void elements (`<br>` → `<br/>`) in included markdown so MDX
    *  accepts them. Default: `true`. */
   fixVoidTags?: boolean;
+  /** Convert HTML string `style="…"` attributes in included markdown into JSX style
+   *  objects (`style={{ … }}`) so MDX/React accepts them. Default: `true`. */
+  fixInlineStyles?: boolean;
   /** Remove a redundant "Table of Contents" section (and any `[[_TOC_]]` marker)
    *  from included markdown — Docusaurus renders its own. Default: `false`. */
   stripToc?: boolean;
@@ -31,6 +34,7 @@ export interface ResolvedOptions {
   assetBaseUrl: string;
   fixAutolinks: boolean;
   fixVoidTags: boolean;
+  fixInlineStyles: boolean;
   stripToc: boolean;
 }
 
@@ -49,6 +53,7 @@ const schema = Joi.object({
   assetBaseUrl: Joi.string().optional(),
   fixAutolinks: Joi.boolean().optional(),
   fixVoidTags: Joi.boolean().optional(),
+  fixInlineStyles: Joi.boolean().optional(),
   stripToc: Joi.boolean().optional(),
   outProcessors: Joi.array().items(Joi.function()).optional(),
 });
@@ -70,6 +75,7 @@ export function resolveOptions(
     assetBaseUrl: (opts.assetBaseUrl ?? "/gitlab-assets").replace(/\/+$/, ""),
     fixAutolinks: opts.fixAutolinks ?? true,
     fixVoidTags: opts.fixVoidTags ?? true,
+    fixInlineStyles: opts.fixInlineStyles ?? true,
     stripToc: opts.stripToc ?? false,
   };
 }

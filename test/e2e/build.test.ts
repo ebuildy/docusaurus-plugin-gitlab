@@ -99,5 +99,9 @@ describe("e2e: docusaurus build", () => {
     // site enables stripToc: true); Docusaurus renders its own sidebar TOC instead.
     expect(html).not.toContain("Jump to install");
     expect(html).not.toContain("Table of Contents");
+    // fixInlineStyles converted the README's HTML `style="color: red"` to a JSX style
+    // object — without it, React/MDX rejects the string `style` prop and the build fails.
+    expect(html).toContain("Red text via HTML");
+    expect(html).toMatch(/color:\s*red/i);
   });
 });

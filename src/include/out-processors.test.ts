@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   applyOutProcessors,
   fixAutolinks,
+  fixInlineStyles,
   fixVoidTags,
   getOutProcessors,
   registerOutProcessors,
@@ -63,6 +64,40 @@ describe("fixVoidTags", () => {
   it("leaves void tags inside code verbatim", async () => {
     expect(await fixVoidTags("use `<br>` and\n\n```\n<br>\n```\n")).toContain("`<br>`");
     expect(await fixVoidTags("```\n<br>\n```\n")).toContain("```\n<br>\n```");
+  });
+});
+
+describe("fixInlineStyles", () => {
+  it("converts a string style attribute to a JSX style object", async () => {
+    expect(await fixInlineStyles('<p style="color: red;">x</p>')).toBe(
+      '<p style={{ color: "red" }}>x</p>',
+    );
+  });
+
+  it("camelCases multiple declarations", async () => {
+    expect(await fixInlineStyles('<div style="margin-right: 1em; text-align: center">x</div>')).toBe(
+      '<div style={{ marginRight: "1em", textAlign: "center" }}>x</div>',
+    );
+  });
+
+  it("handles single-quoted attributes", async () => {
+    expect(await fixInlineStyles("<p style='color: blue'>x</p>")).toBe(
+      '<p style={{ color: "blue" }}>x</p>',
+    );
+  });
+
+  it("keeps a CSS custom property as a quoted key", async () => {
+    expect(await fixInlineStyles('<p style="--accent: #f00">x</p>')).toBe(
+      '<p style={{ "--accent": "#f00" }}>x</p>',
+    );
+  });
+
+  it("leaves tags without a style attribute untouched", async () => {
+    expect(await fixInlineStyles("<p>plain</p>")).toBe("<p>plain</p>");
+  });
+
+  it("leaves style attributes inside code verbatim", async () => {
+    expect(await fixInlineStyles('use `<p style="x">`')).toBe('use `<p style="x">`');
   });
 });
 

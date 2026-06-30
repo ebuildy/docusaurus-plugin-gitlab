@@ -263,6 +263,10 @@ valid MDX. Two built-in processors fix the common ones (both **on by default**):
 - **`fixVoidTags`** — self-closes HTML void elements like `<br>` or `<img …>`
   (which MDX rejects with _"Expected a closing tag for `<br>`"_) into `<br/>`.
   Disable with `fixVoidTags: false`.
+- **`fixInlineStyles`** — converts HTML string `style="…"` attributes (which MDX/React
+  reject with _"The `style` prop expects a mapping … not a string"_) into JSX style
+  objects: `style="color: red"` → `style={{ color: "red" }}`. Disable with
+  `fixInlineStyles: false`.
 
 Optionally, **`stripToc`** (default **off**) removes a README's own "Table of
 Contents" section (the heading plus its list, up to the next heading of the same or
@@ -305,6 +309,7 @@ caller's responsibility to preserve; the built-in `fixAutolinks` already skips i
 | `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from |
 | `fixAutolinks` | boolean | `true` | Rewrite CommonMark autolinks in included markdown to MDX-safe links (include placeholders only) |
 | `fixVoidTags` | boolean | `true` | Self-close HTML void elements (`<br>` → `<br/>`) in included markdown (include placeholders only) |
+| `fixInlineStyles` | boolean | `true` | Convert HTML string `style="…"` attributes to JSX style objects in included markdown |
 | `stripToc` | boolean | `false` | Remove a redundant "Table of Contents" section (and `[[_TOC_]]` marker) from included markdown |
 | `outProcessors` | `Array<(md: string) => string \| Promise<string>>` | `[]` | Extra post-processors for included markdown, run after the built-in fixes |
 
