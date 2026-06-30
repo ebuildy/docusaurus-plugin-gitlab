@@ -3,7 +3,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile } from "./fetchers";
+import {
+  fetchProjectInfo,
+  fetchReleases,
+  fetchIssues,
+  fetchReadme,
+  fetchFile,
+  fetchReadmeSource,
+  fetchFileSource,
+} from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -251,5 +259,40 @@ describe("fetchFile", () => {
     expect(data.kind).toBe("code");
     const code = data as Extract<typeof data, { kind: "code" }>;
     expect(code.language).toBe("weird");
+  });
+});
+
+function makeSourceCtx(overrides: Partial<any> = {}) {
+  const store = new Map<string, unknown>();
+  return {
+    client: {
+      getProject: async () => ({ default_branch: "main" }),
+      getFileRaw: async (_p: unknown, path: string, ref: string) => `RAW:${path}@${ref}`,
+      ...overrides.client,
+    },
+    cache: {
+      get: async (k: string) => store.get(k),
+      set: async (k: string, v: unknown) => void store.set(k, v),
+    },
+    assets: {} as any,
+    options: { host: "https://gitlab.example.com" },
+  } as any;
+}
+
+describe("fetchReadmeSource", () => {
+  it("fetches README.md raw at the default branch", async () => {
+    const r = await fetchReadmeSource(makeSourceCtx(), { project: "g/p" });
+    expect(r).toEqual({ raw: "RAW:README.md@main", ref: "main" });
+  });
+  it("honors an explicit ref", async () => {
+    const r = await fetchReadmeSource(makeSourceCtx(), { project: "g/p", ref: "v2" });
+    expect(r).toEqual({ raw: "RAW:README.md@v2", ref: "v2" });
+  });
+});
+
+describe("fetchFileSource", () => {
+  it("fetches an arbitrary file path", async () => {
+    const r = await fetchFileSource(makeSourceCtx(), { project: "g/p", path: "src/a.ts" });
+    expect(r).toEqual({ raw: "RAW:src/a.ts@main", ref: "main" });
   });
 });
