@@ -22,6 +22,9 @@ export default function gitlabPlugin(_context: unknown, options: PluginOptions) 
           rules: [
             {
               test: /\.mdx?$/,
+              // Must run before Docusaurus's MDX loader: `{@includeGitlab ...}`
+              // is not valid MDX, so the placeholder has to be substituted in the
+              // raw source text before MDX parsing.
               enforce: "pre" as const,
               use: [
                 {
