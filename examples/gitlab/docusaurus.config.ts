@@ -1,9 +1,18 @@
 import { createRequire } from "node:module";
 import type { Config } from "@docusaurus/types";
-import { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
+import gitlabPlugin, { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
 import remarkGemoji from "remark-gemoji";
 
 const require = createRequire(import.meta.url);
+
+// Live data: tolerate transient API/rate-limit issues by rendering a fallback
+// (for the JSX components) / inline warning (for include placeholders) instead
+// of failing the build. Shared by the remark plugin and the Docusaurus plugin.
+const gitlabOptions = {
+  host: process.env.GITLAB_HOST ?? "https://gitlab.com",
+  token: process.env.GITLAB_TOKEN,
+  strict: false,
+};
 
 // Live example: embeds REAL public content from gitlab.com.
 // No token is required for these public projects, but you can set GITLAB_TOKEN
@@ -15,6 +24,9 @@ const config: Config = {
   favicon: undefined,
   onBrokenLinks: "ignore",
   onBrokenMarkdownLinks: "ignore",
+  // The Docusaurus plugin powers the {@includeGitlabReadme} / {@includeGitlabFile}
+  // placeholders; the remark plugin below powers the <Gitlab*> JSX components.
+  plugins: [[gitlabPlugin, gitlabOptions]],
   presets: [
     [
       "classic",
@@ -22,18 +34,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/",
           sidebarPath: "./sidebars.ts",
-          remarkPlugins: [
-            [
-              remarkGitlab,
-              {
-                host: process.env.GITLAB_HOST ?? "https://gitlab.com",
-                token: process.env.GITLAB_TOKEN,
-                // Live data: tolerate transient API/rate-limit issues by rendering
-                // a fallback instead of failing the build.
-                strict: false,
-              },
-            ],
-          ],
+          remarkPlugins: [remarkGemoji, [remarkGitlab, gitlabOptions]],
         },
         blog: false,
         theme: {

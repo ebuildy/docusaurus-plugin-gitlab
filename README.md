@@ -191,6 +191,66 @@ syntax-highlighted code block (via `prism-react-renderer`).
 | `ref` | string | default branch | Branch, tag, or commit SHA |
 | `lines` | string | whole file | Line range for code files, e.g. `"10-25"` (1-based, inclusive) |
 
+## Include placeholders
+
+Besides the JSX components, you can embed GitLab **markdown** and **files** with
+text placeholders that are substituted **before** MDX parsing — so the content
+flows through Docusaurus's own pipeline (table of contents, emoji, admonitions,
+heading anchors, Prism highlighting, internal links) exactly as if you had written
+it by hand.
+
+### Setup
+
+Register the plugin once. This is separate from the remark plugin in
+[Setup](#setup) above — keep that for the JSX components:
+
+```ts
+// docusaurus.config.ts (ESM)
+import gitlabPlugin from "@ebuildy/docusaurus-plugin-gitlab";
+
+export default {
+  plugins: [
+    [
+      gitlabPlugin,
+      {
+        host: "https://gitlab.com",
+        token: process.env.GITLAB_TOKEN, // optional for public projects
+      },
+    ],
+  ],
+  // ...your presets, including remarkGitlab for the JSX components...
+};
+```
+
+The plugin also contributes `theme.css` automatically (via `getClientModules`),
+so the component/include styles load without a separate `customCss` entry.
+
+### Syntax
+
+| Placeholder | Effect |
+|---|---|
+| `{@includeGitlabReadme: group/sub/project}` | Inline the project README (default branch) |
+| `{@includeGitlabReadme: ref@group/sub/project}` | …at a branch, tag, or commit SHA |
+| `{@includeGitlabFile: group/sub/project/-/path/file.md}` | Inline a markdown file as markdown |
+| `{@includeGitlabFile: ref@group/sub/project/-/src/app.ts#L10-25}` | Inline a code file as a highlighted block (optional line range) |
+
+- The project path and the file path are separated by `/-/` — the same separator
+  GitLab uses in its URLs — which keeps nested subgroups unambiguous.
+- A leading `ref@` pins the content to a branch, tag, or commit SHA.
+- `{@includeGitlabFile}` decides by extension: `.md`/`.mdx`/`.markdown` are inlined
+  as markdown; everything else becomes a fenced, syntax-highlighted code block, with
+  an optional `#Lstart-end` line range (1-based, inclusive).
+- Images are downloaded and localized, and repo-relative links are rewritten to
+  absolute GitLab URLs — same as `<GitlabReadme>`.
+- Because the content becomes part of your page's markdown source, MDX-significant
+  characters in the remote content are escaped so a stray `{` or `<` can't break your
+  build. Code blocks are left verbatim.
+
+> **Placeholders vs. components:** reach for the placeholders when you want GitLab
+> markdown to render through Docusaurus's native pipeline (TOC, emoji, admonitions,
+> highlighting). Reach for `<GitlabReadme>` / `<GitlabFile>` when you want a
+> self-contained, pre-rendered HTML block. Both can coexist in the same site.
+
 ## Plugin options
 
 | Option | Type | Default | Description |

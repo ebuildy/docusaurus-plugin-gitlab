@@ -1,0 +1,23 @@
+---
+title: Includes
+---
+
+# Include placeholders
+
+These embeds use text placeholders that are substituted **before** MDX parsing,
+so the GitLab content flows through Docusaurus's own markdown pipeline — table of
+contents, emoji, heading anchors, and Prism highlighting all work natively.
+
+## A project README
+
+The whole README is inlined as markdown (its headings join this page's table of
+contents on the right):
+
+{@includeGitlabReadme: gitlab-org/api/client-go}
+
+## A source file as a highlighted block
+
+A non-markdown file is wrapped in a fenced code block with the language inferred
+from its extension; the `#L1-40` range trims it to the first 40 lines:
+
+{@includeGitlabFile: gitlab-org/api/client-go/-/gitlab.go#L1-40}
