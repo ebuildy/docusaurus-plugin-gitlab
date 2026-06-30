@@ -59,6 +59,14 @@ A new **Docusaurus plugin** (default export, `src/plugin/index.ts`) that:
    add a **single** `plugins` entry and get both placeholders and JSX components
    (packaging decision: "one plugin does both").
 
+**Integration risk to verify first:** Docusaurus exposes clean hooks for the webpack loader
+(`configureWebpack`) and `theme.css` (`getThemePath` / `injectHtmlTags`), but there is **no
+first-class API for one plugin to inject a remark plugin into content-docs' MDX config**.
+The first implementation task must confirm whether `remarkGitlab` can be auto-registered
+site-wide. If not, the fallback: the plugin auto-wires the **loader + theme**, and the
+`remarkGitlab` registration stays a documented one-line addition to the preset's
+`remarkPlugins`. The placeholder feature itself does not depend on this.
+
 The loader builds the GitLab context (`GitLabClient` + `FileCache` + `AssetManager`) once as
 a module-level singleton keyed by resolved options. Webpack loader options must be
 serializable, so the loader receives plain config (`host`, `token`, cache/asset settings)
