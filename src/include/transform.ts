@@ -11,16 +11,20 @@ export async function transformIncludes(
   ctx: GitLabContext,
   options: Pick<ResolvedOptions, "strict">,
 ): Promise<string> {
+  const matches = [...source.matchAll(PLACEHOLDER_RE)];
+  if (matches.length === 0) return source;
+
   const seen = new Map<string, { kind: "readme" | "file"; arg: string }>();
-  for (const m of source.matchAll(PLACEHOLDER_RE)) {
+  for (const m of matches) {
     seen.set(m[0], {
       kind: m[1] === "includeGitlabReadme" ? "readme" : "file",
       arg: m[2].trim(),
     });
   }
-  if (seen.size === 0) return source;
 
-  const entries = await Promise.all(
+  // Resolve each unique placeholder once (dedupe by full match text).
+  const replacements = new Map<string, string>();
+  await Promise.all(
     [...seen.entries()].map(async ([full, { kind, arg }]) => {
       try {
         const spec = parseInclude(kind, arg);
@@ -36,18 +40,23 @@ export async function transformIncludes(
           path: spec.path,
           lineRange: spec.lineRange,
         });
-        return [full, `\n\n${body}\n\n`] as const;
+        replacements.set(full, `\n\n${body}\n\n`);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (options.strict) {
           throw new Error(`@ebuildy/docusaurus-plugin-gitlab: ${full} failed — ${message}`);
         }
-        return [full, `\n\n> ⚠️ ${full} failed — ${message}\n\n`] as const;
+        replacements.set(full, `\n\n> ⚠️ ${full} failed — ${message}\n\n`);
       }
     }),
   );
 
-  let out = source;
-  for (const [full, text] of entries) out = out.split(full).join(text);
-  return out;
+  // Single pass over the ORIGINAL source by match position — injected bodies are never re-scanned.
+  let out = "";
+  let last = 0;
+  for (const m of matches) {
+    out += source.slice(last, m.index) + replacements.get(m[0])!;
+    last = (m.index ?? 0) + m[0].length;
+  }
+  return out + source.slice(last);
 }

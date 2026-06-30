@@ -46,4 +46,28 @@ describe("transformIncludes", () => {
     expect(out).toContain("> ⚠️");
     expect(out).toContain("failed");
   });
+
+  it("does not re-substitute a placeholder that appears inside another include's body", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async (_p: unknown, path: string) =>
+          path === "demo.txt"
+            ? "Example: {@includeGitlabReadme: g/p}"
+            : "# Title",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => `/a/${u}` },
+      options: { host: "https://gl" },
+    } as any;
+
+    const source = "{@includeGitlabFile: g/p/-/demo.txt}\n\n{@includeGitlabReadme: g/p}";
+    const out = await transformIncludes(source, ctx, { strict: true } as any);
+
+    // The literal placeholder text inside the code file's fenced body must survive verbatim,
+    // NOT be replaced by the README's rendered content.
+    expect(out).toContain("Example: {@includeGitlabReadme: g/p}");
+    // And the real second placeholder IS resolved to the README.
+    expect(out).toContain("# Title");
+  });
 });
