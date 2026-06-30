@@ -1,3 +1,4 @@
+import type { Root } from "mdast";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
@@ -10,14 +11,10 @@ export function stripFrontmatter(md: string): string {
 
 /** Character offset ranges [start, end) of fenced/indented/inline code in `md`. */
 export function codeRanges(md: string): Array<[number, number]> {
-  const tree = unified().use(remarkParse).use(remarkGfm).parse(md);
+  const tree = unified().use(remarkParse).use(remarkGfm).parse(md) as Root;
   const ranges: Array<[number, number]> = [];
-  visit(tree as never, (node: any) => {
-    if (
-      (node.type === "code" || node.type === "inlineCode") &&
-      node.position?.start?.offset != null &&
-      node.position?.end?.offset != null
-    ) {
+  visit(tree, ["code", "inlineCode"], (node) => {
+    if (node.position?.start?.offset != null && node.position?.end?.offset != null) {
       ranges.push([node.position.start.offset, node.position.end.offset]);
     }
   });
