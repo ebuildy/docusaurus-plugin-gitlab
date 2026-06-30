@@ -31,7 +31,7 @@ const LINK_KEEP = /^(?:https?:|mailto:|tel:|#|\/\/)/i;
 
 const MD_IMAGE_RE = /!\[([^\]]*)\]\(\s*([^)\s]+)((?:\s+"[^"]*")?)\s*\)/g;
 const MD_LINK_RE = /(?<!!)\[([^\]]*)\]\(\s*([^)\s]+)((?:\s+"[^"]*")?)\s*\)/g;
-const HTML_IMG_SRC_RE = /(<img\b[^>]*? src=")([^"]*)(")/gi;
+const HTML_IMG_SRC_RE = /(<img\b[^>]*?\ssrc=")([^"]*)(")/gi;
 
 async function replaceAsync(
   input: string,

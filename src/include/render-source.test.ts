@@ -61,4 +61,8 @@ describe("transformProse", () => {
     expect(await transformProse('<img src="./a.png">', helpers))
       .toBe('<img src="/gitlab-assets/._a.png">');
   });
+  it("localizes a multi-line html img src", async () => {
+    expect(await transformProse('<img\n  alt="x"\n  src="./a.png">', helpers))
+      .toBe('<img\n  alt="x"\n  src="/gitlab-assets/._a.png">');
+  });
 });
