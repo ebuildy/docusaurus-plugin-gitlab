@@ -44,4 +44,19 @@ describe("resolveOptions", () => {
       resolveOptions({ host: "https://gitlab.com", id: "default" } as any, "production"),
     ).not.toThrow();
   });
+
+  it("enables fixAutolinks by default and lets it be disabled", () => {
+    expect(resolveOptions({ host: "https://gitlab.com" }, "production").fixAutolinks).toBe(true);
+    expect(
+      resolveOptions({ host: "https://gitlab.com", fixAutolinks: false }, "production").fixAutolinks,
+    ).toBe(false);
+  });
+
+  it("accepts an outProcessors function array (and keeps it out of resolved)", () => {
+    const resolved = resolveOptions(
+      { host: "https://gitlab.com", outProcessors: [(md) => md] },
+      "production",
+    );
+    expect("outProcessors" in resolved).toBe(false);
+  });
 });

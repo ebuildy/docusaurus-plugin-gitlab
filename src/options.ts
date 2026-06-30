@@ -1,4 +1,5 @@
 import Joi from "joi";
+import type { OutProcessor } from "./include/out-processors.js";
 
 export interface PluginOptions {
   host: string;
@@ -7,6 +8,12 @@ export interface PluginOptions {
   cache?: { ttl: number } | false;
   assetDir?: string;
   assetBaseUrl?: string;
+  /** Convert CommonMark autolinks (`<https://…>`, `<a@b.com>`) in included markdown
+   *  to MDX-safe links so they don't break the build. Default: `true`. */
+  fixAutolinks?: boolean;
+  /** Extra post-processors applied to the markdown generated from includes,
+   *  in order, after the built-in `fixAutolinks` (when enabled). */
+  outProcessors?: OutProcessor[];
 }
 
 export interface ResolvedOptions {
@@ -16,6 +23,7 @@ export interface ResolvedOptions {
   cache: { ttl: number } | false;
   assetDir: string;
   assetBaseUrl: string;
+  fixAutolinks: boolean;
 }
 
 const schema = Joi.object({
@@ -31,6 +39,8 @@ const schema = Joi.object({
   cache: Joi.alternatives(Joi.object({ ttl: Joi.number().min(0).required() }), Joi.boolean().valid(false)).optional(),
   assetDir: Joi.string().optional(),
   assetBaseUrl: Joi.string().optional(),
+  fixAutolinks: Joi.boolean().optional(),
+  outProcessors: Joi.array().items(Joi.function()).optional(),
 });
 
 export function resolveOptions(
@@ -48,5 +58,6 @@ export function resolveOptions(
     cache: opts.cache === undefined ? { ttl: 3600 } : opts.cache,
     assetDir: opts.assetDir ?? "static/gitlab-assets",
     assetBaseUrl: (opts.assetBaseUrl ?? "/gitlab-assets").replace(/\/+$/, ""),
+    fixAutolinks: opts.fixAutolinks ?? true,
   };
 }

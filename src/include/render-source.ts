@@ -57,7 +57,25 @@ export function escapeMdx(s: string): string {
   return s
     .replace(/\{/g, "&#123;")
     .replace(/\}/g, "&#125;")
-    .replace(/<(?![a-z/!])/gi, "&lt;");
+    // Escape `<` unless it starts a real tag: an opening tag (`<div`), a closing
+    // tag (`</div`), or an HTML comment (`<!--`). A bare `<` or a stray `</`
+    // (e.g. `</ `, `</>`) is neutralized so it can't break MDX parsing.
+    .replace(/<(?![a-z]|\/[a-z]|!--)/gi, "&lt;");
+}
+
+/** Apply `fn` to every non-code region of `md`, leaving fenced/inline code verbatim. */
+export function mapProseRegions(md: string, fn: (prose: string) => string): string {
+  const ranges = codeRanges(md);
+  const out: string[] = [];
+  let cursor = 0;
+  for (const [start, end] of ranges) {
+    if (start < cursor) continue; // skip nested/overlapping ranges
+    out.push(fn(md.slice(cursor, start)));
+    out.push(md.slice(start, end));
+    cursor = end;
+  }
+  out.push(fn(md.slice(cursor)));
+  return out.join("");
 }
 
 /** Rewrite images/links and MDX-escape a non-code region of markdown. */
@@ -81,6 +99,11 @@ export async function transformProse(text: string, h: ProseHelpers): Promise<str
 }
 
 const MD_EXT = /\.(?:md|mdx|markdown)$/i;
+
+/** Whether an include's content is treated as markdown (vs. a fenced code block). */
+export function isMarkdownSource(kind: "readme" | "file", path?: string): boolean {
+  return kind === "readme" || (path != null && MD_EXT.test(path));
+}
 
 function absolutizeFactory(host: string, project: string, ref: string) {
   return (url: string) => {
@@ -115,8 +138,7 @@ export interface RenderSourceOptions {
 
 /** Turn fetched GitLab content into MDX-safe markdown source text. */
 export async function renderSource(raw: string, o: RenderSourceOptions): Promise<string> {
-  const isMarkdown = o.kind === "readme" || (o.path != null && MD_EXT.test(o.path));
-  if (isMarkdown) {
+  if (isMarkdownSource(o.kind, o.path)) {
     const body = stripFrontmatter(raw);
     return processMarkdownSource(body, {
       localizeImage: (u) => o.ctx.assets.localize(u, o.ref, o.project),

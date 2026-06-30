@@ -1,8 +1,12 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { registerOutProcessors } from "../include/out-processors.js";
 import { resolveOptions, type PluginOptions } from "../options.js";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Stable, serializable ids for in-process processor registration (see below).
+let processorSeq = 0;
 
 interface PluginContextLike {
   siteDir?: string;
@@ -12,6 +16,14 @@ export default function gitlabPlugin(context: unknown, options: PluginOptions) {
   const mode = process.env.NODE_ENV === "production" ? "production" : "development";
   const resolved = resolveOptions(options, mode);
   const siteDir = (context as PluginContextLike | undefined)?.siteDir ?? process.cwd();
+
+  // User `outProcessors` are functions, which can't survive webpack's
+  // serialization of loader options. Register them in-process under a plain
+  // string id and pass only the id to the loader. (The built-in autolink fix is
+  // driven separately by the serializable `resolved.fixAutolinks` boolean, so it
+  // never depends on this registry.)
+  const processorsId = `gitlab-out-${processorSeq++}`;
+  registerOutProcessors(processorsId, options.outProcessors ?? []);
 
   return {
     name: "@ebuildy/docusaurus-plugin-gitlab",
@@ -47,7 +59,7 @@ export default function gitlabPlugin(context: unknown, options: PluginOptions) {
               use: [
                 {
                   loader: path.resolve(dirname, "../include/loader.js"),
-                  options: { resolved },
+                  options: { resolved, processorsId },
                 },
               ],
             },

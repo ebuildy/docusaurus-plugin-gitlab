@@ -251,6 +251,39 @@ so the component/include styles load without a separate `customCss` entry.
 > highlighting). Reach for `<GitlabReadme>` / `<GitlabFile>` when you want a
 > self-contained, pre-rendered HTML block. Both can coexist in the same site.
 
+### Post-processing the generated markdown
+
+GitLab markdown sometimes contains CommonMark **autolinks** like
+`<https://example.com>` or `<contact@example.com>`. These are valid markdown but
+**not** valid MDX (`<contact…` is read as a JSX tag), so they would abort the build.
+The built-in **`fixAutolinks`** processor rewrites them into normal markdown links
+(`[contact@example.com](mailto:contact@example.com)`). It's **on by default**;
+disable it with `fixAutolinks: false`.
+
+Add your own transforms with `outProcessors` — each receives the generated markdown
+of a markdown include (after `fixAutolinks`) and returns the new markdown:
+
+```ts
+import gitlabPlugin, { fixAutolinks } from "@ebuildy/docusaurus-plugin-gitlab";
+
+plugins: [
+  [
+    gitlabPlugin,
+    {
+      host: "https://gitlab.com",
+      // fixAutolinks: false,            // opt out of the built-in
+      outProcessors: [
+        (md) => md.replace(/:tada:/g, "🎉"), // runs after fixAutolinks
+      ],
+    },
+  ],
+];
+```
+
+`outProcessors` receive the whole generated markdown string (sync or async) and run
+only on markdown includes (not on code-file fences). Fenced/inline code is the
+caller's responsibility to preserve; the built-in `fixAutolinks` already skips it.
+
 ## Plugin options
 
 | Option | Type | Default | Description |
@@ -261,6 +294,8 @@ so the component/include styles load without a separate `customCss` entry.
 | `cache` | `{ ttl: number }` \| `false` | `{ ttl: 3600 }` | On-disk cache TTL (seconds), or `false` to disable |
 | `assetDir` | string | `static/gitlab-assets` | Where README images/badges are downloaded |
 | `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from |
+| `fixAutolinks` | boolean | `true` | Rewrite CommonMark autolinks in included markdown to MDX-safe links (include placeholders only) |
+| `outProcessors` | `Array<(md: string) => string \| Promise<string>>` | `[]` | Extra post-processors for included markdown, run after `fixAutolinks` |
 
 The token is read at build time only. Provide it via an environment variable
 (`GITLAB_TOKEN`) — never commit it.

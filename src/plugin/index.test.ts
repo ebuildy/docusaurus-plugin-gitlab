@@ -1,8 +1,14 @@
 import { describe, it, expect } from "vitest";
+import { getOutProcessors } from "../include/out-processors.js";
 import gitlabPlugin from "./index.js";
 
 const ctx = { siteDir: "/site" } as any;
 const opts = { host: "https://gitlab.example.com", cache: false } as any;
+
+const ruleOptions = (o: any) => {
+  const wp = gitlabPlugin(ctx, o).configureWebpack!({} as any, false, {} as any);
+  return (wp.module!.rules as any[])[0].use[0].options;
+};
 
 describe("gitlabPlugin", () => {
   it("has the package name", () => {
@@ -55,5 +61,18 @@ describe("gitlabPlugin", () => {
 
   it("validates options eagerly", () => {
     expect(() => gitlabPlugin(ctx, { host: "not-a-url" } as any)).toThrow();
+  });
+
+  it("drives the built-in fixAutolinks via resolved options (default on)", () => {
+    expect(ruleOptions(opts).resolved.fixAutolinks).toBe(true);
+    expect(ruleOptions({ ...opts, fixAutolinks: false }).resolved.fixAutolinks).toBe(false);
+  });
+
+  it("registers user outProcessors under the loader's processorsId", () => {
+    const user = (md: string) => md;
+    const o = { host: "https://gl.custom.example.com", cache: false, outProcessors: [user] } as any;
+    const { processorsId } = ruleOptions(o);
+    expect(typeof processorsId).toBe("string");
+    expect(getOutProcessors(processorsId)).toEqual([user]);
   });
 });

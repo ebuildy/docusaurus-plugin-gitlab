@@ -88,5 +88,9 @@ describe("e2e: docusaurus build", () => {
     expect(html).toMatch(/<h2[^>]+id="usage"/);
     // Native emoji from remark-gemoji:
     expect(html).toContain("🚀");
+    // The built-in fixAutolinks out-processor rewrote the README's CommonMark
+    // email autolink (<contact@example.com>) into a real link — without it, the
+    // bare `<contact@…>` would be parsed as JSX and abort the MDX build.
+    expect(html).toContain("mailto:contact@example.com");
   });
 });

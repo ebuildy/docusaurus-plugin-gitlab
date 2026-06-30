@@ -45,6 +45,9 @@ describe("escapeMdx", () => {
     expect(escapeMdx("a < b and <img> and </p> and <!-- c -->"))
       .toBe("a &lt; b and <img> and </p> and <!-- c -->");
   });
+  it("escapes a stray </ that is not a real closing tag", () => {
+    expect(escapeMdx("and/or </ then </> done")).toBe("and/or &lt;/ then &lt;/> done");
+  });
 });
 
 describe("transformProse", () => {

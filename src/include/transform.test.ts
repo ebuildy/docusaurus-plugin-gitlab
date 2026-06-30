@@ -70,4 +70,57 @@ describe("transformIncludes", () => {
     // And the real second placeholder IS resolved to the README.
     expect(out).toContain("# Title");
   });
+
+  it("applies the autolink fix to a markdown include's generated body", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "Email: <a@b.com>",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, {
+      strict: true,
+      fixAutolinks: true,
+    });
+    expect(out).toContain("[a@b.com](mailto:a@b.com)");
+    expect(out).not.toContain("<a@b.com>");
+  });
+
+  it("runs a user outProcessor after the built-in fix, in order", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "x",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, {
+      strict: true,
+      outProcessors: [(md) => `${md.trim()} [processed]`],
+    });
+    expect(out).toContain("x [processed]");
+  });
+
+  it("does not run processors on a code-file include", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "url := <a@b.com>\n",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabFile: g/p/-/main.go}", ctx, {
+      strict: true,
+      fixAutolinks: true,
+    });
+    // Code content is fenced verbatim — the autolink-looking text is left as-is.
+    expect(out).toContain("url := <a@b.com>");
+  });
 });

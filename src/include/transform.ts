@@ -1,18 +1,33 @@
 import type { GitLabContext } from "../gitlab/fetchers.js";
 import { fetchFileSource, fetchReadmeSource } from "../gitlab/fetchers.js";
-import type { ResolvedOptions } from "../options.js";
 import { parseInclude } from "./grammar.js";
-import { renderSource } from "./render-source.js";
+import { applyOutProcessors, fixAutolinks, type OutProcessor } from "./out-processors.js";
+import { isMarkdownSource, renderSource } from "./render-source.js";
 
 const PLACEHOLDER_RE = /\{@(includeGitlabReadme|includeGitlabFile):([^}]+)\}/g;
+
+export interface TransformOptions {
+  strict: boolean;
+  /** Prepend the built-in autolink fix to the processors applied per markdown include. */
+  fixAutolinks?: boolean;
+  /** Extra post-processors applied to the generated markdown of each markdown include. */
+  outProcessors?: OutProcessor[];
+}
 
 export async function transformIncludes(
   source: string,
   ctx: GitLabContext,
-  options: Pick<ResolvedOptions, "strict">,
+  options: TransformOptions,
 ): Promise<string> {
   const matches = [...source.matchAll(PLACEHOLDER_RE)];
   if (matches.length === 0) return source;
+
+  // The built-in autolink fix is driven by a serializable flag (so it reliably
+  // crosses the webpack loader boundary); user processors come from the registry.
+  const processors: OutProcessor[] = [
+    ...(options.fixAutolinks ? [fixAutolinks] : []),
+    ...(options.outProcessors ?? []),
+  ];
 
   const seen = new Map<string, { kind: "readme" | "file"; arg: string }>();
   for (const m of matches) {
@@ -32,7 +47,7 @@ export async function transformIncludes(
           kind === "readme"
             ? await fetchReadmeSource(ctx, { project: spec.project, ref: spec.ref })
             : await fetchFileSource(ctx, { project: spec.project, path: spec.path!, ref: spec.ref });
-        const body = await renderSource(raw, {
+        let body = await renderSource(raw, {
           ctx,
           project: spec.project,
           ref,
@@ -40,6 +55,9 @@ export async function transformIncludes(
           path: spec.path,
           lineRange: spec.lineRange,
         });
+        if (processors.length && isMarkdownSource(kind, spec.path)) {
+          body = await applyOutProcessors(body, processors);
+        }
         replacements.set(full, `\n\n${body}\n\n`);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
