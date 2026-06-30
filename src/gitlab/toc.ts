@@ -6,25 +6,51 @@ import { visit } from "unist-util-visit";
 /**
  * Token we substitute for a standalone `[[_TOC_]]` line BEFORE markdown parsing.
  * Underscores inside a word are not emphasis, so this survives the pipeline
- * intact as plain paragraph text — unlike `[[_TOC_]]`, whose underscores would
- * be parsed into `<em>`.
+ * intact as plain paragraph text.
  */
 export const TOC_PLACEHOLDER = "GITLAB_MD_TOC_PLACEHOLDER";
 
+/** Where the README's table of contents is rendered. */
+export type TocMode = "auto" | "inline" | "sidebar" | "hidden";
+
 const HEADING_LEVELS: Record<string, number> = { h2: 2, h3: 3, h4: 4, h5: 5 };
 
-interface TocEntry {
+function findFirstHeadingPosition(tree: Root): { parent: Root; index: number } | null {
+  for (let index = 0; index < tree.children.length; index++) {
+    const child = tree.children[index];
+    if (child.type === "element" && HEADING_LEVELS[child.tagName]) {
+      return { parent: tree, index };
+    }
+  }
+  return null;
+}
+
+export interface TocEntry {
   level: number;
   id: string;
   text: string;
 }
 
+export interface RehypeGitlabTocOptions {
+  /** Defaults to "auto" (today's marker-driven behavior). */
+  mode?: TocMode;
+  /** When set in "sidebar" mode, collected heading entries are pushed here. */
+  collect?: TocEntry[];
+}
+
 /**
  * Rehype plugin. Must run AFTER rehype-sanitize so the ids/anchors it generates
- * are not clobbered by the sanitize schema. No-op unless a placeholder paragraph
- * is present (keeps heading-id injection scoped to documents that use the marker).
+ * are not clobbered by the sanitize schema.
+ *
+ * - auto: today's behavior — no-op unless a `[[_TOC_]]` placeholder is present;
+ *   then assign heading ids and replace the marker with an inline nav.
+ * - inline: always assign ids and render the nav (at the marker if present,
+ *   else above the first heading).
+ * - sidebar: assign ids, strip the marker, push entries into `collect`, no nav.
+ * - hidden: assign ids, strip the marker, no nav.
  */
-export function rehypeGitlabToc() {
+export function rehypeGitlabToc(options: RehypeGitlabTocOptions = {}) {
+  const mode: TocMode = options.mode ?? "auto";
   return (tree: Root) => {
     const placeholders: { parent: Root | Element; index: number }[] = [];
     visit(tree, "element", (node, index, parent) => {
@@ -37,8 +63,13 @@ export function rehypeGitlabToc() {
         placeholders.push({ parent: parent as Root | Element, index });
       }
     });
-    if (placeholders.length === 0) return;
 
+    const hasMarker = placeholders.length > 0;
+
+    // Auto mode keeps today's behavior: do nothing unless the marker is present.
+    if (mode === "auto" && !hasMarker) return;
+
+    // Assign ids to h2-h5 and collect entries (needed by every active mode).
     const slugger = new GithubSlugger();
     const entries: TocEntry[] = [];
     visit(tree, "element", (node: Element) => {
@@ -58,14 +89,34 @@ export function rehypeGitlabToc() {
       entries.push({ level, id, text });
     });
 
+    if (mode === "sidebar" && options.collect) {
+      options.collect.push(...entries);
+    }
+
+    // Sidebar/hidden render no inline nav; strip the marker if present.
+    if (mode === "sidebar" || mode === "hidden") {
+      for (const { parent, index } of placeholders.reverse()) {
+        parent.children.splice(index, 1);
+      }
+      return;
+    }
+
     const nav = buildToc(entries);
 
-    // Splice back-to-front so earlier indices stay valid.
-    for (const { parent, index } of placeholders.reverse()) {
-      if (nav) {
-        parent.children.splice(index, 1, structuredClone(nav) as RootContent);
-      } else {
-        parent.children.splice(index, 1);
+    // auto-with-marker and inline-with-marker: replace the marker with the nav.
+    if (hasMarker) {
+      for (const { parent, index } of placeholders.reverse()) {
+        if (nav) parent.children.splice(index, 1, structuredClone(nav) as RootContent);
+        else parent.children.splice(index, 1);
+      }
+      return;
+    }
+
+    // inline without a marker: insert the nav above the first top-level heading.
+    if (nav) {
+      const target = findFirstHeadingPosition(tree);
+      if (target) {
+        target.parent.children.splice(target.index, 0, structuredClone(nav) as RootContent);
       }
     }
   };
