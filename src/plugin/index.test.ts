@@ -63,9 +63,11 @@ describe("gitlabPlugin", () => {
     expect(() => gitlabPlugin(ctx, { host: "not-a-url" } as any)).toThrow();
   });
 
-  it("drives the built-in fixAutolinks via resolved options (default on)", () => {
+  it("drives the built-in fixes via resolved options (default on)", () => {
     expect(ruleOptions(opts).resolved.fixAutolinks).toBe(true);
+    expect(ruleOptions(opts).resolved.fixVoidTags).toBe(true);
     expect(ruleOptions({ ...opts, fixAutolinks: false }).resolved.fixAutolinks).toBe(false);
+    expect(ruleOptions({ ...opts, fixVoidTags: false }).resolved.fixVoidTags).toBe(false);
   });
 
   it("registers user outProcessors under the loader's processorsId", () => {

@@ -20,6 +20,7 @@ export default function gitlabIncludeLoader(this: LoaderThis, source: string): v
   const options = {
     strict: resolved.strict,
     fixAutolinks: resolved.fixAutolinks,
+    fixVoidTags: resolved.fixVoidTags,
     outProcessors: processorsId ? getOutProcessors(processorsId) : [],
   };
   transformIncludes(source, getContext(resolved), options).then(

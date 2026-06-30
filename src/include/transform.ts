@@ -1,7 +1,7 @@
 import type { GitLabContext } from "../gitlab/fetchers.js";
 import { fetchFileSource, fetchReadmeSource } from "../gitlab/fetchers.js";
 import { parseInclude } from "./grammar.js";
-import { applyOutProcessors, fixAutolinks, type OutProcessor } from "./out-processors.js";
+import { applyOutProcessors, fixAutolinks, fixVoidTags, type OutProcessor } from "./out-processors.js";
 import { isMarkdownSource, renderSource } from "./render-source.js";
 
 const PLACEHOLDER_RE = /\{@(includeGitlabReadme|includeGitlabFile):([^}]+)\}/g;
@@ -10,6 +10,8 @@ export interface TransformOptions {
   strict: boolean;
   /** Prepend the built-in autolink fix to the processors applied per markdown include. */
   fixAutolinks?: boolean;
+  /** Prepend the built-in void-tag fix to the processors applied per markdown include. */
+  fixVoidTags?: boolean;
   /** Extra post-processors applied to the generated markdown of each markdown include. */
   outProcessors?: OutProcessor[];
 }
@@ -26,6 +28,7 @@ export async function transformIncludes(
   // crosses the webpack loader boundary); user processors come from the registry.
   const processors: OutProcessor[] = [
     ...(options.fixAutolinks ? [fixAutolinks] : []),
+    ...(options.fixVoidTags ? [fixVoidTags] : []),
     ...(options.outProcessors ?? []),
   ];
 

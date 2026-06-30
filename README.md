@@ -253,15 +253,19 @@ so the component/include styles load without a separate `customCss` entry.
 
 ### Post-processing the generated markdown
 
-GitLab markdown sometimes contains CommonMark **autolinks** like
-`<https://example.com>` or `<contact@example.com>`. These are valid markdown but
-**not** valid MDX (`<contact…` is read as a JSX tag), so they would abort the build.
-The built-in **`fixAutolinks`** processor rewrites them into normal markdown links
-(`[contact@example.com](mailto:contact@example.com)`). It's **on by default**;
-disable it with `fixAutolinks: false`.
+GitLab markdown sometimes uses constructs that are valid CommonMark but **not**
+valid MDX. Two built-in processors fix the common ones (both **on by default**):
+
+- **`fixAutolinks`** — rewrites CommonMark autolinks like `<https://example.com>`
+  or `<contact@example.com>` (which MDX reads as JSX tags) into normal markdown
+  links (`[contact@example.com](mailto:contact@example.com)`). Disable with
+  `fixAutolinks: false`.
+- **`fixVoidTags`** — self-closes HTML void elements like `<br>` or `<img …>`
+  (which MDX rejects with _"Expected a closing tag for `<br>`"_) into `<br/>`.
+  Disable with `fixVoidTags: false`.
 
 Add your own transforms with `outProcessors` — each receives the generated markdown
-of a markdown include (after `fixAutolinks`) and returns the new markdown:
+of a markdown include (after the built-in fixes) and returns the new markdown:
 
 ```ts
 import gitlabPlugin, { fixAutolinks } from "@ebuildy/docusaurus-plugin-gitlab";
@@ -295,7 +299,8 @@ caller's responsibility to preserve; the built-in `fixAutolinks` already skips i
 | `assetDir` | string | `static/gitlab-assets` | Where README images/badges are downloaded |
 | `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from |
 | `fixAutolinks` | boolean | `true` | Rewrite CommonMark autolinks in included markdown to MDX-safe links (include placeholders only) |
-| `outProcessors` | `Array<(md: string) => string \| Promise<string>>` | `[]` | Extra post-processors for included markdown, run after `fixAutolinks` |
+| `fixVoidTags` | boolean | `true` | Self-close HTML void elements (`<br>` → `<br/>`) in included markdown (include placeholders only) |
+| `outProcessors` | `Array<(md: string) => string \| Promise<string>>` | `[]` | Extra post-processors for included markdown, run after the built-in fixes |
 
 The token is read at build time only. Provide it via an environment variable
 (`GITLAB_TOKEN`) — never commit it.

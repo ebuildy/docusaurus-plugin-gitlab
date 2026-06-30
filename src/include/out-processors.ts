@@ -28,6 +28,28 @@ function convertAutolinks(text: string): string {
  */
 export const fixAutolinks: OutProcessor = (md) => mapProseRegions(md, convertAutolinks);
 
+// HTML void elements never have a closing tag, but MDX requires them to be
+// self-closing (`<br/>`). GitLab/GitHub markdown writes them unclosed (`<br>`),
+// which MDX rejects ("Expected a closing tag for `<br>`"), so normalize them.
+const VOID_ELEMENTS = "area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr";
+const VOID_TAG_RE = new RegExp(`<(${VOID_ELEMENTS})\\b([^>]*)>`, "gi");
+
+function selfCloseVoidTags(text: string): string {
+  return text.replace(VOID_TAG_RE, (_m, name: string, rest: string) => {
+    // Drop trailing whitespace and a trailing `/` (already self-closed), then
+    // re-emit in MDX's required `<name … />` form.
+    const attrs = rest.replace(/\s*\/?$/, "");
+    return `<${name}${attrs} />`;
+  });
+}
+
+/**
+ * Built-in processor: self-close HTML void elements (`<br>` → `<br/>`, `<img …>` →
+ * `<img … />`) so MDX accepts them, leaving fenced/inline code untouched. Already
+ * self-closed tags are left effectively unchanged.
+ */
+export const fixVoidTags: OutProcessor = (md) => mapProseRegions(md, selfCloseVoidTags);
+
 /** Run processors in order over `md`. */
 export async function applyOutProcessors(md: string, procs: OutProcessor[]): Promise<string> {
   let out = md;
@@ -36,8 +58,8 @@ export async function applyOutProcessors(md: string, procs: OutProcessor[]): Pro
 }
 
 // Functions can't be threaded through webpack loader options (they aren't
-// serializable), so the plugin registers them here (in-process) keyed by the
-// resolved-options JSON, and the loader reads them back by the same key.
+// serializable), so the plugin registers them here (in-process) keyed by a plain
+// string id, and the loader reads them back by that same id.
 const registry = new Map<string, OutProcessor[]>();
 
 export function registerOutProcessors(key: string, procs: OutProcessor[]): void {

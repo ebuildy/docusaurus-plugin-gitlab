@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   applyOutProcessors,
   fixAutolinks,
+  fixVoidTags,
   getOutProcessors,
   registerOutProcessors,
   type OutProcessor,
@@ -37,6 +38,30 @@ describe("fixAutolinks", () => {
 
   it("leaves an autolink inside inline code verbatim", async () => {
     expect(await fixAutolinks("use `<a@b.com>` here")).toBe("use `<a@b.com>` here");
+  });
+});
+
+describe("fixVoidTags", () => {
+  it("self-closes a bare <br>", async () => {
+    expect(await fixVoidTags("a<br>b")).toBe("a<br />b");
+  });
+
+  it("self-closes a void element with attributes", async () => {
+    expect(await fixVoidTags('<img src="x.png">')).toBe('<img src="x.png" />');
+  });
+
+  it("leaves an already self-closed tag effectively unchanged", async () => {
+    expect(await fixVoidTags("a<br/>b")).toBe("a<br />b");
+    expect(await fixVoidTags("a<br />b")).toBe("a<br />b");
+  });
+
+  it("does not touch non-void tags", async () => {
+    expect(await fixVoidTags("<div>x</div>")).toBe("<div>x</div>");
+  });
+
+  it("leaves void tags inside code verbatim", async () => {
+    expect(await fixVoidTags("use `<br>` and\n\n```\n<br>\n```\n")).toContain("`<br>`");
+    expect(await fixVoidTags("```\n<br>\n```\n")).toContain("```\n<br>\n```");
   });
 });
 

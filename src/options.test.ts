@@ -52,6 +52,13 @@ describe("resolveOptions", () => {
     ).toBe(false);
   });
 
+  it("enables fixVoidTags by default and lets it be disabled", () => {
+    expect(resolveOptions({ host: "https://gitlab.com" }, "production").fixVoidTags).toBe(true);
+    expect(
+      resolveOptions({ host: "https://gitlab.com", fixVoidTags: false }, "production").fixVoidTags,
+    ).toBe(false);
+  });
+
   it("accepts an outProcessors function array (and keeps it out of resolved)", () => {
     const resolved = resolveOptions(
       { host: "https://gitlab.com", outProcessors: [(md) => md] },

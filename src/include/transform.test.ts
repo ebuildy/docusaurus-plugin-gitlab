@@ -89,6 +89,24 @@ describe("transformIncludes", () => {
     expect(out).not.toContain("<a@b.com>");
   });
 
+  it("self-closes void tags in a markdown include via the built-in fix", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "line one<br>line two",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, {
+      strict: true,
+      fixVoidTags: true,
+    });
+    expect(out).toContain("line one<br />line two");
+    expect(out).not.toMatch(/<br>/);
+  });
+
   it("runs a user outProcessor after the built-in fix, in order", async () => {
     const ctx = {
       client: {

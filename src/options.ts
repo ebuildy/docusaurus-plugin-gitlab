@@ -11,8 +11,11 @@ export interface PluginOptions {
   /** Convert CommonMark autolinks (`<https://…>`, `<a@b.com>`) in included markdown
    *  to MDX-safe links so they don't break the build. Default: `true`. */
   fixAutolinks?: boolean;
+  /** Self-close HTML void elements (`<br>` → `<br/>`) in included markdown so MDX
+   *  accepts them. Default: `true`. */
+  fixVoidTags?: boolean;
   /** Extra post-processors applied to the markdown generated from includes,
-   *  in order, after the built-in `fixAutolinks` (when enabled). */
+   *  in order, after the built-in fixes (when enabled). */
   outProcessors?: OutProcessor[];
 }
 
@@ -24,6 +27,7 @@ export interface ResolvedOptions {
   assetDir: string;
   assetBaseUrl: string;
   fixAutolinks: boolean;
+  fixVoidTags: boolean;
 }
 
 const schema = Joi.object({
@@ -40,6 +44,7 @@ const schema = Joi.object({
   assetDir: Joi.string().optional(),
   assetBaseUrl: Joi.string().optional(),
   fixAutolinks: Joi.boolean().optional(),
+  fixVoidTags: Joi.boolean().optional(),
   outProcessors: Joi.array().items(Joi.function()).optional(),
 });
 
@@ -59,5 +64,6 @@ export function resolveOptions(
     assetDir: opts.assetDir ?? "static/gitlab-assets",
     assetBaseUrl: (opts.assetBaseUrl ?? "/gitlab-assets").replace(/\/+$/, ""),
     fixAutolinks: opts.fixAutolinks ?? true,
+    fixVoidTags: opts.fixVoidTags ?? true,
   };
 }

@@ -92,5 +92,8 @@ describe("e2e: docusaurus build", () => {
     // email autolink (<contact@example.com>) into a real link — without it, the
     // bare `<contact@…>` would be parsed as JSX and abort the MDX build.
     expect(html).toContain("mailto:contact@example.com");
+    // The built-in fixVoidTags out-processor self-closed the README's `<br>` (in a
+    // table cell) — without it, MDX would demand a closing tag and abort the build.
+    expect(html).toMatch(/<br\s*\/?>/);
   });
 });
