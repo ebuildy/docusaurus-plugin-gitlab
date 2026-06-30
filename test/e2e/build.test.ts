@@ -80,4 +80,13 @@ describe("e2e: docusaurus build", () => {
     // ...and the README headings come AFTER the page heading that precedes the component.
     expect(html.indexOf('href="#overview"')).toBeLessThan(html.indexOf('href="#install"'));
   });
+
+  it("flows included README through the native Docusaurus pipeline", () => {
+    const html = readFileSync(join(siteDir, "build", "includes", "index.html"), "utf8");
+    // Native heading anchors (the JSX component path does not produce these):
+    expect(html).toMatch(/<h2[^>]+id="install"/);
+    expect(html).toMatch(/<h2[^>]+id="usage"/);
+    // Native emoji from remark-gemoji:
+    expect(html).toContain("🚀");
+  });
 });

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import gitlabPlugin from "./index.js";
 
-const ctx = {} as any;
+const ctx = { siteDir: "/site" } as any;
 const opts = { host: "https://gitlab.example.com", cache: false } as any;
 
 describe("gitlabPlugin", () => {
@@ -17,6 +17,35 @@ describe("gitlabPlugin", () => {
     expect(rule.use[0].loader).toContain("include");
     expect(rule.use[0].loader).toContain("loader.js");
     expect(rule.use[0].options.resolved.host).toBe("https://gitlab.example.com");
+  });
+
+  it("scopes the rule's include to siteDir instead of leaving it undefined", () => {
+    // @docusaurus/core's synthetic MDX-fallback plugin flattens every
+    // `.mdx?`-matching rule's `include` into its own `exclude` array
+    // (getMDXFallbackExcludedPaths in server/plugins/synthetic.js). Without
+    // an explicit `include`, that flatMap injects a literal `undefined`
+    // into the array — and the webpack-merge pass that wires the fallback
+    // plugin's result back into the config turns that `undefined` hole into
+    // `null`, which fails webpack's config schema and aborts the build.
+    // Reproduced directly against webpack-merge while debugging Task 12's
+    // e2e test; see examples/site's real Docusaurus build for the full repro.
+    const wp = gitlabPlugin(ctx, opts).configureWebpack!({} as any, false, {} as any);
+    const rule = (wp.module!.rules as any[])[0];
+    expect(rule.include).toEqual(["/site"]);
+  });
+
+  it("falls back to cwd for include when context has no siteDir", () => {
+    const wp = gitlabPlugin({} as any, opts).configureWebpack!({} as any, false, {} as any);
+    const rule = (wp.module!.rules as any[])[0];
+    expect(rule.include).toEqual([process.cwd()]);
+  });
+
+  it("appends (not index-merges) module.rules so other plugins' rules survive webpack-merge", () => {
+    // webpack-merge's default array strategy deep-merges `module.rules` by
+    // index instead of concatenating, which would corrupt other plugins'
+    // rule objects. `append` makes it plain-concat instead.
+    const wp = gitlabPlugin(ctx, opts).configureWebpack!({} as any, false, {} as any);
+    expect((wp as any).mergeStrategy).toEqual({ "module.rules": "append" });
   });
 
   it("contributes the theme stylesheet", () => {

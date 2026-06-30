@@ -19,6 +19,12 @@ export interface ResolvedOptions {
 }
 
 const schema = Joi.object({
+  // Docusaurus injects `id` into every plugin's options object before calling
+  // the plugin function (see @docusaurus/core's `doValidatePluginOptions`),
+  // even when the plugin doesn't declare a `validateOptions` hook. Accept and
+  // ignore it so the plugin works when registered via the top-level `plugins`
+  // array, not just via the (separately validated) `remarkGitlab` entry.
+  id: Joi.string().optional(),
   host: Joi.string().uri().required(),
   token: Joi.string().allow("").optional(),
   strict: Joi.boolean().optional(),

@@ -35,4 +35,13 @@ describe("resolveOptions", () => {
       resolveOptions({ host: "https://gitlab.com", nope: 1 } as any, "production"),
     ).toThrow();
   });
+
+  it("tolerates the `id` field Docusaurus injects into every plugin's options", () => {
+    // @docusaurus/core's doValidatePluginOptions always adds `id` to a
+    // plugin's options before invoking it, even without a validateOptions
+    // hook — see examples/site/docusaurus.config.ts's top-level `plugins`.
+    expect(() =>
+      resolveOptions({ host: "https://gitlab.com", id: "default" } as any, "production"),
+    ).not.toThrow();
+  });
 });
