@@ -67,9 +67,11 @@ describe("gitlabPlugin", () => {
     expect(ruleOptions(opts).resolved.fixAutolinks).toBe(true);
     expect(ruleOptions(opts).resolved.fixVoidTags).toBe(true);
     expect(ruleOptions(opts).resolved.fixInlineStyles).toBe(true);
+    expect(ruleOptions(opts).resolved.convertAlerts).toBe(true);
     expect(ruleOptions({ ...opts, fixAutolinks: false }).resolved.fixAutolinks).toBe(false);
     expect(ruleOptions({ ...opts, fixVoidTags: false }).resolved.fixVoidTags).toBe(false);
     expect(ruleOptions({ ...opts, fixInlineStyles: false }).resolved.fixInlineStyles).toBe(false);
+    expect(ruleOptions({ ...opts, convertAlerts: false }).resolved.convertAlerts).toBe(false);
   });
 
   it("drives stripToc via resolved options (default off)", () => {

@@ -3,6 +3,7 @@ import { fetchFileSource, fetchReadmeSource } from "../gitlab/fetchers.js";
 import { parseInclude } from "./grammar.js";
 import {
   applyOutProcessors,
+  convertAlerts,
   fixAutolinks,
   fixInlineStyles,
   fixVoidTags,
@@ -21,6 +22,8 @@ export interface TransformOptions {
   fixVoidTags?: boolean;
   /** Prepend the built-in inline-style fix to the processors applied per markdown include. */
   fixInlineStyles?: boolean;
+  /** Translate GitLab alert blockquotes into Docusaurus admonitions per markdown include. */
+  convertAlerts?: boolean;
   /** Remove a redundant Table of Contents section from each markdown include. */
   stripToc?: boolean;
   /** Extra post-processors applied to the generated markdown of each markdown include. */
@@ -39,6 +42,7 @@ export async function transformIncludes(
   // crosses the webpack loader boundary); user processors come from the registry.
   const processors: OutProcessor[] = [
     ...(options.stripToc ? [stripTableOfContents] : []),
+    ...(options.convertAlerts ? [convertAlerts] : []),
     ...(options.fixAutolinks ? [fixAutolinks] : []),
     ...(options.fixVoidTags ? [fixVoidTags] : []),
     ...(options.fixInlineStyles ? [fixInlineStyles] : []),

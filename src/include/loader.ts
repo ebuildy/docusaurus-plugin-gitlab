@@ -22,6 +22,7 @@ export default function gitlabIncludeLoader(this: LoaderThis, source: string): v
     fixAutolinks: resolved.fixAutolinks,
     fixVoidTags: resolved.fixVoidTags,
     fixInlineStyles: resolved.fixInlineStyles,
+    convertAlerts: resolved.convertAlerts,
     stripToc: resolved.stripToc,
     outProcessors: processorsId ? getOutProcessors(processorsId) : [],
   };

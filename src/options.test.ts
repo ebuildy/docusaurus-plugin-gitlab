@@ -67,6 +67,14 @@ describe("resolveOptions", () => {
     ).toBe(false);
   });
 
+  it("enables convertAlerts by default and lets it be disabled", () => {
+    expect(resolveOptions({ host: "https://gitlab.com" }, "production").convertAlerts).toBe(true);
+    expect(
+      resolveOptions({ host: "https://gitlab.com", convertAlerts: false }, "production")
+        .convertAlerts,
+    ).toBe(false);
+  });
+
   it("disables stripToc by default and lets it be enabled", () => {
     expect(resolveOptions({ host: "https://gitlab.com" }, "production").stripToc).toBe(false);
     expect(

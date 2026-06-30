@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   applyOutProcessors,
+  convertAlerts,
   fixAutolinks,
   fixInlineStyles,
   fixVoidTags,
@@ -98,6 +99,37 @@ describe("fixInlineStyles", () => {
 
   it("leaves style attributes inside code verbatim", async () => {
     expect(await fixInlineStyles('use `<p style="x">`')).toBe('use `<p style="x">`');
+  });
+});
+
+describe("convertAlerts", () => {
+  it("converts a note alert to a Docusaurus admonition", async () => {
+    const out = await convertAlerts("> [!note]\n> This is a note.");
+    expect(out).toBe(":::note\n\nThis is a note.\n\n:::");
+  });
+
+  it("maps important to info and caution to danger", async () => {
+    expect(await convertAlerts("> [!important]\n> x")).toContain(":::info");
+    expect(await convertAlerts("> [!caution]\n> x")).toContain(":::danger");
+  });
+
+  it("preserves multi-line content and blank quote lines", async () => {
+    const out = await convertAlerts("> [!tip]\n> Para 1\n>\n> Para 2");
+    expect(out).toBe(":::tip\n\nPara 1\n\nPara 2\n\n:::");
+  });
+
+  it("uses a bracketed title when text follows the marker", async () => {
+    const out = await convertAlerts("> [!warning] Heads up\n> body");
+    expect(out).toBe(":::warning[Heads up]\n\nbody\n\n:::");
+  });
+
+  it("leaves a regular blockquote untouched", async () => {
+    expect(await convertAlerts("> just a quote")).toBe("> just a quote");
+  });
+
+  it("ignores alert syntax inside a fenced code block", async () => {
+    const md = "```\n> [!note]\n> x\n```";
+    expect(await convertAlerts(md)).toBe(md);
   });
 });
 

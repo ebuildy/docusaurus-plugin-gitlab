@@ -103,5 +103,11 @@ describe("e2e: docusaurus build", () => {
     // object — without it, React/MDX rejects the string `style` prop and the build fails.
     expect(html).toContain("Red text via HTML");
     expect(html).toMatch(/color:\s*red/i);
+    // convertAlerts turned the README's `> [!warning]` blockquote into a native
+    // Docusaurus admonition (rendered with an `admonition` wrapper class), not a
+    // blockquote with a literal "[!warning]" marker.
+    expect(html).toContain("Mind the gap.");
+    expect(html).not.toContain("[!warning]");
+    expect(html).toMatch(/admonition/i);
   });
 });

@@ -138,6 +138,68 @@ export const stripTableOfContents: OutProcessor = (md) => {
   return lines.join("\n");
 };
 
+// GitLab/GitHub alert blockquotes (`> [!note]`) map onto Docusaurus admonitions.
+const ALERT_TO_ADMONITION: Record<string, string> = {
+  note: "note",
+  tip: "tip",
+  important: "info",
+  warning: "warning",
+  caution: "danger",
+};
+const ALERT_HEAD_RE = /^>\s?\[!(note|tip|important|warning|caution)\](.*)$/i;
+const FENCE_RE = /^\s*(`{3,}|~{3,})/;
+
+function admonition(type: string, title: string, content: string[]): string {
+  const kind = ALERT_TO_ADMONITION[type.toLowerCase()];
+  const head = title.trim() ? `:::${kind}[${title.trim()}]` : `:::${kind}`;
+  const body = content.join("\n").replace(/^\n+|\n+$/g, "");
+  return `${head}\n\n${body}\n\n:::`;
+}
+
+/**
+ * Built-in processor: translate GitLab/GitHub alert blockquotes (`> [!note]`,
+ * `> [!warning]`, …) into native Docusaurus admonitions (`:::note … :::`), leaving
+ * fenced code untouched. `important` → `info` and `caution` → `danger`.
+ */
+export const convertAlerts: OutProcessor = (md) => {
+  const lines = md.split("\n");
+  const out: string[] = [];
+  let fence: string | null = null;
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const fenceMatch = FENCE_RE.exec(line);
+    if (fence !== null) {
+      out.push(line);
+      if (fenceMatch && fenceMatch[1][0] === fence[0] && fenceMatch[1].length >= fence.length) {
+        fence = null;
+      }
+      i++;
+      continue;
+    }
+    if (fenceMatch) {
+      fence = fenceMatch[1];
+      out.push(line);
+      i++;
+      continue;
+    }
+    const head = ALERT_HEAD_RE.exec(line);
+    if (head) {
+      const content: string[] = [];
+      i++;
+      while (i < lines.length && lines[i].startsWith(">")) {
+        content.push(lines[i].replace(/^>\s?/, ""));
+        i++;
+      }
+      out.push(admonition(head[1], head[2], content));
+      continue;
+    }
+    out.push(line);
+    i++;
+  }
+  return out.join("\n");
+};
+
 /** Run processors in order over `md`. */
 export async function applyOutProcessors(md: string, procs: OutProcessor[]): Promise<string> {
   let out = md;

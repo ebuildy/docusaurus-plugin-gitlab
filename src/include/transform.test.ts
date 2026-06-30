@@ -125,6 +125,25 @@ describe("transformIncludes", () => {
     expect(out).not.toContain('style="color: red;"');
   });
 
+  it("converts GitLab alerts to admonitions in a markdown include", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "> [!warning]\n> Be careful.",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, {
+      strict: true,
+      convertAlerts: true,
+    });
+    expect(out).toContain(":::warning");
+    expect(out).toContain("Be careful.");
+    expect(out).not.toContain("[!warning]");
+  });
+
   it("strips a Table of Contents section when stripToc is enabled", async () => {
     const ctx = {
       client: {

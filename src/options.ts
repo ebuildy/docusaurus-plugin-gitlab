@@ -17,6 +17,9 @@ export interface PluginOptions {
   /** Convert HTML string `style="…"` attributes in included markdown into JSX style
    *  objects (`style={{ … }}`) so MDX/React accepts them. Default: `true`. */
   fixInlineStyles?: boolean;
+  /** Translate GitLab/GitHub alert blockquotes (`> [!note]`) in included markdown
+   *  into native Docusaurus admonitions (`:::note … :::`). Default: `true`. */
+  convertAlerts?: boolean;
   /** Remove a redundant "Table of Contents" section (and any `[[_TOC_]]` marker)
    *  from included markdown — Docusaurus renders its own. Default: `false`. */
   stripToc?: boolean;
@@ -35,6 +38,7 @@ export interface ResolvedOptions {
   fixAutolinks: boolean;
   fixVoidTags: boolean;
   fixInlineStyles: boolean;
+  convertAlerts: boolean;
   stripToc: boolean;
 }
 
@@ -54,6 +58,7 @@ const schema = Joi.object({
   fixAutolinks: Joi.boolean().optional(),
   fixVoidTags: Joi.boolean().optional(),
   fixInlineStyles: Joi.boolean().optional(),
+  convertAlerts: Joi.boolean().optional(),
   stripToc: Joi.boolean().optional(),
   outProcessors: Joi.array().items(Joi.function()).optional(),
 });
@@ -76,6 +81,7 @@ export function resolveOptions(
     fixAutolinks: opts.fixAutolinks ?? true,
     fixVoidTags: opts.fixVoidTags ?? true,
     fixInlineStyles: opts.fixInlineStyles ?? true,
+    convertAlerts: opts.convertAlerts ?? true,
     stripToc: opts.stripToc ?? false,
   };
 }
