@@ -1,3 +1,5 @@
+import type { TocEntry } from "./toc.js";
+
 export type ProjectRef = string | number;
 
 export interface ProjectInfoData {
@@ -41,6 +43,7 @@ export interface IssueData {
 export interface ReadmeData {
   ref: string;
   html: string;
+  toc?: TocEntry[];
 }
 
 export interface FileMarkdownData {
