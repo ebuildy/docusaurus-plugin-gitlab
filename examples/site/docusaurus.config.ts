@@ -6,6 +6,7 @@ const gitlabOptions = {
   host: process.env.GITLAB_HOST ?? "https://gitlab.com",
   token: process.env.GITLAB_TOKEN,
   strict: true,
+  stripToc: true,
 };
 
 const config: Config = {

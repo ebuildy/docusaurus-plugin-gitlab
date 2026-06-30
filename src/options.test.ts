@@ -59,6 +59,13 @@ describe("resolveOptions", () => {
     ).toBe(false);
   });
 
+  it("disables stripToc by default and lets it be enabled", () => {
+    expect(resolveOptions({ host: "https://gitlab.com" }, "production").stripToc).toBe(false);
+    expect(
+      resolveOptions({ host: "https://gitlab.com", stripToc: true }, "production").stripToc,
+    ).toBe(true);
+  });
+
   it("accepts an outProcessors function array (and keeps it out of resolved)", () => {
     const resolved = resolveOptions(
       { host: "https://gitlab.com", outProcessors: [(md) => md] },

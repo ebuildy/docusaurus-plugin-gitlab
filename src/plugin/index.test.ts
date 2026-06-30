@@ -70,6 +70,11 @@ describe("gitlabPlugin", () => {
     expect(ruleOptions({ ...opts, fixVoidTags: false }).resolved.fixVoidTags).toBe(false);
   });
 
+  it("drives stripToc via resolved options (default off)", () => {
+    expect(ruleOptions(opts).resolved.stripToc).toBe(false);
+    expect(ruleOptions({ ...opts, stripToc: true }).resolved.stripToc).toBe(true);
+  });
+
   it("registers user outProcessors under the loader's processorsId", () => {
     const user = (md: string) => md;
     const o = { host: "https://gl.custom.example.com", cache: false, outProcessors: [user] } as any;

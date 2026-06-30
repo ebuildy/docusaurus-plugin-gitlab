@@ -264,6 +264,11 @@ valid MDX. Two built-in processors fix the common ones (both **on by default**):
   (which MDX rejects with _"Expected a closing tag for `<br>`"_) into `<br/>`.
   Disable with `fixVoidTags: false`.
 
+Optionally, **`stripToc`** (default **off**) removes a README's own "Table of
+Contents" section (the heading plus its list, up to the next heading of the same or
+higher level) and any `[[_TOC_]]` marker — Docusaurus already renders a TOC in the
+right sidebar. Enable with `stripToc: true`.
+
 Add your own transforms with `outProcessors` — each receives the generated markdown
 of a markdown include (after the built-in fixes) and returns the new markdown:
 
@@ -300,6 +305,7 @@ caller's responsibility to preserve; the built-in `fixAutolinks` already skips i
 | `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from |
 | `fixAutolinks` | boolean | `true` | Rewrite CommonMark autolinks in included markdown to MDX-safe links (include placeholders only) |
 | `fixVoidTags` | boolean | `true` | Self-close HTML void elements (`<br>` → `<br/>`) in included markdown (include placeholders only) |
+| `stripToc` | boolean | `false` | Remove a redundant "Table of Contents" section (and `[[_TOC_]]` marker) from included markdown |
 | `outProcessors` | `Array<(md: string) => string \| Promise<string>>` | `[]` | Extra post-processors for included markdown, run after the built-in fixes |
 
 The token is read at build time only. Provide it via an environment variable

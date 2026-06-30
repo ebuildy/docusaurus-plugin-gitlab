@@ -5,6 +5,7 @@ import {
   fixVoidTags,
   getOutProcessors,
   registerOutProcessors,
+  stripTableOfContents,
   type OutProcessor,
 } from "./out-processors.js";
 
@@ -62,6 +63,54 @@ describe("fixVoidTags", () => {
   it("leaves void tags inside code verbatim", async () => {
     expect(await fixVoidTags("use `<br>` and\n\n```\n<br>\n```\n")).toContain("`<br>`");
     expect(await fixVoidTags("```\n<br>\n```\n")).toContain("```\n<br>\n```");
+  });
+});
+
+describe("stripTableOfContents", () => {
+  it("removes a TOC section up to the next same-level heading", async () => {
+    const md = [
+      "# Title",
+      "",
+      "## Table of Contents",
+      "",
+      "- [One](#one)",
+      "- [Two](#two)",
+      "",
+      "## One",
+      "",
+      "body",
+    ].join("\n");
+    const out = await stripTableOfContents(md);
+    expect(out).not.toContain("Table of Contents");
+    expect(out).not.toContain("[One](#one)");
+    expect(out).toContain("## One");
+    expect(out).toContain("body");
+  });
+
+  it("matches Contents and TOC headings case-insensitively", async () => {
+    expect(await stripTableOfContents("## Contents\n\n- x\n\n## Real\n\nhi")).not.toContain("- x");
+    expect(await stripTableOfContents("### toc\n\n- x\n\n### Real\n\nhi")).not.toContain("- x");
+  });
+
+  it("removes a bare [[_TOC_]] marker", async () => {
+    expect(await stripTableOfContents("intro\n\n[[_TOC_]]\n\nbody")).not.toContain("[[_TOC_]]");
+  });
+
+  it("leaves content without a TOC untouched", async () => {
+    const md = "# Title\n\n## Install\n\nsetup";
+    expect(await stripTableOfContents(md)).toBe(md);
+  });
+
+  it("ignores a TOC-looking heading inside a code block", async () => {
+    const md = "# Title\n\n```\n## Table of Contents\n```\n\nbody";
+    expect(await stripTableOfContents(md)).toBe(md);
+  });
+
+  it("strips a final TOC section to end of document", async () => {
+    const out = await stripTableOfContents("## Intro\n\nhi\n\n## Table of Contents\n\n- [a](#a)\n");
+    expect(out).toContain("## Intro");
+    expect(out).not.toContain("Table of Contents");
+    expect(out).not.toContain("[a](#a)");
   });
 });
 

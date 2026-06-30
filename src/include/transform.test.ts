@@ -107,6 +107,25 @@ describe("transformIncludes", () => {
     expect(out).not.toMatch(/<br>/);
   });
 
+  it("strips a Table of Contents section when stripToc is enabled", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "# T\n\n## Table of Contents\n\n- [Install](#install)\n\n## Install\n\nsetup",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, {
+      strict: true,
+      stripToc: true,
+    });
+    expect(out).not.toContain("Table of Contents");
+    expect(out).not.toContain("[Install](#install)");
+    expect(out).toContain("## Install");
+  });
+
   it("runs a user outProcessor after the built-in fix, in order", async () => {
     const ctx = {
       client: {

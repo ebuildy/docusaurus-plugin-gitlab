@@ -1,3 +1,8 @@
+import type { Root } from "mdast";
+import remarkGfm from "remark-gfm";
+import remarkParse from "remark-parse";
+import { unified } from "unified";
+import { visit } from "unist-util-visit";
 import { mapProseRegions } from "./render-source.js";
 
 /**
@@ -49,6 +54,47 @@ function selfCloseVoidTags(text: string): string {
  * self-closed tags are left effectively unchanged.
  */
 export const fixVoidTags: OutProcessor = (md) => mapProseRegions(md, selfCloseVoidTags);
+
+// A README's own "Table of Contents" is redundant with the one Docusaurus renders
+// in the right sidebar. Recognize a heading whose text is one of these.
+const TOC_TITLES = new Set(["table of contents", "contents", "toc"]);
+// Standalone GitLab `[[_TOC_]]` marker line.
+const TOC_MARKER_RE = /^[^\S\r\n]*\[\[_toc_\]\][^\S\r\n]*\r?\n?/gim;
+
+function isTocHeading(text: string): boolean {
+  return TOC_TITLES.has(text.toLowerCase().replace(/[*_`:]/g, "").trim());
+}
+
+/**
+ * Built-in processor: remove a redundant "Table of Contents" section (the heading
+ * and everything up to the next heading of the same or higher level) and any bare
+ * `[[_TOC_]]` marker. Headings inside code blocks are ignored (mdast never parses
+ * them as headings). Opt-in via the `stripToc` option.
+ */
+export const stripTableOfContents: OutProcessor = (md) => {
+  const out = md.replace(TOC_MARKER_RE, "");
+  const tree = unified().use(remarkParse).use(remarkGfm).parse(out) as Root;
+
+  const headings: Array<{ depth: number; line: number }> = [];
+  visit(tree, "heading", (node) => {
+    if (node.position?.start?.line != null) {
+      headings.push({ depth: node.depth, line: node.position.start.line });
+    }
+  });
+
+  const lines = out.split("\n");
+  const tocIdx = headings.findIndex((h) =>
+    isTocHeading((lines[h.line - 1] ?? "").replace(/^#{1,6}\s+/, "")),
+  );
+  if (tocIdx === -1) return out;
+
+  const toc = headings[tocIdx];
+  const next = headings.slice(tocIdx + 1).find((h) => h.depth <= toc.depth);
+  const start = toc.line - 1;
+  const end = next ? next.line - 1 : lines.length;
+  lines.splice(start, end - start);
+  return lines.join("\n");
+};
 
 /** Run processors in order over `md`. */
 export async function applyOutProcessors(md: string, procs: OutProcessor[]): Promise<string> {

@@ -95,5 +95,9 @@ describe("e2e: docusaurus build", () => {
     // The built-in fixVoidTags out-processor self-closed the README's `<br>` (in a
     // table cell) — without it, MDX would demand a closing tag and abort the build.
     expect(html).toMatch(/<br\s*\/?>/);
+    // stripToc removed the README's own "Table of Contents" section (the example
+    // site enables stripToc: true); Docusaurus renders its own sidebar TOC instead.
+    expect(html).not.toContain("Jump to install");
+    expect(html).not.toContain("Table of Contents");
   });
 });
