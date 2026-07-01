@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile, fetchTopics } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -251,5 +251,53 @@ describe("fetchFile", () => {
     expect(data.kind).toBe("code");
     const code = data as Extract<typeof data, { kind: "code" }>;
     expect(code.language).toBe("weird");
+  });
+});
+
+describe("fetchTopics", () => {
+  const raw = [
+    { name: "docs", title: "Docs", total_projects_count: 3 },
+    { name: "api", title: "API", total_projects_count: 10 },
+    { name: "internal-tool", title: "Internal Tool", total_projects_count: 1 },
+  ];
+
+  it("normalizes topics and builds the explore URL, sorted by title ascending", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    const data = await fetchTopics(ctx(client), {});
+    expect(data.map((t) => t.title)).toEqual(["API", "Docs", "Internal Tool"]);
+    expect(data[0]).toEqual({
+      name: "api",
+      title: "API",
+      totalProjectsCount: 10,
+      webUrl: "https://gitlab.com/explore/projects/topics/api",
+    });
+  });
+
+  it("sorts descending when order=name:desc", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    const data = await fetchTopics(ctx(client), { order: "name:desc" });
+    expect(data.map((t) => t.title)).toEqual(["Internal Tool", "Docs", "API"]);
+  });
+
+  it("filters by case-insensitive regex on the title", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    const data = await fetchTopics(ctx(client), { filter: "^a" });
+    expect(data.map((t) => t.title)).toEqual(["API"]);
+  });
+
+  it("applies the limit after filtering and sorting", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    const data = await fetchTopics(ctx(client), { limit: 2 });
+    expect(data.map((t) => t.title)).toEqual(["API", "Docs"]);
+  });
+
+  it("throws on an invalid order value", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await expect(fetchTopics(ctx(client), { order: "count" })).rejects.toThrow(/order/);
+  });
+
+  it("throws on an invalid filter regex", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await expect(fetchTopics(ctx(client), { filter: "(" })).rejects.toThrow(/filter/);
   });
 });

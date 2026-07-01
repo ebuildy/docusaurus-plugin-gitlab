@@ -9,6 +9,7 @@ import type {
   ProjectInfoData,
   ReadmeData,
   ReleaseData,
+  TopicData,
 } from "./types";
 
 export interface GitLabContext {
@@ -93,6 +94,41 @@ export async function fetchIssues(ctx: GitLabContext, attrs: Attrs): Promise<Iss
   });
 }
 
+interface OrderSpec {
+  field: "name";
+  dir: "asc" | "desc";
+}
+
+function readOrder(value: unknown): OrderSpec {
+  if (value === undefined || value === "name" || value === "name:asc") {
+    return { field: "name", dir: "asc" };
+  }
+  if (value === "name:desc") return { field: "name", dir: "desc" };
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: "order" must be one of "name", "name:asc", ` +
+      `"name:desc"; got ${JSON.stringify(value)}.`,
+  );
+}
+
+function compileFilter(value: unknown): ((text: string) => boolean) | null {
+  if (value === undefined) return null;
+  const pattern = String(value);
+  let re: RegExp;
+  try {
+    re = new RegExp(pattern, "i");
+  } catch {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: "filter" is not a valid regular expression: ${pattern}`,
+    );
+  }
+  return (text: string) => re.test(text);
+}
+
+function sortByName<T>(items: T[], get: (item: T) => string, dir: "asc" | "desc"): T[] {
+  const sorted = [...items].sort((a, b) => get(a).localeCompare(get(b)));
+  return dir === "desc" ? sorted.reverse() : sorted;
+}
+
 function readTocMode(value: unknown): TocMode {
   if (value === undefined) return "auto";
   if (value === "hidden" || value === "inline" || value === "sidebar") return value;
@@ -174,6 +210,27 @@ function languageFromPath(path: string): string {
   const dotIndex = base.lastIndexOf(".");
   const ext = (dotIndex === -1 ? base : base.slice(dotIndex + 1)).toLowerCase();
   return LANGUAGE_BY_EXTENSION[ext] ?? ext ?? "text";
+}
+
+export async function fetchTopics(ctx: GitLabContext, attrs: Attrs): Promise<TopicData[]> {
+  const order = readOrder(attrs.order);
+  const match = compileFilter(attrs.filter);
+  const limit = typeof attrs.limit === "number" ? attrs.limit : undefined;
+  const host = ctx.options.host;
+  const key = `topics:${String(attrs.filter ?? "")}:${order.dir}:${limit ?? "all"}`;
+  return memo(ctx, key, async () => {
+    const raw = await ctx.client.getTopics();
+    let items: TopicData[] = raw.map((t: any) => ({
+      name: t.name,
+      title: t.title ?? t.name,
+      totalProjectsCount: t.total_projects_count ?? 0,
+      webUrl: `${host}/explore/projects/topics/${encodeURIComponent(t.name)}`,
+    }));
+    if (match) items = items.filter((t) => match(t.title));
+    items = sortByName(items, (t) => t.title, order.dir);
+    if (limit !== undefined) items = items.slice(0, limit);
+    return items;
+  });
 }
 
 export async function fetchFile(ctx: GitLabContext, attrs: Attrs): Promise<FileData> {
