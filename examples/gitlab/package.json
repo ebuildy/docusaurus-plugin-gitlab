@@ -13,7 +13,8 @@
     "@ebuildy/docusaurus-plugin-gitlab": "file:../..",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "remark-gemoji": "^8.0.0"
+    "remark-gemoji": "^8.0.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@docusaurus/tsconfig": "^3.5.0",

@@ -1,5 +1,13 @@
 import type { Config } from "@docusaurus/types";
-import { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
+import gitlabPlugin, { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
+import remarkGemoji from "remark-gemoji";
+
+const gitlabOptions = {
+  host: process.env.GITLAB_HOST ?? "https://gitlab.com",
+  token: process.env.GITLAB_TOKEN,
+  strict: true,
+  stripToc: true,
+};
 
 const config: Config = {
   title: "GitLab MDX Example",
@@ -8,6 +16,7 @@ const config: Config = {
   favicon: undefined,
   onBrokenLinks: "ignore",
   onBrokenMarkdownLinks: "ignore",
+  plugins: [[gitlabPlugin, gitlabOptions]],
   presets: [
     [
       "classic",
@@ -15,16 +24,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/",
           sidebarPath: "./sidebars.ts",
-          remarkPlugins: [
-            [
-              remarkGitlab,
-              {
-                host: process.env.GITLAB_HOST ?? "https://gitlab.com",
-                token: process.env.GITLAB_TOKEN,
-                strict: true,
-              },
-            ],
-          ],
+          remarkPlugins: [remarkGemoji, [remarkGitlab, gitlabOptions]],
         },
         blog: false,
         theme: {},

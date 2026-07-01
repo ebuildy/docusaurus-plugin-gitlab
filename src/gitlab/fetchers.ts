@@ -324,3 +324,30 @@ export async function fetchFile(ctx: GitLabContext, attrs: Attrs): Promise<FileD
     },
   );
 }
+
+export interface SourceResult {
+  raw: string;
+  ref: string;
+}
+
+export async function fetchReadmeSource(
+  ctx: GitLabContext,
+  args: { project: string; ref?: string },
+): Promise<SourceResult> {
+  return memo(ctx, `readmeSource:${args.project}:${args.ref ?? "default"}`, async () => {
+    const ref = args.ref ?? (await ctx.client.getProject(args.project)).default_branch;
+    const raw = await ctx.client.getFileRaw(args.project, "README.md", ref);
+    return { raw, ref } satisfies SourceResult;
+  });
+}
+
+export async function fetchFileSource(
+  ctx: GitLabContext,
+  args: { project: string; path: string; ref?: string },
+): Promise<SourceResult> {
+  return memo(ctx, `fileSource:${args.project}:${args.path}:${args.ref ?? "default"}`, async () => {
+    const ref = args.ref ?? (await ctx.client.getProject(args.project)).default_branch;
+    const raw = await ctx.client.getFileRaw(args.project, args.path, ref);
+    return { raw, ref } satisfies SourceResult;
+  });
+}
