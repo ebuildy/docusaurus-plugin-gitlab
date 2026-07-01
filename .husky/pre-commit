@@ -1,1 +1,14 @@
+# Guard: refuse to create a commit that wouldn't be signed.
+# A pre-commit hook runs before the commit (and its signature) exist, so it can't
+# verify a signature — but it can ensure signing is configured, so the commit that
+# git is about to create will be signed. (True enforcement of *pushed* history is
+# GitHub branch protection → "Require signed commits".)
+if [ "$(git config --get commit.gpgsign)" != "true" ] || [ -z "$(git config --get user.signingkey)" ]; then
+  echo "✖ Commit signing is not configured — refusing to create an unsigned commit." >&2
+  echo "  Configure it with:" >&2
+  echo "    git config --global commit.gpgsign true" >&2
+  echo "    git config --global user.signingkey <your-key>" >&2
+  exit 1
+fi
+
 npx lint-staged
