@@ -149,10 +149,19 @@ const ALERT_TO_ADMONITION: Record<string, string> = {
 const ALERT_HEAD_RE = /^>\s?\[!(note|tip|important|warning|caution)\](.*)$/i;
 const FENCE_RE = /^\s*(`{3,}|~{3,})/;
 
+/** Strip leading/trailing newlines. Linear scan — avoids the ReDoS-prone `/\n+$/`. */
+function trimNewlines(s: string): string {
+  let start = 0;
+  let end = s.length;
+  while (start < end && s[start] === "\n") start++;
+  while (end > start && s[end - 1] === "\n") end--;
+  return s.slice(start, end);
+}
+
 function admonition(type: string, title: string, content: string[]): string {
   const kind = ALERT_TO_ADMONITION[type.toLowerCase()];
   const head = title.trim() ? `:::${kind}[${title.trim()}]` : `:::${kind}`;
-  const body = content.join("\n").replace(/^\n+|\n+$/g, "");
+  const body = trimNewlines(content.join("\n"));
   return `${head}\n\n${body}\n\n:::`;
 }
 

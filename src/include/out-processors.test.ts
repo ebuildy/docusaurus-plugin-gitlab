@@ -123,6 +123,11 @@ describe("convertAlerts", () => {
     expect(out).toBe(":::warning[Heads up]\n\nbody\n\n:::");
   });
 
+  it("trims leading and trailing blank lines from the admonition body", async () => {
+    // Guards the linear newline trim that replaced a ReDoS-prone `/\n+$/g`.
+    expect(await convertAlerts("> [!note]\n>\n> body\n>")).toBe(":::note\n\nbody\n\n:::");
+  });
+
   it("leaves a regular blockquote untouched", async () => {
     expect(await convertAlerts("> just a quote")).toBe("> just a quote");
   });
