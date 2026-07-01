@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile, fetchTopics } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile, fetchTopics, fetchLabels } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -299,5 +299,76 @@ describe("fetchTopics", () => {
   it("throws on an invalid filter regex", async () => {
     const client = { getTopics: vi.fn(async () => raw) };
     await expect(fetchTopics(ctx(client), { filter: "(" })).rejects.toThrow(/filter/);
+  });
+});
+
+describe("fetchLabels", () => {
+  const rawLabels = [
+    { name: "bug", color: "#d9534f", text_color: "#ffffff", description: "Defect", archived: false },
+    { name: "feature", color: "#5cb85c", text_color: "#1a1a1a", description: null, archived: false },
+    { name: "old", color: "#cccccc", text_color: "#000000", description: "retired", archived: true },
+  ];
+
+  function labelClient() {
+    return {
+      getProjectLabels: vi.fn(async () => rawLabels),
+      getGroupLabels: vi.fn(async () => rawLabels),
+      getProject: vi.fn(async () => ({ web_url: "https://gitlab.com/group/repo" })),
+      getGroup: vi.fn(async () => ({ web_url: "https://gitlab.com/groups/my-group" })),
+    };
+  }
+
+  it("normalizes project labels, drops archived, and builds the issues link", async () => {
+    const client = labelClient();
+    const data = await fetchLabels(ctx(client), { project: "group/repo" });
+    expect(data.map((l) => l.name)).toEqual(["bug", "feature"]);
+    expect(data[0]).toEqual({
+      name: "bug",
+      color: "#d9534f",
+      textColor: "#ffffff",
+      description: "Defect",
+      webUrl: "https://gitlab.com/group/repo/-/issues?label_name[]=bug",
+    });
+    expect(client.getProjectLabels).toHaveBeenCalledWith("group/repo");
+    expect(client.getGroupLabels).not.toHaveBeenCalled();
+  });
+
+  it("uses the group endpoints and group issues link for group scope", async () => {
+    const client = labelClient();
+    const data = await fetchLabels(ctx(client), { group: "my-group" });
+    expect(client.getGroupLabels).toHaveBeenCalledWith("my-group");
+    expect(client.getProjectLabels).not.toHaveBeenCalled();
+    expect(data[0].webUrl).toBe("https://gitlab.com/groups/my-group/-/issues?label_name[]=bug");
+  });
+
+  it("filters by case-insensitive regex on the name", async () => {
+    const client = labelClient();
+    const data = await fetchLabels(ctx(client), { project: "group/repo", filter: "^feat" });
+    expect(data.map((l) => l.name)).toEqual(["feature"]);
+  });
+
+  it("sorts descending and applies the limit", async () => {
+    const client = labelClient();
+    const data = await fetchLabels(ctx(client), { project: "group/repo", order: "name:desc", limit: 1 });
+    expect(data.map((l) => l.name)).toEqual(["feature"]);
+  });
+
+  it("throws when neither project nor group is given", async () => {
+    const client = labelClient();
+    await expect(fetchLabels(ctx(client), {})).rejects.toThrow(/exactly one/);
+  });
+
+  it("throws when both project and group are given", async () => {
+    const client = labelClient();
+    await expect(
+      fetchLabels(ctx(client), { project: "group/repo", group: "my-group" }),
+    ).rejects.toThrow(/exactly one/);
+  });
+
+  it("throws on an invalid layout value", async () => {
+    const client = labelClient();
+    await expect(
+      fetchLabels(ctx(client), { project: "group/repo", layout: "grid" }),
+    ).rejects.toThrow(/layout/);
   });
 });

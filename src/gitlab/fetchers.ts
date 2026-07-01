@@ -6,6 +6,7 @@ import type { TocEntry, TocMode } from "./toc.js";
 import type {
   FileData,
   IssueData,
+  LabelData,
   ProjectInfoData,
   ReadmeData,
   ReleaseData,
@@ -228,6 +229,56 @@ export async function fetchTopics(ctx: GitLabContext, attrs: Attrs): Promise<Top
     }));
     if (match) items = items.filter((t) => match(t.title));
     items = sortByName(items, (t) => t.title, order.dir);
+    if (limit !== undefined) items = items.slice(0, limit);
+    return items;
+  });
+}
+
+function readLayout(value: unknown): "list" | "cards" {
+  if (value === undefined || value === "list" || value === "cards") {
+    return value === undefined ? "list" : value;
+  }
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabLabels> "layout" must be "list" or "cards"; ` +
+      `got ${JSON.stringify(value)}.`,
+  );
+}
+
+export async function fetchLabels(ctx: GitLabContext, attrs: Attrs): Promise<LabelData[]> {
+  const project = attrs.project as string | number | undefined;
+  const group = attrs.group as string | number | undefined;
+  if ((project === undefined) === (group === undefined)) {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <GitlabLabels> requires exactly one of "project" or "group".`,
+    );
+  }
+  readLayout(attrs.layout); // validate only; layout is presentational (read by the component)
+  const order = readOrder(attrs.order);
+  const match = compileFilter(attrs.filter);
+  const limit = typeof attrs.limit === "number" ? attrs.limit : undefined;
+  const scopeKey = project !== undefined ? `p:${String(project)}` : `g:${String(group)}`;
+  const key = `labels:${scopeKey}:${String(attrs.filter ?? "")}:${order.dir}:${limit ?? "all"}`;
+  return memo(ctx, key, async () => {
+    let raw: any[];
+    let base: string;
+    if (project !== undefined) {
+      raw = await ctx.client.getProjectLabels(project);
+      base = (await ctx.client.getProject(project)).web_url;
+    } else {
+      raw = await ctx.client.getGroupLabels(group as string | number);
+      base = (await ctx.client.getGroup(group as string | number)).web_url;
+    }
+    let items: LabelData[] = raw
+      .filter((l) => l.archived !== true)
+      .map((l) => ({
+        name: l.name,
+        color: l.color,
+        textColor: l.text_color,
+        description: l.description ?? null,
+        webUrl: `${base}/-/issues?label_name[]=${encodeURIComponent(l.name)}`,
+      }));
+    if (match) items = items.filter((l) => match(l.name));
+    items = sortByName(items, (l) => l.name, order.dir);
     if (limit !== undefined) items = items.slice(0, limit);
     return items;
   });
