@@ -1,0 +1,35 @@
+---
+title: GitlabLabels
+sidebar_position: 8
+---
+
+# `<GitlabLabels>`
+
+Renders the labels of a project **or** a group as a list of links. Each label links
+to the issues list filtered by that label and keeps its GitLab color. Two layouts are
+available.
+
+## Usage
+
+```mdx
+<GitlabLabels project="group/repo" />
+
+<GitlabLabels group="my-group" layout="cards" filter="^team::" order="name" limit={20} />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `project` | `string \| number` | — | Project path or numeric ID. Provide **either** this or `group`. |
+| `group` | `string \| number` | — | Group path or numeric ID. Provide **either** this or `project`. |
+| `layout` | `string` | `list` | `list` (colored badges) or `cards` (badge + description). |
+| `filter` | `string` | — | Case-insensitive regular expression matched against the label name. |
+| `order` | `string` | `name` | `name` / `name:asc` / `name:desc`. |
+| `limit` | `number` | all | Maximum number of labels to show (applied after filter + sort). |
+
+## Notes
+
+- Exactly one of `project` / `group` is required; providing both or neither fails the build.
+- Each label links to `<project-or-group>/-/issues?label_name[]=<name>`.
+- Archived labels are omitted.

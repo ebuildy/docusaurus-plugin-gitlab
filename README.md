@@ -191,6 +191,37 @@ syntax-highlighted code block (via `prism-react-renderer`).
 | `ref` | string | default branch | Branch, tag, or commit SHA |
 | `lines` | string | whole file | Line range for code files, e.g. `"10-25"` (1-based, inclusive) |
 
+### `<GitlabTopics>`
+
+The instance topic catalog as links, each with a project-count bubble.
+
+```mdx
+<GitlabTopics filter="^data" order="name:desc" limit={10} />
+```
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `filter` | string | — | Case-insensitive regex on the topic title |
+| `order` | string | `name` | `name`, `name:asc`, or `name:desc` |
+| `limit` | number | all | Max topics to show |
+
+### `<GitlabLabels>`
+
+A project's or group's labels as links to the filtered issues list. `list` or `cards` layout.
+
+```mdx
+<GitlabLabels project="group/repo" layout="cards" filter="^team::" limit={20} />
+```
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `project` | string \| number | — | Provide either `project` or `group` |
+| `group` | string \| number | — | Provide either `project` or `group` |
+| `layout` | string | `list` | `list` or `cards` |
+| `filter` | string | — | Case-insensitive regex on the label name |
+| `order` | string | `name` | `name`, `name:asc`, or `name:desc` |
+| `limit` | number | all | Max labels to show |
+
 ## Plugin options
 
 | Option | Type | Default | Description |
