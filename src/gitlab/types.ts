@@ -73,3 +73,18 @@ export interface ComponentPayload<T> {
   data?: T;
   error?: FetchError;
 }
+
+export interface TopicData {
+  name: string;
+  title: string;
+  totalProjectsCount: number;
+  webUrl: string;
+}
+
+export interface LabelData {
+  name: string;
+  color: string;
+  textColor: string;
+  description: string | null;
+  webUrl: string;
+}

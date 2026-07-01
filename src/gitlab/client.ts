@@ -53,6 +53,22 @@ export class GitLabClient {
     return typeof raw === "string" ? raw : await raw.text();
   }
 
+  async getTopics(): Promise<any[]> {
+    return this.api.Topics.all({ perPage: 100 });
+  }
+
+  async getProjectLabels(project: ProjectRef): Promise<any[]> {
+    return this.api.ProjectLabels.all(project);
+  }
+
+  async getGroupLabels(group: ProjectRef): Promise<any[]> {
+    return this.api.GroupLabels.all(group);
+  }
+
+  async getGroup(group: ProjectRef): Promise<any> {
+    return this.api.Groups.show(group);
+  }
+
   private headers(): Record<string, string> {
     const h: Record<string, string> = { Accept: "application/json" };
     if (this.config.token) h["PRIVATE-TOKEN"] = this.config.token;
