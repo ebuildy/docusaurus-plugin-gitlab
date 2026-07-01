@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import type { Config } from "@docusaurus/types";
 import gitlabPlugin, { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
 import remarkGemoji from "remark-gemoji";
+import remarkGfm from "remark-gfm";
 
 const require = createRequire(import.meta.url);
 
@@ -12,6 +13,7 @@ const gitlabOptions = {
   host: process.env.GITLAB_HOST ?? "https://gitlab.com",
   token: process.env.GITLAB_TOKEN,
   strict: false,
+  stripToc: true,
 };
 
 // Live example: embeds REAL public content from gitlab.com.
@@ -34,7 +36,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/",
           sidebarPath: "./sidebars.ts",
-          remarkPlugins: [remarkGemoji, [remarkGitlab, gitlabOptions]],
+          remarkPlugins: [remarkGfm, remarkGemoji, [remarkGitlab, gitlabOptions]],
         },
         blog: false,
         theme: {
