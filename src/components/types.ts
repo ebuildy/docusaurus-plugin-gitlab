@@ -5,6 +5,7 @@ export type {
   ReadmeData,
   FileData,
   TopicData,
+  LabelData,
   FetchError,
   ComponentPayload,
 } from "../gitlab/types.js";
