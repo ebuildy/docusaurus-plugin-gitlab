@@ -132,28 +132,35 @@ describe("GitLabClient", () => {
     await expect(c.requestBinary("https://gitlab.com/x.png")).rejects.toThrow(/404/);
   });
 
-  it("getTopics delegates to Topics.all with a 100-per-page request", async () => {
+  it("getTopics defaults to 100 per page capped at 5 pages (500 max)", async () => {
     topicsAllMock.mockResolvedValue([{ name: "docs", total_projects_count: 3 }]);
     const c = new GitLabClient({ host: "https://gitlab.com" });
     const data = await c.getTopics();
     expect(data).toEqual([{ name: "docs", total_projects_count: 3 }]);
-    expect(topicsAllMock).toHaveBeenCalledWith({ perPage: 100 });
+    expect(topicsAllMock).toHaveBeenCalledWith({ perPage: 100, maxPages: 5 });
   });
 
-  it("getProjectLabels delegates to ProjectLabels.all", async () => {
+  it("getTopics forwards caller pagination overrides", async () => {
+    topicsAllMock.mockResolvedValue([]);
+    const c = new GitLabClient({ host: "https://gitlab.com" });
+    await c.getTopics({ perPage: 100, maxPages: 2 });
+    expect(topicsAllMock).toHaveBeenCalledWith({ perPage: 100, maxPages: 2 });
+  });
+
+  it("getProjectLabels delegates to ProjectLabels.all with the default 500 cap", async () => {
     projectLabelsAllMock.mockResolvedValue([{ name: "bug" }]);
     const c = new GitLabClient({ host: "https://gitlab.com" });
     const data = await c.getProjectLabels("group/repo");
     expect(data).toEqual([{ name: "bug" }]);
-    expect(projectLabelsAllMock).toHaveBeenCalledWith("group/repo");
+    expect(projectLabelsAllMock).toHaveBeenCalledWith("group/repo", { perPage: 100, maxPages: 5 });
   });
 
-  it("getGroupLabels delegates to GroupLabels.all", async () => {
+  it("getGroupLabels delegates to GroupLabels.all with the default 500 cap", async () => {
     groupLabelsAllMock.mockResolvedValue([{ name: "epic" }]);
     const c = new GitLabClient({ host: "https://gitlab.com" });
     const data = await c.getGroupLabels("my-group");
     expect(data).toEqual([{ name: "epic" }]);
-    expect(groupLabelsAllMock).toHaveBeenCalledWith("my-group");
+    expect(groupLabelsAllMock).toHaveBeenCalledWith("my-group", { perPage: 100, maxPages: 5 });
   });
 
   it("getGroup delegates to Groups.show", async () => {

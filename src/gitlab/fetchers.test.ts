@@ -300,6 +300,24 @@ describe("fetchTopics", () => {
     const client = { getTopics: vi.fn(async () => raw) };
     await expect(fetchTopics(ctx(client), { filter: "(" })).rejects.toThrow(/filter/);
   });
+
+  it("caps the fetch at 500 items (100 per page, 5 pages) by default", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await fetchTopics(ctx(client), {});
+    expect(client.getTopics).toHaveBeenCalledWith({ perPage: 100, maxPages: 5 });
+  });
+
+  it("fetches fewer pages when a small limit is set and there is no filter", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await fetchTopics(ctx(client), { limit: 150 });
+    expect(client.getTopics).toHaveBeenCalledWith({ perPage: 100, maxPages: 2 });
+  });
+
+  it("keeps the full 500-item cap when a filter is set even with a small limit", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await fetchTopics(ctx(client), { limit: 5, filter: "a" });
+    expect(client.getTopics).toHaveBeenCalledWith({ perPage: 100, maxPages: 5 });
+  });
 });
 
 describe("fetchLabels", () => {
@@ -329,16 +347,28 @@ describe("fetchLabels", () => {
       description: "Defect",
       webUrl: "https://gitlab.com/group/repo/-/issues?label_name[]=bug",
     });
-    expect(client.getProjectLabels).toHaveBeenCalledWith("group/repo");
+    expect(client.getProjectLabels).toHaveBeenCalledWith("group/repo", { perPage: 100, maxPages: 5 });
     expect(client.getGroupLabels).not.toHaveBeenCalled();
   });
 
   it("uses the group endpoints and group issues link for group scope", async () => {
     const client = labelClient();
     const data = await fetchLabels(ctx(client), { group: "my-group" });
-    expect(client.getGroupLabels).toHaveBeenCalledWith("my-group");
+    expect(client.getGroupLabels).toHaveBeenCalledWith("my-group", { perPage: 100, maxPages: 5 });
     expect(client.getProjectLabels).not.toHaveBeenCalled();
     expect(data[0].webUrl).toBe("https://gitlab.com/groups/my-group/-/issues?label_name[]=bug");
+  });
+
+  it("fetches fewer pages when a small limit is set and there is no filter", async () => {
+    const client = labelClient();
+    await fetchLabels(ctx(client), { project: "group/repo", limit: 10 });
+    expect(client.getProjectLabels).toHaveBeenCalledWith("group/repo", { perPage: 100, maxPages: 1 });
+  });
+
+  it("keeps the full 500-item cap when a filter is set even with a small limit", async () => {
+    const client = labelClient();
+    await fetchLabels(ctx(client), { project: "group/repo", limit: 10, filter: "bug" });
+    expect(client.getProjectLabels).toHaveBeenCalledWith("group/repo", { perPage: 100, maxPages: 5 });
   });
 
   it("filters by case-insensitive regex on the name", async () => {

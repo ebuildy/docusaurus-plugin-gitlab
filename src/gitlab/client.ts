@@ -18,6 +18,15 @@ export interface IssuesQuery {
   limit: number;
 }
 
+/** Pagination for the topic/label list endpoints. Defaults cap the fetch at 500 items. */
+export interface PageOptions {
+  perPage?: number;
+  maxPages?: number;
+}
+
+const DEFAULT_PER_PAGE = 100;
+const DEFAULT_MAX_PAGES = 5; // 5 * 100 = 500 item ceiling
+
 export class GitLabClient {
   private readonly api: InstanceType<typeof Gitlab>;
 
@@ -53,16 +62,25 @@ export class GitLabClient {
     return typeof raw === "string" ? raw : await raw.text();
   }
 
-  async getTopics(): Promise<any[]> {
-    return this.api.Topics.all({ perPage: 100 });
+  async getTopics(opts: PageOptions = {}): Promise<any[]> {
+    return this.api.Topics.all({
+      perPage: opts.perPage ?? DEFAULT_PER_PAGE,
+      maxPages: opts.maxPages ?? DEFAULT_MAX_PAGES,
+    });
   }
 
-  async getProjectLabels(project: ProjectRef): Promise<any[]> {
-    return this.api.ProjectLabels.all(project);
+  async getProjectLabels(project: ProjectRef, opts: PageOptions = {}): Promise<any[]> {
+    return this.api.ProjectLabels.all(project, {
+      perPage: opts.perPage ?? DEFAULT_PER_PAGE,
+      maxPages: opts.maxPages ?? DEFAULT_MAX_PAGES,
+    });
   }
 
-  async getGroupLabels(group: ProjectRef): Promise<any[]> {
-    return this.api.GroupLabels.all(group);
+  async getGroupLabels(group: ProjectRef, opts: PageOptions = {}): Promise<any[]> {
+    return this.api.GroupLabels.all(group, {
+      perPage: opts.perPage ?? DEFAULT_PER_PAGE,
+      maxPages: opts.maxPages ?? DEFAULT_MAX_PAGES,
+    });
   }
 
   async getGroup(group: ProjectRef): Promise<any> {

@@ -1,6 +1,6 @@
 import type { AssetManager } from "./assets";
 import type { FileCache } from "./cache";
-import type { GitLabClient } from "./client";
+import type { GitLabClient, PageOptions } from "./client";
 import { renderMarkdown } from "./markdown";
 import type { TocEntry, TocMode } from "./toc.js";
 import type {
@@ -213,6 +213,22 @@ function languageFromPath(path: string): string {
   return LANGUAGE_BY_EXTENSION[ext] ?? ext ?? "text";
 }
 
+const PAGE_SIZE = 100;
+const MAX_PAGES = 5; // hard ceiling: 5 * 100 = 500 topics/labels fetched
+
+/**
+ * Bound the fetch to 500 items. When the component sets `limit` and there is no
+ * name filter, fetch only enough pages to satisfy it; a filter forces the full
+ * ceiling because a match can land on any page.
+ */
+function pageOptions(limit: number | undefined, hasFilter: boolean): PageOptions {
+  const maxPages =
+    limit !== undefined && !hasFilter
+      ? Math.min(MAX_PAGES, Math.max(1, Math.ceil(limit / PAGE_SIZE)))
+      : MAX_PAGES;
+  return { perPage: PAGE_SIZE, maxPages };
+}
+
 export async function fetchTopics(ctx: GitLabContext, attrs: Attrs): Promise<TopicData[]> {
   const order = readOrder(attrs.order);
   const match = compileFilter(attrs.filter);
@@ -220,7 +236,7 @@ export async function fetchTopics(ctx: GitLabContext, attrs: Attrs): Promise<Top
   const host = ctx.options.host;
   const key = `topics:${String(attrs.filter ?? "")}:${order.dir}:${limit ?? "all"}`;
   return memo(ctx, key, async () => {
-    const raw = await ctx.client.getTopics();
+    const raw = await ctx.client.getTopics(pageOptions(limit, match !== null));
     let items: TopicData[] = raw.map((t: any) => ({
       name: t.name,
       title: t.title ?? t.name,
@@ -261,11 +277,12 @@ export async function fetchLabels(ctx: GitLabContext, attrs: Attrs): Promise<Lab
   return memo(ctx, key, async () => {
     let raw: any[];
     let base: string;
+    const pages = pageOptions(limit, match !== null);
     if (project !== undefined) {
-      raw = await ctx.client.getProjectLabels(project);
+      raw = await ctx.client.getProjectLabels(project, pages);
       base = (await ctx.client.getProject(project)).web_url;
     } else {
-      raw = await ctx.client.getGroupLabels(group as string | number);
+      raw = await ctx.client.getGroupLabels(group as string | number, pages);
       base = (await ctx.client.getGroup(group as string | number)).web_url;
     }
     let items: LabelData[] = raw
