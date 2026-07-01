@@ -4,6 +4,8 @@ import {
   fetchReleases,
   fetchIssues,
   fetchFile,
+  fetchTopics,
+  fetchLabels,
   type GitLabContext,
 } from "../gitlab/fetchers.js";
 
@@ -15,4 +17,6 @@ export const COMPONENT_REGISTRY: Record<string, Fetcher> = {
   GitlabReleases: fetchReleases,
   GitlabIssues: fetchIssues,
   GitlabFile: fetchFile,
+  GitlabTopics: fetchTopics,
+  GitlabLabels: fetchLabels,
 };
