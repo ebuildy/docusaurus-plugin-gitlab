@@ -21,3 +21,6 @@ examples/*/.docusaurus/
 examples/*/node_modules/
 examples/*/static/gitlab-assets/
 node_modules/.cache/
+
+.env
+external/
