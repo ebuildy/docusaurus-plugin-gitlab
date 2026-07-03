@@ -25,6 +25,12 @@ using it. Topics are instance-wide, so this component takes no `project`/`group`
 | `order` | `string` | `name` | `name` / `name:asc` / `name:desc`. |
 | `limit` | `number` | all | Maximum number of topics to show (applied after filter + sort). |
 
+## Scoped topics
+
+A topic whose title uses the `scope::value` form (e.g. `team::backend`) renders as a
+two-part badge: the **scope** keeps the default badge background and the **value** is
+shown next to it on a dark-gray background. The split happens on the last `::`.
+
 ## Notes
 
 - Each topic links to `<host>/explore/projects/topics/<name>`.

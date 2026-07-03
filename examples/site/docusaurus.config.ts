@@ -27,7 +27,9 @@ const config: Config = {
           remarkPlugins: [remarkGemoji, [remarkGitlab, gitlabOptions]],
         },
         blog: false,
-        theme: {},
+        theme: {
+          customCss: require.resolve("@ebuildy/docusaurus-plugin-gitlab/theme.css"),
+        },
       },
     ],
   ],

@@ -15,6 +15,8 @@ available.
 <GitlabLabels project="group/repo" />
 
 <GitlabLabels group="my-group" layout="cards" filter="^team::" order="name" limit={20} />
+
+<GitlabLabels group="my-group" layout="cards" cardColumns={3} gap="1rem" maxWidth="900px" align="center" />
 ```
 
 ## Props
@@ -27,6 +29,26 @@ available.
 | `filter` | `string` | — | Case-insensitive regular expression matched against the label name. |
 | `order` | `string` | `name` | `name` / `name:asc` / `name:desc`. |
 | `limit` | `number` | all | Maximum number of labels to show (applied after filter + sort). |
+
+## Cards layout
+
+These props only affect the `cards` layout and tune the responsive grid:
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `cardColumns` | `number` | — | Fixed number of columns. Takes precedence over `cardMinWidth`. |
+| `cardMinWidth` | `string` | `180px` | Minimum card width for a responsive (auto-fill) grid, e.g. `"220px"`. Ignored when `cardColumns` is set. |
+| `gap` | `string` | `0.75rem` | Spacing between cards, e.g. `"1.5rem"`. |
+| `maxWidth` | `string` | — | Constrain the grid width, e.g. `"900px"`. |
+| `align` | `string` | `start` | `start` or `center` — horizontal placement of a width-constrained grid. |
+
+## Scoped labels
+
+[Scoped labels](https://docs.gitlab.com/ee/user/project/labels.html#scoped-labels)
+(`scope::value`, e.g. `Abilities::Performance`) render as a two-part badge: the
+**scope** keeps the label's GitLab color, and the **value** is shown next to it on a
+dark-gray background. The split happens on the last `::`, so nested scopes like
+`priority::severity::high` become scope `priority::severity` / value `high`.
 
 ## Notes
 
