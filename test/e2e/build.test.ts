@@ -80,4 +80,17 @@ describe("e2e: docusaurus build", () => {
     // ...and the README headings come AFTER the page heading that precedes the component.
     expect(html.indexOf('href="#overview"')).toBeLessThan(html.indexOf('href="#install"'));
   });
+
+  it("bakes topics and labels into the static html", () => {
+    const html = readFileSync(join(siteDir, "build", "index.html"), "utf8");
+    // topic explore link + count bubble (robust against Docusaurus's "Docs" navbar label)
+    expect(html).toContain("/explore/projects/topics/docs");
+    expect(html).toContain("gitlab-count-bubble");
+    // project label (cards layout) with its description and issues link
+    expect(html).toContain("gitlab-label-card");
+    expect(html).toContain("label_name[]=bug");
+    expect(html).toContain("New capability");
+    // group label with the group issues link
+    expect(html).toContain("/groups/my-group/-/issues?label_name[]=epic");
+  });
 });

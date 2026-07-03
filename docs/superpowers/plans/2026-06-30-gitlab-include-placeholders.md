@@ -29,6 +29,11 @@
 | `package.json` | Add `./plugin` export | Modify |
 | `examples/site/docusaurus.config.ts` | Register plugin + `remark-gemoji` for the e2e | Modify |
 | `examples/site/docs/includes.mdx` | Example page using both placeholders | Create |
+<<<<<<< HEAD
+| `examples/gitlab/docusaurus.config.ts` | Register plugin + `remark-gemoji` for the e2e | Modify |
+| `examples/gitlab/docs/includes.mdx` | Example page using both placeholders | Create |
+=======
+>>>>>>> main
 | `test/e2e/fixtures.ts` | Add an emoji + a fenced range file to the stub README/file | Modify |
 | `test/e2e/build.test.ts` | Assert native heading anchors + emoji from the included content | Modify |
 | `README.md`, `examples/gitlab/docs/*` | Document the placeholders | Modify |

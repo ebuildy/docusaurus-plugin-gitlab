@@ -1,14 +1,16 @@
 import type { AssetManager } from "./assets";
 import type { FileCache } from "./cache";
-import type { GitLabClient } from "./client";
-import { renderMarkdown } from "./markdown";
+import type { GitLabClient, PageOptions } from "./client";
+import { renderMarkdown } from "./markdown.js";
 import type { TocEntry, TocMode } from "./toc.js";
 import type {
   FileData,
   IssueData,
+  LabelData,
   ProjectInfoData,
   ReadmeData,
   ReleaseData,
+  TopicData,
 } from "./types";
 
 export interface GitLabContext {
@@ -91,6 +93,41 @@ export async function fetchIssues(ctx: GitLabContext, attrs: Attrs): Promise<Iss
       createdAt: i.created_at,
     } satisfies IssueData));
   });
+}
+
+interface OrderSpec {
+  field: "name";
+  dir: "asc" | "desc";
+}
+
+function readOrder(value: unknown): OrderSpec {
+  if (value === undefined || value === "name" || value === "name:asc") {
+    return { field: "name", dir: "asc" };
+  }
+  if (value === "name:desc") return { field: "name", dir: "desc" };
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: "order" must be one of "name", "name:asc", ` +
+      `"name:desc"; got ${JSON.stringify(value)}.`,
+  );
+}
+
+function compileFilter(value: unknown): ((text: string) => boolean) | null {
+  if (value === undefined) return null;
+  const pattern = String(value);
+  let re: RegExp;
+  try {
+    re = new RegExp(pattern, "i");
+  } catch {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: "filter" is not a valid regular expression: ${pattern}`,
+    );
+  }
+  return (text: string) => re.test(text);
+}
+
+function sortByName<T>(items: T[], get: (item: T) => string, dir: "asc" | "desc"): T[] {
+  const sorted = [...items].sort((a, b) => get(a).localeCompare(get(b)));
+  return dir === "desc" ? sorted.reverse() : sorted;
 }
 
 function readTocMode(value: unknown): TocMode {
@@ -176,6 +213,94 @@ function languageFromPath(path: string): string {
   return LANGUAGE_BY_EXTENSION[ext] ?? ext ?? "text";
 }
 
+const PAGE_SIZE = 100;
+const MAX_PAGES = 5; // hard ceiling: 5 * 100 = 500 topics/labels fetched
+
+/**
+ * Bound the fetch to 500 items. When the component sets `limit` and there is no
+ * name filter, fetch only enough pages to satisfy it; a filter forces the full
+ * ceiling because a match can land on any page.
+ */
+function pageOptions(limit: number | undefined, hasFilter: boolean): PageOptions {
+  const maxPages =
+    limit !== undefined && !hasFilter
+      ? Math.min(MAX_PAGES, Math.max(1, Math.ceil(limit / PAGE_SIZE)))
+      : MAX_PAGES;
+  return { perPage: PAGE_SIZE, maxPages };
+}
+
+export async function fetchTopics(ctx: GitLabContext, attrs: Attrs): Promise<TopicData[]> {
+  const order = readOrder(attrs.order);
+  const match = compileFilter(attrs.filter);
+  const limit = typeof attrs.limit === "number" ? attrs.limit : undefined;
+  const host = ctx.options.host;
+  const key = `topics:${String(attrs.filter ?? "")}:${order.dir}:${limit ?? "all"}`;
+  return memo(ctx, key, async () => {
+    const raw = await ctx.client.getTopics(pageOptions(limit, match !== null));
+    let items: TopicData[] = raw.map((t: any) => ({
+      name: t.name,
+      title: t.title ?? t.name,
+      totalProjectsCount: t.total_projects_count ?? 0,
+      webUrl: `${host}/explore/projects/topics/${encodeURIComponent(t.name)}`,
+    }));
+    if (match) items = items.filter((t) => match(t.title));
+    items = sortByName(items, (t) => t.title, order.dir);
+    if (limit !== undefined) items = items.slice(0, limit);
+    return items;
+  });
+}
+
+function readLayout(value: unknown): "list" | "cards" {
+  if (value === undefined || value === "list" || value === "cards") {
+    return value === undefined ? "list" : value;
+  }
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabLabels> "layout" must be "list" or "cards"; ` +
+      `got ${JSON.stringify(value)}.`,
+  );
+}
+
+export async function fetchLabels(ctx: GitLabContext, attrs: Attrs): Promise<LabelData[]> {
+  const project = attrs.project as string | number | undefined;
+  const group = attrs.group as string | number | undefined;
+  if ((project === undefined) === (group === undefined)) {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <GitlabLabels> requires exactly one of "project" or "group".`,
+    );
+  }
+  readLayout(attrs.layout); // validate only; layout is presentational (read by the component)
+  const order = readOrder(attrs.order);
+  const match = compileFilter(attrs.filter);
+  const limit = typeof attrs.limit === "number" ? attrs.limit : undefined;
+  const scopeKey = project !== undefined ? `p:${String(project)}` : `g:${String(group)}`;
+  const key = `labels:${scopeKey}:${String(attrs.filter ?? "")}:${order.dir}:${limit ?? "all"}`;
+  return memo(ctx, key, async () => {
+    let raw: any[];
+    let base: string;
+    const pages = pageOptions(limit, match !== null);
+    if (project !== undefined) {
+      raw = await ctx.client.getProjectLabels(project, pages);
+      base = (await ctx.client.getProject(project)).web_url;
+    } else {
+      raw = await ctx.client.getGroupLabels(group as string | number, pages);
+      base = (await ctx.client.getGroup(group as string | number)).web_url;
+    }
+    let items: LabelData[] = raw
+      .filter((l) => l.archived !== true)
+      .map((l) => ({
+        name: l.name,
+        color: l.color,
+        textColor: l.text_color,
+        description: l.description ?? null,
+        webUrl: `${base}/-/issues?label_name[]=${encodeURIComponent(l.name)}`,
+      }));
+    if (match) items = items.filter((l) => match(l.name));
+    items = sortByName(items, (l) => l.name, order.dir);
+    if (limit !== undefined) items = items.slice(0, limit);
+    return items;
+  });
+}
+
 export async function fetchFile(ctx: GitLabContext, attrs: Attrs): Promise<FileData> {
   const project = attrs.project as string | number;
   const path = String(attrs.path);
@@ -198,4 +323,31 @@ export async function fetchFile(ctx: GitLabContext, attrs: Attrs): Promise<FileD
       return { kind: "code", code, language, ref, path } satisfies FileData;
     },
   );
+}
+
+export interface SourceResult {
+  raw: string;
+  ref: string;
+}
+
+export async function fetchReadmeSource(
+  ctx: GitLabContext,
+  args: { project: string; ref?: string },
+): Promise<SourceResult> {
+  return memo(ctx, `readmeSource:${args.project}:${args.ref ?? "default"}`, async () => {
+    const ref = args.ref ?? (await ctx.client.getProject(args.project)).default_branch;
+    const raw = await ctx.client.getFileRaw(args.project, "README.md", ref);
+    return { raw, ref } satisfies SourceResult;
+  });
+}
+
+export async function fetchFileSource(
+  ctx: GitLabContext,
+  args: { project: string; path: string; ref?: string },
+): Promise<SourceResult> {
+  return memo(ctx, `fileSource:${args.project}:${args.path}:${args.ref ?? "default"}`, async () => {
+    const ref = args.ref ?? (await ctx.client.getProject(args.project)).default_branch;
+    const raw = await ctx.client.getFileRaw(args.project, args.path, ref);
+    return { raw, ref } satisfies SourceResult;
+  });
 }

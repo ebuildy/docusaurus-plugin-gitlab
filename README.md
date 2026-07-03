@@ -191,6 +191,45 @@ syntax-highlighted code block (via `prism-react-renderer`).
 | `ref` | string | default branch | Branch, tag, or commit SHA |
 | `lines` | string | whole file | Line range for code files, e.g. `"10-25"` (1-based, inclusive) |
 
+### `<GitlabTopics>`
+
+The instance topic catalog as links, each with a project-count bubble.
+
+```mdx
+<GitlabTopics filter="^data" order="name:desc" limit={10} />
+```
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `filter` | string | — | Case-insensitive regex on the topic title |
+| `order` | string | `name` | `name`, `name:asc`, or `name:desc` |
+| `limit` | number | all | Max topics to show |
+
+### `<GitlabLabels>`
+
+A project's or group's labels as links to the filtered issues list. `list` or `cards` layout.
+
+```mdx
+<GitlabLabels project="group/repo" layout="cards" filter="^team::" limit={20} />
+```
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `project` | string \| number | — | Provide either `project` or `group` |
+| `group` | string \| number | — | Provide either `project` or `group` |
+| `layout` | string | `list` | `list` or `cards` |
+| `filter` | string | — | Case-insensitive regex on the label name |
+| `order` | string | `name` | `name`, `name:asc`, or `name:desc` |
+| `limit` | number | all | Max labels to show |
+
+The `cards` layout accepts grid props: `cardColumns` (fixed column count), `cardMinWidth`
+(responsive min width, ignored when `cardColumns` is set), `gap`, `maxWidth`, and
+`align` (`start`/`center`).
+
+Both components render [scoped labels/topics](https://docs.gitlab.com/ee/user/project/labels.html#scoped-labels)
+(`scope::value`, e.g. `Abilities::Performance`) as a two-part badge — the scope keeps its
+color and the value gets a dark-gray background. The split is on the last `::`.
+
 ## Plugin options
 
 | Option | Type | Default | Description |
@@ -201,6 +240,12 @@ syntax-highlighted code block (via `prism-react-renderer`).
 | `cache` | `{ ttl: number }` \| `false` | `{ ttl: 3600 }` | On-disk cache TTL (seconds), or `false` to disable |
 | `assetDir` | string | `static/gitlab-assets` | Where README images/badges are downloaded |
 | `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from |
+| `fixAutolinks` | boolean | `true` | Rewrite CommonMark autolinks in included markdown to MDX-safe links (include placeholders only) |
+| `fixVoidTags` | boolean | `true` | Self-close HTML void elements (`<br>` → `<br/>`) in included markdown (include placeholders only) |
+| `fixInlineStyles` | boolean | `true` | Convert HTML string `style="…"` attributes to JSX style objects in included markdown |
+| `convertAlerts` | boolean | `true` | Translate GitLab alert blockquotes (`> [!note]`) to Docusaurus admonitions (`:::note`) in included markdown |
+| `stripToc` | boolean | `false` | Remove a redundant "Table of Contents" section (and `[[_TOC_]]` marker) from included markdown |
+| `outProcessors` | `Array<(md: string) => string \| Promise<string>>` | `[]` | Extra post-processors for included markdown, run after the built-in fixes |
 
 The token is read at build time only. Provide it via an environment variable
 (`GITLAB_TOKEN`) — never commit it.

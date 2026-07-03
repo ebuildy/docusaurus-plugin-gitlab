@@ -1,0 +1,37 @@
+---
+title: GitlabTopics
+sidebar_position: 7
+---
+
+# `<GitlabTopics>`
+
+Renders the GitLab instance's topic catalog as a list of links. Each topic links to
+its projects-by-topic explore page and shows a bubble with the number of projects
+using it. Topics are instance-wide, so this component takes no `project`/`group`.
+
+## Usage
+
+```mdx
+<GitlabTopics />
+
+<GitlabTopics filter="^data" order="name:desc" limit={10} />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `filter` | `string` | — | Case-insensitive regular expression matched against the topic title. |
+| `order` | `string` | `name` | `name` / `name:asc` / `name:desc`. |
+| `limit` | `number` | all | Maximum number of topics to show (applied after filter + sort). |
+
+## Scoped topics
+
+A topic whose title uses the `scope::value` form (e.g. `team::backend`) renders as a
+two-part badge: the **scope** keeps the default badge background and the **value** is
+shown next to it on a dark-gray background. The split happens on the last `::`.
+
+## Notes
+
+- Each topic links to `<host>/explore/projects/topics/<name>`.
+- The count bubble is the topic's `total_projects_count`.

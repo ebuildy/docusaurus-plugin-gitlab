@@ -5,6 +5,10 @@ const releasesAllMock = vi.fn();
 const issuesAllMock = vi.fn();
 const showRawMock = vi.fn();
 const gitlabCtor = vi.fn();
+const topicsAllMock = vi.fn();
+const projectLabelsAllMock = vi.fn();
+const groupLabelsAllMock = vi.fn();
+const groupShowMock = vi.fn();
 
 vi.mock("@gitbeaker/rest", () => ({
   // Vitest 4 invokes the mock implementation as a real constructor under
@@ -16,6 +20,10 @@ vi.mock("@gitbeaker/rest", () => ({
       ProjectReleases: { all: releasesAllMock },
       Issues: { all: issuesAllMock },
       RepositoryFiles: { showRaw: showRawMock },
+      Topics: { all: topicsAllMock },
+      ProjectLabels: { all: projectLabelsAllMock },
+      GroupLabels: { all: groupLabelsAllMock },
+      Groups: { show: groupShowMock },
     };
   }),
 }));
@@ -31,6 +39,10 @@ beforeEach(() => {
   issuesAllMock.mockReset();
   showRawMock.mockReset();
   gitlabCtor.mockReset();
+  topicsAllMock.mockReset();
+  projectLabelsAllMock.mockReset();
+  groupLabelsAllMock.mockReset();
+  groupShowMock.mockReset();
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -118,5 +130,44 @@ describe("GitLabClient", () => {
     fetchMock.mockResolvedValue(new Response("nope", { status: 404 }));
     const c = new GitLabClient({ host: "https://gitlab.com" });
     await expect(c.requestBinary("https://gitlab.com/x.png")).rejects.toThrow(/404/);
+  });
+
+  it("getTopics defaults to 100 per page capped at 5 pages (500 max)", async () => {
+    topicsAllMock.mockResolvedValue([{ name: "docs", total_projects_count: 3 }]);
+    const c = new GitLabClient({ host: "https://gitlab.com" });
+    const data = await c.getTopics();
+    expect(data).toEqual([{ name: "docs", total_projects_count: 3 }]);
+    expect(topicsAllMock).toHaveBeenCalledWith({ perPage: 100, maxPages: 5 });
+  });
+
+  it("getTopics forwards caller pagination overrides", async () => {
+    topicsAllMock.mockResolvedValue([]);
+    const c = new GitLabClient({ host: "https://gitlab.com" });
+    await c.getTopics({ perPage: 100, maxPages: 2 });
+    expect(topicsAllMock).toHaveBeenCalledWith({ perPage: 100, maxPages: 2 });
+  });
+
+  it("getProjectLabels delegates to ProjectLabels.all with the default 500 cap", async () => {
+    projectLabelsAllMock.mockResolvedValue([{ name: "bug" }]);
+    const c = new GitLabClient({ host: "https://gitlab.com" });
+    const data = await c.getProjectLabels("group/repo");
+    expect(data).toEqual([{ name: "bug" }]);
+    expect(projectLabelsAllMock).toHaveBeenCalledWith("group/repo", { perPage: 100, maxPages: 5 });
+  });
+
+  it("getGroupLabels delegates to GroupLabels.all with the default 500 cap", async () => {
+    groupLabelsAllMock.mockResolvedValue([{ name: "epic" }]);
+    const c = new GitLabClient({ host: "https://gitlab.com" });
+    const data = await c.getGroupLabels("my-group");
+    expect(data).toEqual([{ name: "epic" }]);
+    expect(groupLabelsAllMock).toHaveBeenCalledWith("my-group", { perPage: 100, maxPages: 5 });
+  });
+
+  it("getGroup delegates to Groups.show", async () => {
+    groupShowMock.mockResolvedValue({ id: 9, web_url: "https://x/groups/my-group" });
+    const c = new GitLabClient({ host: "https://gitlab.com" });
+    const data = await c.getGroup("my-group");
+    expect(data).toEqual({ id: 9, web_url: "https://x/groups/my-group" });
+    expect(groupShowMock).toHaveBeenCalledWith("my-group");
   });
 });

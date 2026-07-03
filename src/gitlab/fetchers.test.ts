@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile, fetchTopics, fetchLabels } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -251,5 +251,154 @@ describe("fetchFile", () => {
     expect(data.kind).toBe("code");
     const code = data as Extract<typeof data, { kind: "code" }>;
     expect(code.language).toBe("weird");
+  });
+});
+
+describe("fetchTopics", () => {
+  const raw = [
+    { name: "docs", title: "Docs", total_projects_count: 3 },
+    { name: "api", title: "API", total_projects_count: 10 },
+    { name: "internal-tool", title: "Internal Tool", total_projects_count: 1 },
+  ];
+
+  it("normalizes topics and builds the explore URL, sorted by title ascending", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    const data = await fetchTopics(ctx(client), {});
+    expect(data.map((t) => t.title)).toEqual(["API", "Docs", "Internal Tool"]);
+    expect(data[0]).toEqual({
+      name: "api",
+      title: "API",
+      totalProjectsCount: 10,
+      webUrl: "https://gitlab.com/explore/projects/topics/api",
+    });
+  });
+
+  it("sorts descending when order=name:desc", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    const data = await fetchTopics(ctx(client), { order: "name:desc" });
+    expect(data.map((t) => t.title)).toEqual(["Internal Tool", "Docs", "API"]);
+  });
+
+  it("filters by case-insensitive regex on the title", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    const data = await fetchTopics(ctx(client), { filter: "^a" });
+    expect(data.map((t) => t.title)).toEqual(["API"]);
+  });
+
+  it("applies the limit after filtering and sorting", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    const data = await fetchTopics(ctx(client), { limit: 2 });
+    expect(data.map((t) => t.title)).toEqual(["API", "Docs"]);
+  });
+
+  it("throws on an invalid order value", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await expect(fetchTopics(ctx(client), { order: "count" })).rejects.toThrow(/order/);
+  });
+
+  it("throws on an invalid filter regex", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await expect(fetchTopics(ctx(client), { filter: "(" })).rejects.toThrow(/filter/);
+  });
+
+  it("caps the fetch at 500 items (100 per page, 5 pages) by default", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await fetchTopics(ctx(client), {});
+    expect(client.getTopics).toHaveBeenCalledWith({ perPage: 100, maxPages: 5 });
+  });
+
+  it("fetches fewer pages when a small limit is set and there is no filter", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await fetchTopics(ctx(client), { limit: 150 });
+    expect(client.getTopics).toHaveBeenCalledWith({ perPage: 100, maxPages: 2 });
+  });
+
+  it("keeps the full 500-item cap when a filter is set even with a small limit", async () => {
+    const client = { getTopics: vi.fn(async () => raw) };
+    await fetchTopics(ctx(client), { limit: 5, filter: "a" });
+    expect(client.getTopics).toHaveBeenCalledWith({ perPage: 100, maxPages: 5 });
+  });
+});
+
+describe("fetchLabels", () => {
+  const rawLabels = [
+    { name: "bug", color: "#d9534f", text_color: "#ffffff", description: "Defect", archived: false },
+    { name: "feature", color: "#5cb85c", text_color: "#1a1a1a", description: null, archived: false },
+    { name: "old", color: "#cccccc", text_color: "#000000", description: "retired", archived: true },
+  ];
+
+  function labelClient() {
+    return {
+      getProjectLabels: vi.fn(async () => rawLabels),
+      getGroupLabels: vi.fn(async () => rawLabels),
+      getProject: vi.fn(async () => ({ web_url: "https://gitlab.com/group/repo" })),
+      getGroup: vi.fn(async () => ({ web_url: "https://gitlab.com/groups/my-group" })),
+    };
+  }
+
+  it("normalizes project labels, drops archived, and builds the issues link", async () => {
+    const client = labelClient();
+    const data = await fetchLabels(ctx(client), { project: "group/repo" });
+    expect(data.map((l) => l.name)).toEqual(["bug", "feature"]);
+    expect(data[0]).toEqual({
+      name: "bug",
+      color: "#d9534f",
+      textColor: "#ffffff",
+      description: "Defect",
+      webUrl: "https://gitlab.com/group/repo/-/issues?label_name[]=bug",
+    });
+    expect(client.getProjectLabels).toHaveBeenCalledWith("group/repo", { perPage: 100, maxPages: 5 });
+    expect(client.getGroupLabels).not.toHaveBeenCalled();
+  });
+
+  it("uses the group endpoints and group issues link for group scope", async () => {
+    const client = labelClient();
+    const data = await fetchLabels(ctx(client), { group: "my-group" });
+    expect(client.getGroupLabels).toHaveBeenCalledWith("my-group", { perPage: 100, maxPages: 5 });
+    expect(client.getProjectLabels).not.toHaveBeenCalled();
+    expect(data[0].webUrl).toBe("https://gitlab.com/groups/my-group/-/issues?label_name[]=bug");
+  });
+
+  it("fetches fewer pages when a small limit is set and there is no filter", async () => {
+    const client = labelClient();
+    await fetchLabels(ctx(client), { project: "group/repo", limit: 10 });
+    expect(client.getProjectLabels).toHaveBeenCalledWith("group/repo", { perPage: 100, maxPages: 1 });
+  });
+
+  it("keeps the full 500-item cap when a filter is set even with a small limit", async () => {
+    const client = labelClient();
+    await fetchLabels(ctx(client), { project: "group/repo", limit: 10, filter: "bug" });
+    expect(client.getProjectLabels).toHaveBeenCalledWith("group/repo", { perPage: 100, maxPages: 5 });
+  });
+
+  it("filters by case-insensitive regex on the name", async () => {
+    const client = labelClient();
+    const data = await fetchLabels(ctx(client), { project: "group/repo", filter: "^feat" });
+    expect(data.map((l) => l.name)).toEqual(["feature"]);
+  });
+
+  it("sorts descending and applies the limit", async () => {
+    const client = labelClient();
+    const data = await fetchLabels(ctx(client), { project: "group/repo", order: "name:desc", limit: 1 });
+    expect(data.map((l) => l.name)).toEqual(["feature"]);
+  });
+
+  it("throws when neither project nor group is given", async () => {
+    const client = labelClient();
+    await expect(fetchLabels(ctx(client), {})).rejects.toThrow(/exactly one/);
+  });
+
+  it("throws when both project and group are given", async () => {
+    const client = labelClient();
+    await expect(
+      fetchLabels(ctx(client), { project: "group/repo", group: "my-group" }),
+    ).rejects.toThrow(/exactly one/);
+  });
+
+  it("throws on an invalid layout value", async () => {
+    const client = labelClient();
+    await expect(
+      fetchLabels(ctx(client), { project: "group/repo", layout: "grid" }),
+    ).rejects.toThrow(/layout/);
   });
 });

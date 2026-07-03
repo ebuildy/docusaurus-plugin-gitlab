@@ -1,28 +1,10 @@
 import { visit } from "unist-util-visit";
-import { AssetManager } from "../gitlab/assets.js";
-import { FileCache } from "../gitlab/cache.js";
-import { GitLabClient } from "../gitlab/client.js";
-import type { GitLabContext } from "../gitlab/fetchers.js";
+import { buildContext } from "../gitlab/context.js";
 import { resolveOptions, type PluginOptions } from "../options.js";
 import { parseAttributes } from "./attributes.js";
 import { injectProp } from "./inject.js";
 import { COMPONENT_REGISTRY } from "./registry.js";
 import { mergeReadmeTocs } from "./toc-export.js";
-
-const CACHE_DIR = "node_modules/.cache/@ebuildy/docusaurus-plugin-gitlab";
-
-function buildContext(options: ReturnType<typeof resolveOptions>): GitLabContext {
-  const client = new GitLabClient({ host: options.host, token: options.token });
-  const cache = new FileCache(CACHE_DIR, options.cache);
-  const assets = new AssetManager({
-    client,
-    cache,
-    assetDir: options.assetDir,
-    assetBaseUrl: options.assetBaseUrl,
-    host: options.host,
-  });
-  return { client, cache, assets, options: { host: options.host } };
-}
 
 export default function remarkGitlab(rawOptions: PluginOptions) {
   const mode = process.env.NODE_ENV === "production" ? "production" : "development";

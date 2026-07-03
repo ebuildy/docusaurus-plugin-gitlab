@@ -58,6 +58,66 @@
   font-size: 0.85em;
 }
 
+/* Scoped labels/topics ("scope::value") render as two joined segments:
+   the scope keeps its color, the value gets a dark-gray treatment. */
+.gitlab-label--scoped,
+.gitlab-topic--scoped {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+  /* framed in the scope color: set inline for labels, primary for topics */
+  border: 1px solid;
+}
+.gitlab-topic--scoped {
+  border-color: var(--ifm-color-primary);
+}
+.gitlab-label-scope,
+.gitlab-label-value {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.5rem;
+}
+/* Scoped topics carry no per-label color, so give the scope the badge default. */
+.gitlab-topic--scoped .gitlab-label-scope {
+  background: var(--ifm-color-emphasis-100);
+  color: var(--ifm-color-primary);
+}
+.gitlab-label-value {
+  background: #4c4c4c;
+  color: #fff;
+}
+.gitlab-topic--scoped .gitlab-count-bubble {
+  padding: 0 0.4rem;
+}
+
+/* Labels — cards layout: a responsive grid of project-style cards. */
+.gitlab-label-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+/* Reuse .gitlab-card (border + shadow + hover) but reset link chrome and the
+   card's default block margin so it sits flush in the grid. */
+.gitlab-label-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.gitlab-label-card:hover {
+  text-decoration: none;
+}
+.gitlab-label-card-desc {
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--ifm-color-emphasis-700);
+}
+
 /* Issues list */
 .gitlab-issues {
   list-style: none;

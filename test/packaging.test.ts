@@ -42,3 +42,18 @@ describe("packaging: ESM-only", () => {
     }
   });
 });
+
+describe("packaging: plugin default export", () => {
+  it("exposes a Docusaurus plugin as the package default export", async () => {
+    // Import the built artifact via a runtime URL so `tsc --noEmit` doesn't try to
+    // resolve `dist/` (which isn't built during the typecheck CI step). `npm run
+    // test` builds the package first, so the file exists at runtime.
+    const entry = new URL("../dist/index.js", import.meta.url).href;
+    const mod = (await import(entry)) as {
+      default: (context: unknown, options: unknown) => { name: string };
+    };
+    expect(typeof mod.default).toBe("function");
+    const plugin = mod.default({}, { host: "https://gitlab.example.com", cache: false });
+    expect(plugin.name).toBe("@ebuildy/docusaurus-plugin-gitlab");
+  });
+});

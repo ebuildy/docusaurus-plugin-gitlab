@@ -37,9 +37,29 @@ export async function startGitlabStub(): Promise<{ url: string; stop: () => Prom
           author: { name: "Ann", web_url: "https://x/ann" }, created_at: "2026-01-01T00:00:00Z" },
       ]);
     }
+    if (url.startsWith("/api/v4/projects/group%2Frepo/labels")) {
+      return send([
+        { name: "bug", color: "#d9534f", text_color: "#ffffff", description: "Defect", archived: false },
+        { name: "feature", color: "#5cb85c", text_color: "#1a1a1a", description: "New capability", archived: false },
+      ]);
+    }
+    if (url.startsWith("/api/v4/topics")) {
+      return send([
+        { name: "docs", title: "Docs", total_projects_count: 4 },
+        { name: "api", title: "API", total_projects_count: 9 },
+      ]);
+    }
+    if (url.startsWith("/api/v4/groups/my-group/labels")) {
+      return send([
+        { name: "epic", color: "#8e44ad", text_color: "#ffffff", description: "Cross-project", archived: false },
+      ]);
+    }
+    if (url.startsWith("/api/v4/groups/my-group")) {
+      return send({ id: 42, web_url: "https://x/groups/my-group" });
+    }
     if (url.includes("/repository/files/README.md/raw")) {
       return send(
-        "# Hello\n\nReadme body.\n\n## Install\n\nsetup\n\n## Usage\n\ngo\n\n![logo](./logo.png)",
+        "# Hello :rocket:\n\nReadme body.\n\n## Table of Contents\n\n- [Jump to install](#install)\n- [Jump to usage](#usage)\n\n## Install\n\nsetup\n\n## Usage\n\ngo\n\nEmail: <contact@example.com>\n\n<p style=\"color: red;\">Red text via HTML</p>\n\n> [!warning]\n> Mind the gap.\n\n| Notes |\n| --- |\n| one<br>two |\n\n![logo](./logo.png)",
         "text/plain",
       );
     }
