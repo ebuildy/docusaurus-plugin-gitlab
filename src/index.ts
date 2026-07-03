@@ -15,5 +15,7 @@ export type {
   IssueData,
   ReadmeData,
   FileData,
+  TopicData,
+  LabelData,
   FetchError,
 } from "./gitlab/types.js";

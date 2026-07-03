@@ -191,115 +191,44 @@ syntax-highlighted code block (via `prism-react-renderer`).
 | `ref` | string | default branch | Branch, tag, or commit SHA |
 | `lines` | string | whole file | Line range for code files, e.g. `"10-25"` (1-based, inclusive) |
 
-## Include placeholders
+### `<GitlabTopics>`
 
-Besides the JSX components, you can embed GitLab **markdown** and **files** with
-text placeholders that are substituted **before** MDX parsing — so the content
-flows through Docusaurus's own pipeline (table of contents, emoji, admonitions,
-heading anchors, Prism highlighting, internal links) exactly as if you had written
-it by hand.
+The instance topic catalog as links, each with a project-count bubble.
 
-### Setup
-
-Register the plugin once. This is separate from the remark plugin in
-[Setup](#setup) above — keep that for the JSX components:
-
-```ts
-// docusaurus.config.ts (ESM)
-import gitlabPlugin from "@ebuildy/docusaurus-plugin-gitlab";
-
-export default {
-  plugins: [
-    [
-      gitlabPlugin,
-      {
-        host: "https://gitlab.com",
-        token: process.env.GITLAB_TOKEN, // optional for public projects
-      },
-    ],
-  ],
-  // ...your presets, including remarkGitlab for the JSX components...
-};
+```mdx
+<GitlabTopics filter="^data" order="name:desc" limit={10} />
 ```
 
-The plugin also contributes `theme.css` automatically (via `getClientModules`),
-so the component/include styles load without a separate `customCss` entry.
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `filter` | string | — | Case-insensitive regex on the topic title |
+| `order` | string | `name` | `name`, `name:asc`, or `name:desc` |
+| `limit` | number | all | Max topics to show |
 
-### Syntax
+### `<GitlabLabels>`
 
-| Placeholder | Effect |
-|---|---|
-| `{@includeGitlabReadme: group/sub/project}` | Inline the project README (default branch) |
-| `{@includeGitlabReadme: ref@group/sub/project}` | …at a branch, tag, or commit SHA |
-| `{@includeGitlabFile: group/sub/project/-/path/file.md}` | Inline a markdown file as markdown |
-| `{@includeGitlabFile: ref@group/sub/project/-/src/app.ts#L10-25}` | Inline a code file as a highlighted block (optional line range) |
+A project's or group's labels as links to the filtered issues list. `list` or `cards` layout.
 
-- The project path and the file path are separated by `/-/` — the same separator
-  GitLab uses in its URLs — which keeps nested subgroups unambiguous.
-- A leading `ref@` pins the content to a branch, tag, or commit SHA.
-- `{@includeGitlabFile}` decides by extension: `.md`/`.mdx`/`.markdown` are inlined
-  as markdown; everything else becomes a fenced, syntax-highlighted code block, with
-  an optional `#Lstart-end` line range (1-based, inclusive).
-- Images are downloaded and localized, and repo-relative links are rewritten to
-  absolute GitLab URLs — same as `<GitlabReadme>`.
-- Because the content becomes part of your page's markdown source, MDX-significant
-  characters in the remote content are escaped so a stray `{` or `<` can't break your
-  build. Code blocks are left verbatim.
-
-> **Placeholders vs. components:** reach for the placeholders when you want GitLab
-> markdown to render through Docusaurus's native pipeline (TOC, emoji, admonitions,
-> highlighting). Reach for `<GitlabReadme>` / `<GitlabFile>` when you want a
-> self-contained, pre-rendered HTML block. Both can coexist in the same site.
-
-### Post-processing the generated markdown
-
-GitLab markdown sometimes uses constructs that are valid CommonMark but **not**
-valid MDX. Two built-in processors fix the common ones (both **on by default**):
-
-- **`fixAutolinks`** — rewrites CommonMark autolinks like `<https://example.com>`
-  or `<contact@example.com>` (which MDX reads as JSX tags) into normal markdown
-  links (`[contact@example.com](mailto:contact@example.com)`). Disable with
-  `fixAutolinks: false`.
-- **`fixVoidTags`** — self-closes HTML void elements like `<br>` or `<img …>`
-  (which MDX rejects with _"Expected a closing tag for `<br>`"_) into `<br/>`.
-  Disable with `fixVoidTags: false`.
-- **`fixInlineStyles`** — converts HTML string `style="…"` attributes (which MDX/React
-  reject with _"The `style` prop expects a mapping … not a string"_) into JSX style
-  objects: `style="color: red"` → `style={{ color: "red" }}`. Disable with
-  `fixInlineStyles: false`.
-- **`convertAlerts`** — translates GitLab/GitHub alert blockquotes into native
-  Docusaurus admonitions: `> [!note]` → `:::note`, `> [!tip]` → `:::tip`,
-  `> [!important]` → `:::info`, `> [!warning]` → `:::warning`, `> [!caution]` →
-  `:::danger`. Disable with `convertAlerts: false`.
-
-Optionally, **`stripToc`** (default **off**) removes a README's own "Table of
-Contents" section (the heading plus its list, up to the next heading of the same or
-higher level) and any `[[_TOC_]]` marker — Docusaurus already renders a TOC in the
-right sidebar. Enable with `stripToc: true`.
-
-Add your own transforms with `outProcessors` — each receives the generated markdown
-of a markdown include (after the built-in fixes) and returns the new markdown:
-
-```ts
-import gitlabPlugin, { fixAutolinks } from "@ebuildy/docusaurus-plugin-gitlab";
-
-plugins: [
-  [
-    gitlabPlugin,
-    {
-      host: "https://gitlab.com",
-      // fixAutolinks: false,            // opt out of the built-in
-      outProcessors: [
-        (md) => md.replace(/:tada:/g, "🎉"), // runs after fixAutolinks
-      ],
-    },
-  ],
-];
+```mdx
+<GitlabLabels project="group/repo" layout="cards" filter="^team::" limit={20} />
 ```
 
-`outProcessors` receive the whole generated markdown string (sync or async) and run
-only on markdown includes (not on code-file fences). Fenced/inline code is the
-caller's responsibility to preserve; the built-in `fixAutolinks` already skips it.
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `project` | string \| number | — | Provide either `project` or `group` |
+| `group` | string \| number | — | Provide either `project` or `group` |
+| `layout` | string | `list` | `list` or `cards` |
+| `filter` | string | — | Case-insensitive regex on the label name |
+| `order` | string | `name` | `name`, `name:asc`, or `name:desc` |
+| `limit` | number | all | Max labels to show |
+
+The `cards` layout accepts grid props: `cardColumns` (fixed column count), `cardMinWidth`
+(responsive min width, ignored when `cardColumns` is set), `gap`, `maxWidth`, and
+`align` (`start`/`center`).
+
+Both components render [scoped labels/topics](https://docs.gitlab.com/ee/user/project/labels.html#scoped-labels)
+(`scope::value`, e.g. `Abilities::Performance`) as a two-part badge — the scope keeps its
+color and the value gets a dark-gray background. The split is on the last `::`.
 
 ## Plugin options
 

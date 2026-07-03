@@ -13,6 +13,8 @@ vi.mock("../gitlab/fetchers.js", () => ({
     throw new Error("api down");
   }),
   fetchFile: vi.fn(),
+  fetchTopics: vi.fn(),
+  fetchLabels: vi.fn(),
 }));
 
 function processor(opts: any) {

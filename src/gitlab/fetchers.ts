@@ -1,15 +1,16 @@
 import type { AssetManager } from "./assets";
 import type { FileCache } from "./cache";
-import type { GitLabClient } from "./client";
-import { applyLineRange, languageFromPath } from "./code.js";
+import type { GitLabClient, PageOptions } from "./client";
 import { renderMarkdown } from "./markdown.js";
 import type { TocEntry, TocMode } from "./toc.js";
 import type {
   FileData,
   IssueData,
+  LabelData,
   ProjectInfoData,
   ReadmeData,
   ReleaseData,
+  TopicData,
 } from "./types";
 
 export interface GitLabContext {
@@ -94,6 +95,41 @@ export async function fetchIssues(ctx: GitLabContext, attrs: Attrs): Promise<Iss
   });
 }
 
+interface OrderSpec {
+  field: "name";
+  dir: "asc" | "desc";
+}
+
+function readOrder(value: unknown): OrderSpec {
+  if (value === undefined || value === "name" || value === "name:asc") {
+    return { field: "name", dir: "asc" };
+  }
+  if (value === "name:desc") return { field: "name", dir: "desc" };
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: "order" must be one of "name", "name:asc", ` +
+      `"name:desc"; got ${JSON.stringify(value)}.`,
+  );
+}
+
+function compileFilter(value: unknown): ((text: string) => boolean) | null {
+  if (value === undefined) return null;
+  const pattern = String(value);
+  let re: RegExp;
+  try {
+    re = new RegExp(pattern, "i");
+  } catch {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: "filter" is not a valid regular expression: ${pattern}`,
+    );
+  }
+  return (text: string) => re.test(text);
+}
+
+function sortByName<T>(items: T[], get: (item: T) => string, dir: "asc" | "desc"): T[] {
+  const sorted = [...items].sort((a, b) => get(a).localeCompare(get(b)));
+  return dir === "desc" ? sorted.reverse() : sorted;
+}
+
 function readTocMode(value: unknown): TocMode {
   if (value === undefined) return "auto";
   if (value === "hidden" || value === "inline" || value === "sidebar") return value;
@@ -120,6 +156,148 @@ export async function fetchReadme(ctx: GitLabContext, attrs: Attrs): Promise<Rea
     const result: ReadmeData = { ref, html };
     if (tocMode === "sidebar") result.toc = collectToc;
     return result;
+  });
+}
+
+function applyLineRange(text: string, lines?: string): string {
+  if (!lines) return text;
+  const match = /^(\d+)(?:-(\d+))?$/.exec(lines.trim());
+  if (!match) return text;
+  const start = Number(match[1]);
+  const end = match[2] ? Number(match[2]) : start;
+  const allLines = text.split("\n");
+  return allLines.slice(start - 1, end).join("\n");
+}
+
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  ts: "ts",
+  tsx: "tsx",
+  js: "js",
+  jsx: "jsx",
+  mjs: "js",
+  cjs: "js",
+  py: "python",
+  go: "go",
+  rs: "rust",
+  java: "java",
+  rb: "ruby",
+  php: "php",
+  c: "c",
+  h: "c",
+  cpp: "cpp",
+  cc: "cpp",
+  hpp: "cpp",
+  cs: "csharp",
+  json: "json",
+  yml: "yaml",
+  yaml: "yaml",
+  toml: "toml",
+  sh: "bash",
+  bash: "bash",
+  md: "markdown",
+  mdx: "markdown",
+  html: "html",
+  css: "css",
+  scss: "scss",
+  sql: "sql",
+  kt: "kotlin",
+  swift: "swift",
+  xml: "xml",
+  dockerfile: "dockerfile",
+};
+
+function languageFromPath(path: string): string {
+  const base = path.split("/").pop() ?? path;
+  const dotIndex = base.lastIndexOf(".");
+  const ext = (dotIndex === -1 ? base : base.slice(dotIndex + 1)).toLowerCase();
+  return LANGUAGE_BY_EXTENSION[ext] ?? ext ?? "text";
+}
+
+const PAGE_SIZE = 100;
+const MAX_PAGES = 5; // hard ceiling: 5 * 100 = 500 topics/labels fetched
+
+/**
+ * Bound the fetch to 500 items. When the component sets `limit` and there is no
+ * name filter, fetch only enough pages to satisfy it; a filter forces the full
+ * ceiling because a match can land on any page.
+ */
+function pageOptions(limit: number | undefined, hasFilter: boolean): PageOptions {
+  const maxPages =
+    limit !== undefined && !hasFilter
+      ? Math.min(MAX_PAGES, Math.max(1, Math.ceil(limit / PAGE_SIZE)))
+      : MAX_PAGES;
+  return { perPage: PAGE_SIZE, maxPages };
+}
+
+export async function fetchTopics(ctx: GitLabContext, attrs: Attrs): Promise<TopicData[]> {
+  const order = readOrder(attrs.order);
+  const match = compileFilter(attrs.filter);
+  const limit = typeof attrs.limit === "number" ? attrs.limit : undefined;
+  const host = ctx.options.host;
+  const key = `topics:${String(attrs.filter ?? "")}:${order.dir}:${limit ?? "all"}`;
+  return memo(ctx, key, async () => {
+    const raw = await ctx.client.getTopics(pageOptions(limit, match !== null));
+    let items: TopicData[] = raw.map((t: any) => ({
+      name: t.name,
+      title: t.title ?? t.name,
+      totalProjectsCount: t.total_projects_count ?? 0,
+      webUrl: `${host}/explore/projects/topics/${encodeURIComponent(t.name)}`,
+    }));
+    if (match) items = items.filter((t) => match(t.title));
+    items = sortByName(items, (t) => t.title, order.dir);
+    if (limit !== undefined) items = items.slice(0, limit);
+    return items;
+  });
+}
+
+function readLayout(value: unknown): "list" | "cards" {
+  if (value === undefined || value === "list" || value === "cards") {
+    return value === undefined ? "list" : value;
+  }
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabLabels> "layout" must be "list" or "cards"; ` +
+      `got ${JSON.stringify(value)}.`,
+  );
+}
+
+export async function fetchLabels(ctx: GitLabContext, attrs: Attrs): Promise<LabelData[]> {
+  const project = attrs.project as string | number | undefined;
+  const group = attrs.group as string | number | undefined;
+  if ((project === undefined) === (group === undefined)) {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <GitlabLabels> requires exactly one of "project" or "group".`,
+    );
+  }
+  readLayout(attrs.layout); // validate only; layout is presentational (read by the component)
+  const order = readOrder(attrs.order);
+  const match = compileFilter(attrs.filter);
+  const limit = typeof attrs.limit === "number" ? attrs.limit : undefined;
+  const scopeKey = project !== undefined ? `p:${String(project)}` : `g:${String(group)}`;
+  const key = `labels:${scopeKey}:${String(attrs.filter ?? "")}:${order.dir}:${limit ?? "all"}`;
+  return memo(ctx, key, async () => {
+    let raw: any[];
+    let base: string;
+    const pages = pageOptions(limit, match !== null);
+    if (project !== undefined) {
+      raw = await ctx.client.getProjectLabels(project, pages);
+      base = (await ctx.client.getProject(project)).web_url;
+    } else {
+      raw = await ctx.client.getGroupLabels(group as string | number, pages);
+      base = (await ctx.client.getGroup(group as string | number)).web_url;
+    }
+    let items: LabelData[] = raw
+      .filter((l) => l.archived !== true)
+      .map((l) => ({
+        name: l.name,
+        color: l.color,
+        textColor: l.text_color,
+        description: l.description ?? null,
+        webUrl: `${base}/-/issues?label_name[]=${encodeURIComponent(l.name)}`,
+      }));
+    if (match) items = items.filter((l) => match(l.name));
+    items = sortByName(items, (l) => l.name, order.dir);
+    if (limit !== undefined) items = items.slice(0, limit);
+    return items;
   });
 }
 

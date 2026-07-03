@@ -81,33 +81,16 @@ describe("e2e: docusaurus build", () => {
     expect(html.indexOf('href="#overview"')).toBeLessThan(html.indexOf('href="#install"'));
   });
 
-  it("flows included README through the native Docusaurus pipeline", () => {
-    const html = readFileSync(join(siteDir, "build", "includes", "index.html"), "utf8");
-    // Native heading anchors (the JSX component path does not produce these):
-    expect(html).toMatch(/<h2[^>]+id="install"/);
-    expect(html).toMatch(/<h2[^>]+id="usage"/);
-    // Native emoji from remark-gemoji:
-    expect(html).toContain("🚀");
-    // The built-in fixAutolinks out-processor rewrote the README's CommonMark
-    // email autolink (<contact@example.com>) into a real link — without it, the
-    // bare `<contact@…>` would be parsed as JSX and abort the MDX build.
-    expect(html).toContain("mailto:contact@example.com");
-    // The built-in fixVoidTags out-processor self-closed the README's `<br>` (in a
-    // table cell) — without it, MDX would demand a closing tag and abort the build.
-    expect(html).toMatch(/<br\s*\/?>/);
-    // stripToc removed the README's own "Table of Contents" section (the example
-    // site enables stripToc: true); Docusaurus renders its own sidebar TOC instead.
-    expect(html).not.toContain("Jump to install");
-    expect(html).not.toContain("Table of Contents");
-    // fixInlineStyles converted the README's HTML `style="color: red"` to a JSX style
-    // object — without it, React/MDX rejects the string `style` prop and the build fails.
-    expect(html).toContain("Red text via HTML");
-    expect(html).toMatch(/color:\s*red/i);
-    // convertAlerts turned the README's `> [!warning]` blockquote into a native
-    // Docusaurus admonition (rendered with an `admonition` wrapper class), not a
-    // blockquote with a literal "[!warning]" marker.
-    expect(html).toContain("Mind the gap.");
-    expect(html).not.toContain("[!warning]");
-    expect(html).toMatch(/admonition/i);
+  it("bakes topics and labels into the static html", () => {
+    const html = readFileSync(join(siteDir, "build", "index.html"), "utf8");
+    // topic explore link + count bubble (robust against Docusaurus's "Docs" navbar label)
+    expect(html).toContain("/explore/projects/topics/docs");
+    expect(html).toContain("gitlab-count-bubble");
+    // project label (cards layout) with its description and issues link
+    expect(html).toContain("gitlab-label-card");
+    expect(html).toContain("label_name[]=bug");
+    expect(html).toContain("New capability");
+    // group label with the group issues link
+    expect(html).toContain("/groups/my-group/-/issues?label_name[]=epic");
   });
 });
