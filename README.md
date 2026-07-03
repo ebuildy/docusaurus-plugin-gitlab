@@ -222,6 +222,14 @@ A project's or group's labels as links to the filtered issues list. `list` or `c
 | `order` | string | `name` | `name`, `name:asc`, or `name:desc` |
 | `limit` | number | all | Max labels to show |
 
+The `cards` layout accepts grid props: `cardColumns` (fixed column count), `cardMinWidth`
+(responsive min width, ignored when `cardColumns` is set), `gap`, `maxWidth`, and
+`align` (`start`/`center`).
+
+Both components render [scoped labels/topics](https://docs.gitlab.com/ee/user/project/labels.html#scoped-labels)
+(`scope::value`, e.g. `Abilities::Performance`) as a two-part badge — the scope keeps its
+color and the value gets a dark-gray background. The split is on the last `::`.
+
 ## Plugin options
 
 | Option | Type | Default | Description |

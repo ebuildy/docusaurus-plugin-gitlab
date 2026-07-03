@@ -14,6 +14,17 @@ describe("GitlabTopics", () => {
     expect(screen.getByText("3")).toBeInTheDocument();
   });
 
+  it("renders a scoped topic as two separated segments plus its count bubble", () => {
+    const scoped = [
+      { name: "team::backend", title: "team::backend", totalProjectsCount: 7, webUrl: "https://x/explore/projects/topics/team::backend" },
+    ];
+    render(<GitlabTopics data={scoped as any} />);
+    expect(screen.getByRole("link")).toHaveClass("gitlab-topic--scoped");
+    expect(screen.getByText("team")).toHaveClass("gitlab-label-scope");
+    expect(screen.getByText("backend")).toHaveClass("gitlab-label-value");
+    expect(screen.getByText("7")).toBeInTheDocument();
+  });
+
   it("renders the fallback on error", () => {
     render(<GitlabTopics error={{ message: "boom", project: "" } as any} />);
     expect(screen.getByRole("alert")).toHaveTextContent("boom");

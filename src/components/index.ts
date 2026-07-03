@@ -5,6 +5,7 @@ export { GitlabIssues } from "./GitlabIssues.js";
 export { GitlabFile } from "./GitlabFile.js";
 export { GitlabTopics } from "./GitlabTopics.js";
 export { GitlabLabels } from "./GitlabLabels.js";
+export type { ComponentLayout } from "./layout.js";
 export type {
   ProjectInfoData,
   ReleaseData,
