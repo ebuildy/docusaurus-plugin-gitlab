@@ -197,7 +197,7 @@ describe("transformIncludes", () => {
     const out = await transformIncludes(
       "{@includeGitlabReadme: group/proj}",
       ctx,
-      { strict: true, allowedHosts: [] } as any,
+      { strict: true, allowedHosts: [] },
     );
 
     expect(out).toContain("Chapter one body.");

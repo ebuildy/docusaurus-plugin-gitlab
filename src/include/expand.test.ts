@@ -44,7 +44,9 @@ function baseGuard(): ExpandGuard {
 }
 
 describe("expandFileIncludes — relative GitLab files", () => {
-  beforeEach(() => mockedFetchFileSource.mockReset());
+  beforeEach(() => {
+    mockedFetchFileSource.mockReset();
+  });
 
   it("replaces a directive with the fetched file's raw content", async () => {
     mockedFetchFileSource.mockResolvedValue({ raw: "Chapter one body.", ref: "main" });
