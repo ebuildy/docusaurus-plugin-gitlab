@@ -41,7 +41,10 @@ async function resolveTarget(
     if (!o.allowedHosts.some((h) => h.toLowerCase() === url.host.toLowerCase())) {
       throw new Error(`::include host not allowed: ${url.host}`);
     }
-    const res = await fetch(url);
+    const res = await fetch(url, { redirect: "manual" });
+    if (res.status >= 300 && res.status < 400) {
+      throw new Error(`::include remote redirect blocked: ${url.href} → ${res.status}`);
+    }
     if (!res.ok) throw new Error(`fetch ${url.href} → HTTP ${res.status}`);
     return { raw: await res.text(), key: url.href, isMarkdown: MD_EXT.test(url.pathname) };
   }
@@ -62,14 +65,12 @@ async function resolveOne(
     if (!file) throw new Error("::include missing file= attribute");
     const { raw, key, isMarkdown } = await resolveTarget(file, o);
     if (guard.stack.has(key)) throw new Error(`::include cycle detected: ${key}`);
-    let body = stripFrontmatter(raw);
-    if (isMarkdown) {
-      body = await expandFileIncludes(body, o, {
-        depth: guard.depth + 1,
-        stack: new Set(guard.stack).add(key),
-      });
-    }
-    return body;
+    if (!isMarkdown) return raw;
+    const body = stripFrontmatter(raw);
+    return expandFileIncludes(body, o, {
+      depth: guard.depth + 1,
+      stack: new Set(guard.stack).add(key),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (o.strict) {

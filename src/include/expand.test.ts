@@ -185,3 +185,54 @@ describe("expandFileIncludes — recursion + guards", () => {
     expect(out.match(/SHARED/g)?.length).toBe(2);
   });
 });
+
+describe("expandFileIncludes — robustness fixes", () => {
+  beforeEach(() => {
+    mockedFetchFileSource.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  it("does not strip a leading --- block from a non-markdown include", async () => {
+    mockedFetchFileSource.mockResolvedValue({
+      raw: "---\nname: prod\nport: 8080\n---\nrest: true",
+      ref: "main",
+    });
+    const out = await expandFileIncludes("::include{file=config/settings.yml}", baseCtx(), baseGuard());
+    expect(out).toContain("name: prod");
+    expect(out).toContain("port: 8080");
+  });
+
+  it("does not recurse into a non-markdown include's ::include-looking content", async () => {
+    mockedFetchFileSource.mockResolvedValue({ raw: "::include{file=evil.md}", ref: "main" });
+    const out = await expandFileIncludes("::include{file=data.txt}", baseCtx(), baseGuard());
+    // .txt is not markdown → spliced raw, not expanded
+    expect(out).toContain("::include{file=evil.md}");
+    // fetched exactly once (the .txt), never followed the inner directive
+    expect(mockedFetchFileSource).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks a remote include that responds with a redirect (allowlist bypass prevention)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 302, text: async () => "" })),
+    );
+    await expect(
+      expandFileIncludes(
+        "::include{file=https://example.org/redirect}",
+        baseCtx({ allowedHosts: ["example.org"], strict: true }),
+        baseGuard(),
+      ),
+    ).rejects.toThrow(/redirect blocked/);
+  });
+
+  it("passes redirect:manual to fetch so redirects are not auto-followed", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, text: async () => "ok body" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expandFileIncludes(
+      "::include{file=https://example.org/x.md}",
+      baseCtx({ allowedHosts: ["example.org"] }),
+      baseGuard(),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(expect.anything(), { redirect: "manual" });
+  });
+});
