@@ -121,6 +121,7 @@ docusaurus build
   fetchers use mocked gitbeaker / fake clients; cache and assets use real temp
   dirs). Do not add MSW.
 - The design spec and implementation plan live in `docs/superpowers/`.
+- Use the /commit command to create a signed commit
 
 ## graphify
 
