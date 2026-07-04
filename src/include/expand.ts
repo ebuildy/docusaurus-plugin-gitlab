@@ -1,5 +1,7 @@
+import { languageFromPath } from "../gitlab/code.js";
 import { fetchFileSource } from "../gitlab/fetchers.js";
 import type { GitLabContext } from "../gitlab/fetchers.js";
+import type { OutProcessor } from "./out-processors.js";
 import { codeRanges, stripFrontmatter } from "./render-source.js";
 
 /** Markdown file extensions whose content is expanded recursively as markdown. */
@@ -65,7 +67,10 @@ async function resolveOne(
     if (!file) throw new Error("::include missing file= attribute");
     const { raw, key, isMarkdown } = await resolveTarget(file, o);
     if (guard.stack.has(key)) throw new Error(`::include cycle detected: ${key}`);
-    if (!isMarkdown) return raw;
+    // Non-markdown targets are spliced as a fenced, syntax-highlighted code block
+    // (like `{@includeGitlabFile}` of a code file) rather than as raw prose — raw
+    // YAML/JSON/etc. would otherwise render as garbled markdown.
+    if (!isMarkdown) return `\n\`\`\`${languageFromPath(file)}\n${raw}\n\`\`\`\n`;
     const body = stripFrontmatter(raw);
     return expandFileIncludes(body, o, {
       depth: guard.depth + 1,
@@ -109,4 +114,35 @@ export async function expandFileIncludes(
     last = (m.index ?? 0) + m[0].length;
   });
   return out + md.slice(last);
+}
+
+/** Configuration for the {@link expandIncludes} source processor. */
+export interface ExpandConfig {
+  ctx: GitLabContext;
+  project: string;
+  ref: string;
+  /** Path of the host include (a markdown file), or undefined for a README. Seeds
+   *  cycle detection so a nested include can't re-enter the host document. */
+  path?: string;
+  allowedHosts: string[];
+  strict: boolean;
+}
+
+/**
+ * Build a pre-render source processor that expands GitLab `::include{file=…}`
+ * directives in raw fetched markdown, against the given project/ref. It runs
+ * *before* `renderSource` — the directive's `{…}` braces would be MDX-escaped
+ * afterward — and reuses the {@link OutProcessor} shape so it composes with the
+ * post-render processor chain via `applyOutProcessors`.
+ */
+export function expandIncludes(config: ExpandConfig): OutProcessor {
+  const o: ExpandContext = {
+    ctx: config.ctx,
+    project: config.project,
+    ref: config.ref,
+    allowedHosts: config.allowedHosts,
+    strict: config.strict,
+  };
+  const seed = `${config.project}@${config.ref}/-/${config.path ?? "README.md"}`;
+  return (md) => expandFileIncludes(md, o, { depth: 0, stack: new Set([seed]) });
 }

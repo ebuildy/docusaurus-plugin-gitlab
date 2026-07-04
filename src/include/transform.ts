@@ -1,6 +1,6 @@
 import type { GitLabContext } from "../gitlab/fetchers.js";
 import { fetchFileSource, fetchReadmeSource } from "../gitlab/fetchers.js";
-import { expandFileIncludes } from "./expand.js";
+import { expandIncludes } from "./expand.js";
 import { parseInclude } from "./grammar.js";
 import {
   applyOutProcessors,
@@ -70,23 +70,22 @@ export async function transformIncludes(
           kind === "readme"
             ? await fetchReadmeSource(ctx, { project: spec.project, ref: spec.ref })
             : await fetchFileSource(ctx, { project: spec.project, path: spec.path!, ref: spec.ref });
-        let expanded = raw;
-        if (isMarkdownSource(kind, spec.path)) {
-          expanded = await expandFileIncludes(
-            raw,
-            {
-              ctx,
-              project: spec.project,
-              ref,
-              allowedHosts: options.allowedHosts ?? [],
-              strict: options.strict,
-            },
-            {
-              depth: 0,
-              stack: new Set([`${spec.project}@${ref}/-/${spec.path ?? "README.md"}`]),
-            },
-          );
-        }
+        // Pre-render source processors run on the RAW source before renderSource;
+        // ::include expansion must happen here (its `{…}` braces would be
+        // MDX-escaped afterward). Reuses the OutProcessor shape + runner.
+        const sourceProcessors: OutProcessor[] = isMarkdownSource(kind, spec.path)
+          ? [
+              expandIncludes({
+                ctx,
+                project: spec.project,
+                ref,
+                path: spec.path,
+                allowedHosts: options.allowedHosts ?? [],
+                strict: options.strict,
+              }),
+            ]
+          : [];
+        const expanded = await applyOutProcessors(raw, sourceProcessors);
         let body = await renderSource(expanded, {
           ctx,
           project: spec.project,

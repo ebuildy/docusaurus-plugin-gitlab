@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { parseIncludeAttrs, expandFileIncludes, type ExpandContext, type ExpandGuard } from "./expand.js";
+import {
+  parseIncludeAttrs,
+  expandFileIncludes,
+  expandIncludes,
+  type ExpandContext,
+  type ExpandGuard,
+} from "./expand.js";
 
 describe("parseIncludeAttrs", () => {
   it("reads a bare file value", () => {
@@ -205,10 +211,18 @@ describe("expandFileIncludes — robustness fixes", () => {
   it("does not recurse into a non-markdown include's ::include-looking content", async () => {
     mockedFetchFileSource.mockResolvedValue({ raw: "::include{file=evil.md}", ref: "main" });
     const out = await expandFileIncludes("::include{file=data.txt}", baseCtx(), baseGuard());
-    // .txt is not markdown → spliced raw, not expanded
+    // .txt is not markdown → fenced verbatim, its inner directive never followed
     expect(out).toContain("::include{file=evil.md}");
     // fetched exactly once (the .txt), never followed the inner directive
     expect(mockedFetchFileSource).toHaveBeenCalledTimes(1);
+  });
+
+  it("wraps a non-markdown include in a fenced code block using its language", async () => {
+    mockedFetchFileSource.mockResolvedValue({ raw: "name: prod\nport: 8080", ref: "main" });
+    const out = await expandFileIncludes("::include{file=config/profiles.yaml}", baseCtx(), baseGuard());
+    expect(out).toContain("```yaml");
+    expect(out).toMatch(/```yaml\n[\s\S]*name: prod[\s\S]*```/);
+    expect(out).not.toContain("::include");
   });
 
   it("blocks a remote include that responds with a redirect (allowlist bypass prevention)", async () => {
@@ -234,5 +248,42 @@ describe("expandFileIncludes — robustness fixes", () => {
       baseGuard(),
     );
     expect(fetchMock).toHaveBeenCalledWith(expect.anything(), { redirect: "manual" });
+  });
+});
+
+describe("expandIncludes (source processor)", () => {
+  beforeEach(() => {
+    mockedFetchFileSource.mockReset();
+  });
+
+  it("returns an OutProcessor-shaped fn that expands includes with its bound ctx", async () => {
+    mockedFetchFileSource.mockResolvedValue({ raw: "Chapter body.", ref: "main" });
+    const proc = expandIncludes({
+      ctx: {} as any,
+      project: "group/proj",
+      ref: "main",
+      allowedHosts: [],
+      strict: true,
+    });
+    const out = await proc("::include{file=chapter1.md}");
+    expect(out).toContain("Chapter body.");
+    expect(mockedFetchFileSource).toHaveBeenCalledWith({} as any, {
+      project: "group/proj",
+      path: "chapter1.md",
+      ref: "main",
+    });
+  });
+
+  it("seeds cycle detection with the host path so a self-referential include is caught", async () => {
+    mockedFetchFileSource.mockResolvedValue({ raw: "loop", ref: "main" });
+    const proc = expandIncludes({
+      ctx: {} as any,
+      project: "group/proj",
+      ref: "main",
+      path: "docs/page.md",
+      allowedHosts: [],
+      strict: true,
+    });
+    await expect(proc("::include{file=docs/page.md}")).rejects.toThrow(/cycle detected/);
   });
 });

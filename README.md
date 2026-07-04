@@ -250,7 +250,9 @@ markdown:
 - Remote URLs (`::include{file=https://…}`) are fetched only when their host is
   listed in the `includeAllowedHosts` plugin option (empty by default, so remote
   includes are off until you opt in).
-- Includes are expanded recursively (max depth 8) with cycle detection.
+- Markdown targets (`.md`/`.mdx`/`.markdown`) are spliced inline and expanded
+  recursively (max depth 8) with cycle detection. Any other file (e.g. `.yaml`,
+  `.json`) is inserted as a fenced, syntax-highlighted code block.
 - A failed include aborts the build in `strict` mode, or renders an inline
   warning otherwise.
 
