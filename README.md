@@ -1,5 +1,9 @@
 # @ebuildy/docusaurus-plugin-gitlab
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ebuildy/docusaurus-plugin-gitlab/badge)](https://scorecard.dev/viewer/?uri=github.com/ebuildy/docusaurus-plugin-gitlab)
+
+![NPM Version](https://img.shields.io/npm/v/%40ebuildy%2Fdocusaurus-plugin-gitlab)
+
 Embed **GitLab** resources — project info, README, releases, issues, and any
 file or code snippet — directly in your **Docusaurus 3** documentation using MDX
 components.
