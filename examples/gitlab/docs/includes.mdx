@@ -21,3 +21,11 @@ A non-markdown file is wrapped in a fenced code block with the language inferred
 from its extension; the `#L1-40` range trims it to the first 40 lines:
 
 {@includeGitlabFile: gitlab-org/api/client-go/-/gitlab.go#L1-40}
+
+## Nested `::include` directives
+
+If a fetched README or file above contained a GitLab `::include{file=…}`
+directive, it would be expanded automatically as part of the same fetch — no
+extra placeholder needed. Relative targets resolve against the enclosing
+file's own project and ref; remote URLs are only followed when their host is
+allow-listed via the `includeAllowedHosts` plugin option.
