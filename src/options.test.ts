@@ -9,6 +9,12 @@ describe("resolveOptions", () => {
     expect(o.assetDir).toBe("static/gitlab-assets");
     expect(o.assetBaseUrl).toBe("/gitlab-assets");
     expect(o.cache).toEqual({ ttl: 3600 });
+    expect(o.debug).toBe(false);
+  });
+
+  it("passes through debug: true", () => {
+    const o = resolveOptions({ host: "https://gitlab.com", debug: true }, "production");
+    expect(o.debug).toBe(true);
   });
 
   it("defaults strict to false in development", () => {
@@ -88,5 +94,27 @@ describe("resolveOptions", () => {
       "production",
     );
     expect("outProcessors" in resolved).toBe(false);
+  });
+
+  it("defaults includeAllowedHosts to an empty array", () => {
+    const o = resolveOptions({ host: "https://gitlab.com" }, "production");
+    expect(o.includeAllowedHosts).toEqual([]);
+  });
+
+  it("passes through a configured includeAllowedHosts list", () => {
+    const o = resolveOptions(
+      { host: "https://gitlab.com", includeAllowedHosts: ["example.org"] },
+      "production",
+    );
+    expect(o.includeAllowedHosts).toEqual(["example.org"]);
+  });
+
+  it("rejects a non-array includeAllowedHosts", () => {
+    expect(() =>
+      resolveOptions(
+        { host: "https://gitlab.com", includeAllowedHosts: "example.org" } as any,
+        "production",
+      ),
+    ).toThrow();
   });
 });

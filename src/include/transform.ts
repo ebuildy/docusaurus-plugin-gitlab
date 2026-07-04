@@ -1,6 +1,8 @@
 import type { GitLabContext } from "../gitlab/fetchers.js";
 import { fetchFileSource, fetchReadmeSource } from "../gitlab/fetchers.js";
+import { expandIncludes } from "./expand.js";
 import { parseInclude } from "./grammar.js";
+import { createIncludeLogger } from "./logger.js";
 import {
   applyOutProcessors,
   convertAlerts,
@@ -28,6 +30,10 @@ export interface TransformOptions {
   stripToc?: boolean;
   /** Extra post-processors applied to the generated markdown of each markdown include. */
   outProcessors?: OutProcessor[];
+  /** Hostnames allowed as remote `::include{file=https://…}` targets. Default: none. */
+  allowedHosts?: string[];
+  /** Emit build-time debug traces for the include pipeline. Default: false. */
+  debug?: boolean;
 }
 
 export async function transformIncludes(
@@ -37,6 +43,8 @@ export async function transformIncludes(
 ): Promise<string> {
   const matches = [...source.matchAll(PLACEHOLDER_RE)];
   if (matches.length === 0) return source;
+
+  const log = await createIncludeLogger(options.debug ?? false);
 
   // The built-in autolink fix is driven by a serializable flag (so it reliably
   // crosses the webpack loader boundary); user processors come from the registry.
@@ -57,17 +65,41 @@ export async function transformIncludes(
     });
   }
 
+  log.debug(`found ${matches.length} include placeholder(s), ${seen.size} unique to resolve`);
+
   // Resolve each unique placeholder once (dedupe by full match text).
   const replacements = new Map<string, string>();
   await Promise.all(
     [...seen.entries()].map(async ([full, { kind, arg }]) => {
       try {
         const spec = parseInclude(kind, arg);
+        log.debug(
+          `resolving ${full} → ${kind} ${spec.project}@${spec.ref ?? "(default ref)"}` +
+            `${spec.path ? `/-/${spec.path}` : ""}${spec.lineRange ? `#L${spec.lineRange}` : ""}`,
+        );
         const { raw, ref } =
           kind === "readme"
             ? await fetchReadmeSource(ctx, { project: spec.project, ref: spec.ref })
             : await fetchFileSource(ctx, { project: spec.project, path: spec.path!, ref: spec.ref });
-        let body = await renderSource(raw, {
+        log.debug(`fetched ${spec.project}@${ref}${spec.path ? `/-/${spec.path}` : ""} (${raw.length} bytes)`);
+        // Pre-render source processors run on the RAW source before renderSource;
+        // ::include expansion must happen here (its `{…}` braces would be
+        // MDX-escaped afterward). Reuses the OutProcessor shape + runner.
+        const sourceProcessors: OutProcessor[] = isMarkdownSource(kind, spec.path)
+          ? [
+              expandIncludes({
+                ctx,
+                project: spec.project,
+                ref,
+                path: spec.path,
+                allowedHosts: options.allowedHosts ?? [],
+                strict: options.strict,
+                log,
+              }),
+            ]
+          : [];
+        const expanded = await applyOutProcessors(raw, sourceProcessors);
+        let body = await renderSource(expanded, {
           ctx,
           project: spec.project,
           ref,
@@ -78,9 +110,11 @@ export async function transformIncludes(
         if (processors.length && isMarkdownSource(kind, spec.path)) {
           body = await applyOutProcessors(body, processors);
         }
+        log.debug(`rendered ${full} → ${body.length} chars of MDX`);
         replacements.set(full, `\n\n${body}\n\n`);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        log.debug(`FAILED ${full} — ${message}`);
         if (options.strict) {
           throw new Error(`@ebuildy/docusaurus-plugin-gitlab: ${full} failed — ${message}`);
         }

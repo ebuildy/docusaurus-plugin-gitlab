@@ -1,13 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { transformIncludes } from "./transform.js";
 
-function makeCtx() {
+function makeCtx(opts?: { files?: Record<string, string> }) {
   const store = new Map<string, unknown>();
+  const files = opts?.files;
   return {
     client: {
       getProject: async () => ({ default_branch: "main" }),
-      getFileRaw: async (_p: unknown, path: string) =>
-        path === "README.md" ? "# Title\n\nbody {x}" : "const a = 1;\nconst b = 2;\n",
+      getFileRaw: async (project: unknown, path: string, ref: string) => {
+        if (files) {
+          const key = `${project}@${ref}/-/${path}`;
+          if (key in files) return files[key];
+        }
+        return path === "README.md" ? "# Title\n\nbody {x}" : "const a = 1;\nconst b = 2;\n";
+      },
     },
     cache: { get: async (k: string) => store.get(k), set: async (k: string, v: unknown) => void store.set(k, v) },
     assets: { localize: async (u: string) => `/a/${u}` },
@@ -178,6 +184,24 @@ describe("transformIncludes", () => {
       outProcessors: [(md) => `${md.trim()} [processed]`],
     });
     expect(out).toContain("x [processed]");
+  });
+
+  it("expands ::include directives inside a fetched README", async () => {
+    const ctx = makeCtx({
+      files: {
+        "group/proj@main/-/README.md": "# Title\n\n::include{file=chapter1.md}",
+        "group/proj@main/-/chapter1.md": "Chapter one body.",
+      },
+    });
+
+    const out = await transformIncludes(
+      "{@includeGitlabReadme: group/proj}",
+      ctx,
+      { strict: true, allowedHosts: [] },
+    );
+
+    expect(out).toContain("Chapter one body.");
+    expect(out).not.toContain("::include");
   });
 
   it("does not run processors on a code-file include", async () => {

@@ -1,3 +1,8 @@
+// `expandIncludes` lives in the include subsystem, which imports `fetchFileSource`
+// from this module — a benign call-time-only cycle (both are hoisted function
+// declarations, used only at runtime, never at module-eval time).
+import { expandIncludes } from "../include/expand.js";
+import { createIncludeLogger } from "../include/logger.js";
 import type { AssetManager } from "./assets";
 import type { FileCache } from "./cache";
 import type { GitLabClient, PageOptions } from "./client";
@@ -17,7 +22,40 @@ export interface GitLabContext {
   client: GitLabClient;
   cache: FileCache;
   assets: AssetManager;
-  options: { host: string };
+  options: {
+    host: string;
+    /** Include-pipeline settings (populated by `buildContext`); optional so test
+     *  fakes can omit them. Defaults applied where read. */
+    strict?: boolean;
+    allowedHosts?: string[];
+    debug?: boolean;
+  };
+}
+
+/**
+ * Expand GitLab `::include{file=…}` directives in fetched markdown before it is
+ * rendered, so the `<GitlabReadme>` / `<GitlabFile>` components behave like the
+ * `{@includeGitlab…}` loader path. No-op when the source has no directive.
+ */
+async function expandDirectives(
+  ctx: GitLabContext,
+  project: string,
+  ref: string,
+  path: string | undefined,
+  md: string,
+): Promise<string> {
+  if (!md.includes("::include")) return md;
+  const log = await createIncludeLogger(ctx.options.debug ?? false);
+  const expand = expandIncludes({
+    ctx,
+    project,
+    ref,
+    path,
+    allowedHosts: ctx.options.allowedHosts ?? [],
+    strict: ctx.options.strict ?? true,
+    log,
+  });
+  return expand(md);
 }
 
 type Attrs = Record<string, unknown>;
@@ -146,7 +184,8 @@ export async function fetchReadme(ctx: GitLabContext, attrs: Attrs): Promise<Rea
   return memo(ctx, `readme:${project}:${explicitRef ?? "default"}:${tocMode}`, async () => {
     const ref =
       explicitRef ?? (await ctx.client.getProject(attrs.project as string | number)).default_branch;
-    const md = await ctx.client.getFileRaw(attrs.project as string | number, "README.md", ref);
+    const rawMd = await ctx.client.getFileRaw(attrs.project as string | number, "README.md", ref);
+    const md = await expandDirectives(ctx, project, ref, undefined, rawMd);
     const collectToc: TocEntry[] = [];
     const html = await renderMarkdown(md, {
       tocMode,
@@ -313,7 +352,8 @@ export async function fetchFile(ctx: GitLabContext, attrs: Attrs): Promise<FileD
       const ref = explicitRef ?? (await ctx.client.getProject(project)).default_branch;
       const raw = await ctx.client.getFileRaw(project, path, ref);
       if (/\.mdx?$/i.test(path)) {
-        const html = await renderMarkdown(raw, {
+        const expanded = await expandDirectives(ctx, String(project), ref, path, raw);
+        const html = await renderMarkdown(expanded, {
           transformImageSrc: (src) => ctx.assets.localize(src, ref, String(project)),
         });
         return { kind: "markdown", html, ref, path } satisfies FileData;
