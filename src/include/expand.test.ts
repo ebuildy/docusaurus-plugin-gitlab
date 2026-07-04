@@ -136,3 +136,50 @@ describe("expandFileIncludes — remote URLs", () => {
     ).rejects.toThrow(/404/);
   });
 });
+
+describe("expandFileIncludes — recursion + guards", () => {
+  beforeEach(() => {
+    mockedFetchFileSource.mockReset();
+  });
+
+  it("recursively expands includes inside an included markdown file", async () => {
+    mockedFetchFileSource.mockImplementation(async (_ctx, args: any) => {
+      if (args.path === "a.md") return { raw: "A\n\n::include{file=b.md}", ref: "main" };
+      if (args.path === "b.md") return { raw: "B body", ref: "main" };
+      throw new Error(`unexpected ${args.path}`);
+    });
+    const out = await expandFileIncludes("::include{file=a.md}", baseCtx(), baseGuard());
+    expect(out).toContain("A");
+    expect(out).toContain("B body");
+    expect(out).not.toContain("::include");
+  });
+
+  it("detects a direct cycle", async () => {
+    mockedFetchFileSource.mockResolvedValue({ raw: "loop\n\n::include{file=a.md}", ref: "main" });
+    await expect(
+      expandFileIncludes("::include{file=a.md}", baseCtx({ strict: true }), baseGuard()),
+    ).rejects.toThrow(/cycle detected/);
+  });
+
+  it("enforces the max depth", async () => {
+    // Every file includes a deeper one, never terminating.
+    mockedFetchFileSource.mockImplementation(async (_ctx, args: any) => ({
+      raw: `level\n\n::include{file=${args.path}x.md}`,
+      ref: "main",
+    }));
+    await expect(
+      expandFileIncludes("::include{file=a.md}", baseCtx({ strict: true }), baseGuard()),
+    ).rejects.toThrow(/max depth/);
+  });
+
+  it("allows the same file included twice in separate branches (diamond)", async () => {
+    mockedFetchFileSource.mockImplementation(async (_ctx, args: any) => {
+      if (args.path === "top.md")
+        return { raw: "::include{file=shared.md}\n\n::include{file=shared.md}", ref: "main" };
+      if (args.path === "shared.md") return { raw: "SHARED", ref: "main" };
+      throw new Error(`unexpected ${args.path}`);
+    });
+    const out = await expandFileIncludes("::include{file=top.md}", baseCtx(), baseGuard());
+    expect(out.match(/SHARED/g)?.length).toBe(2);
+  });
+});

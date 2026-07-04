@@ -5,6 +5,9 @@ import { codeRanges, stripFrontmatter } from "./render-source.js";
 /** Markdown file extensions whose content is expanded recursively as markdown. */
 const MD_EXT = /\.(?:md|mdx|markdown)$/i;
 
+/** Maximum nesting depth for recursive `::include` expansion. */
+export const MAX_INCLUDE_DEPTH = 8;
+
 /** Extract the `file=` value from a `::include{…}` attribute string (bare or quoted). */
 export function parseIncludeAttrs(attrs: string): { file?: string } {
   const m = /(?:^|\s)file\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s}]+))/.exec(attrs);
@@ -52,13 +55,21 @@ async function resolveOne(
   full: string,
   attrs: string,
   o: ExpandContext,
-  _guard: ExpandGuard,
+  guard: ExpandGuard,
 ): Promise<string> {
   try {
     const { file } = parseIncludeAttrs(attrs);
     if (!file) throw new Error("::include missing file= attribute");
-    const { raw } = await resolveTarget(file, o);
-    return stripFrontmatter(raw);
+    const { raw, key, isMarkdown } = await resolveTarget(file, o);
+    if (guard.stack.has(key)) throw new Error(`::include cycle detected: ${key}`);
+    let body = stripFrontmatter(raw);
+    if (isMarkdown) {
+      body = await expandFileIncludes(body, o, {
+        depth: guard.depth + 1,
+        stack: new Set(guard.stack).add(key),
+      });
+    }
+    return body;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (o.strict) {
@@ -77,6 +88,9 @@ export async function expandFileIncludes(
   o: ExpandContext,
   guard: ExpandGuard,
 ): Promise<string> {
+  if (guard.depth > MAX_INCLUDE_DEPTH) {
+    throw new Error(`::include exceeded max depth (${MAX_INCLUDE_DEPTH})`);
+  }
   const ranges = codeRanges(md);
   const inCode = (i: number) => ranges.some(([s, e]) => i >= s && i < e);
 
