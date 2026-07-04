@@ -82,3 +82,57 @@ describe("expandFileIncludes — relative GitLab files", () => {
     expect(mockedFetchFileSource).not.toHaveBeenCalled();
   });
 });
+
+describe("expandFileIncludes — remote URLs", () => {
+  beforeEach(() => {
+    mockedFetchFileSource.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  it("expands a remote include from an allowlisted host", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, status: 200, text: async () => "Remote body." })),
+    );
+    const out = await expandFileIncludes(
+      "::include{file=https://example.org/x.md}",
+      baseCtx({ allowedHosts: ["example.org"] }),
+      baseGuard(),
+    );
+    expect(out).toContain("Remote body.");
+  });
+
+  it("rejects a remote include from a non-allowlisted host (strict throws)", async () => {
+    await expect(
+      expandFileIncludes(
+        "::include{file=https://evil.test/x.md}",
+        baseCtx({ allowedHosts: ["example.org"], strict: true }),
+        baseGuard(),
+      ),
+    ).rejects.toThrow(/host not allowed/);
+  });
+
+  it("emits a warning marker for a non-allowlisted host when non-strict", async () => {
+    const out = await expandFileIncludes(
+      "::include{file=https://evil.test/x.md}",
+      baseCtx({ allowedHosts: ["example.org"], strict: false }),
+      baseGuard(),
+    );
+    expect(out).toContain("⚠️");
+    expect(out).toContain("host not allowed");
+  });
+
+  it("errors on a non-OK remote response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 404, text: async () => "" })),
+    );
+    await expect(
+      expandFileIncludes(
+        "::include{file=https://example.org/missing.md}",
+        baseCtx({ allowedHosts: ["example.org"], strict: true }),
+        baseGuard(),
+      ),
+    ).rejects.toThrow(/404/);
+  });
+});

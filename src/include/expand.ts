@@ -3,7 +3,6 @@ import type { GitLabContext } from "../gitlab/fetchers.js";
 import { codeRanges, stripFrontmatter } from "./render-source.js";
 
 /** Markdown file extensions whose content is expanded recursively as markdown. */
- 
 const MD_EXT = /\.(?:md|mdx|markdown)$/i;
 
 /** Extract the `file=` value from a `::include{…}` attribute string (bare or quoted). */
@@ -34,6 +33,15 @@ async function resolveTarget(
   file: string,
   o: ExpandContext,
 ): Promise<{ raw: string; key: string; isMarkdown: boolean }> {
+  if (/^https?:\/\//i.test(file)) {
+    const url = new URL(file);
+    if (!o.allowedHosts.some((h) => h.toLowerCase() === url.host.toLowerCase())) {
+      throw new Error(`::include host not allowed: ${url.host}`);
+    }
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`fetch ${url.href} → HTTP ${res.status}`);
+    return { raw: await res.text(), key: url.href, isMarkdown: MD_EXT.test(url.pathname) };
+  }
   const key = `${o.project}@${o.ref}/-/${file}`;
   const src = await fetchFileSource(o.ctx, { project: o.project, path: file, ref: o.ref });
   return { raw: src.raw, key, isMarkdown: MD_EXT.test(file) };
