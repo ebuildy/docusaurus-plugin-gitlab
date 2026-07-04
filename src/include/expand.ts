@@ -1,6 +1,7 @@
 import { languageFromPath } from "../gitlab/code.js";
 import { fetchFileSource } from "../gitlab/fetchers.js";
 import type { GitLabContext } from "../gitlab/fetchers.js";
+import type { IncludeLogger } from "./logger.js";
 import type { OutProcessor } from "./out-processors.js";
 import { codeRanges, stripFrontmatter } from "./render-source.js";
 
@@ -23,6 +24,8 @@ export interface ExpandContext {
   ref: string;
   allowedHosts: string[];
   strict: boolean;
+  /** Optional debug logger; when present, each resolved directive is traced. */
+  log?: IncludeLogger;
 }
 
 export interface ExpandGuard {
@@ -66,6 +69,10 @@ async function resolveOne(
     const { file } = parseIncludeAttrs(attrs);
     if (!file) throw new Error("::include missing file= attribute");
     const { raw, key, isMarkdown } = await resolveTarget(file, o);
+    o.log?.debug(
+      `::include ${file} → ${key} ` +
+        `[depth ${guard.depth}, ${isMarkdown ? "markdown, expanding" : `code:${languageFromPath(file)}`}, ${raw.length} bytes]`,
+    );
     if (guard.stack.has(key)) throw new Error(`::include cycle detected: ${key}`);
     // Non-markdown targets are spliced as a fenced, syntax-highlighted code block
     // (like `{@includeGitlabFile}` of a code file) rather than as raw prose — raw
@@ -126,6 +133,8 @@ export interface ExpandConfig {
   path?: string;
   allowedHosts: string[];
   strict: boolean;
+  /** Optional debug logger; traces each resolved `::include` directive. */
+  log?: IncludeLogger;
 }
 
 /**
@@ -142,6 +151,7 @@ export function expandIncludes(config: ExpandConfig): OutProcessor {
     ref: config.ref,
     allowedHosts: config.allowedHosts,
     strict: config.strict,
+    log: config.log,
   };
   const seed = `${config.project}@${config.ref}/-/${config.path ?? "README.md"}`;
   return (md) => expandFileIncludes(md, o, { depth: 0, stack: new Set([seed]) });

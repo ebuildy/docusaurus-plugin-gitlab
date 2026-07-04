@@ -27,6 +27,10 @@ export interface PluginOptions {
    *  targets inside fetched GitLab markdown. Empty ⇒ remote includes are rejected.
    *  Default: `[]`. */
   includeAllowedHosts?: string[];
+  /** Emit build-time debug traces for the include pipeline (each resolved
+   *  placeholder and `::include` directive) via `@docusaurus/logger`.
+   *  Default: `false`. */
+  debug?: boolean;
   /** Extra post-processors applied to the markdown generated from includes,
    *  in order, after the built-in fixes (when enabled). */
   outProcessors?: OutProcessor[];
@@ -45,6 +49,7 @@ export interface ResolvedOptions {
   convertAlerts: boolean;
   stripToc: boolean;
   includeAllowedHosts: string[];
+  debug: boolean;
 }
 
 const schema = Joi.object({
@@ -66,6 +71,7 @@ const schema = Joi.object({
   convertAlerts: Joi.boolean().optional(),
   stripToc: Joi.boolean().optional(),
   includeAllowedHosts: Joi.array().items(Joi.string()).optional(),
+  debug: Joi.boolean().optional(),
   outProcessors: Joi.array().items(Joi.function()).optional(),
 });
 
@@ -90,5 +96,6 @@ export function resolveOptions(
     convertAlerts: opts.convertAlerts ?? true,
     stripToc: opts.stripToc ?? false,
     includeAllowedHosts: opts.includeAllowedHosts ?? [],
+    debug: opts.debug ?? false,
   };
 }

@@ -251,6 +251,32 @@ describe("expandFileIncludes — robustness fixes", () => {
   });
 });
 
+describe("expandFileIncludes — debug logging", () => {
+  beforeEach(() => {
+    mockedFetchFileSource.mockReset();
+  });
+
+  it("traces each resolved directive through the provided logger", async () => {
+    mockedFetchFileSource.mockResolvedValue({ raw: "Body", ref: "main" });
+    const debug = vi.fn();
+    const out = await expandFileIncludes(
+      "::include{file=chapter1.md}",
+      baseCtx({ log: { debug } }),
+      baseGuard(),
+    );
+    expect(out).toContain("Body");
+    expect(debug).toHaveBeenCalledTimes(1);
+    expect(debug.mock.calls[0][0]).toContain("::include chapter1.md");
+  });
+
+  it("does nothing when no logger is provided", async () => {
+    mockedFetchFileSource.mockResolvedValue({ raw: "Body", ref: "main" });
+    await expect(
+      expandFileIncludes("::include{file=a.md}", baseCtx(), baseGuard()),
+    ).resolves.toContain("Body");
+  });
+});
+
 describe("expandIncludes (source processor)", () => {
   beforeEach(() => {
     mockedFetchFileSource.mockReset();

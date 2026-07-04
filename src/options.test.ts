@@ -9,6 +9,12 @@ describe("resolveOptions", () => {
     expect(o.assetDir).toBe("static/gitlab-assets");
     expect(o.assetBaseUrl).toBe("/gitlab-assets");
     expect(o.cache).toEqual({ ttl: 3600 });
+    expect(o.debug).toBe(false);
+  });
+
+  it("passes through debug: true", () => {
+    const o = resolveOptions({ host: "https://gitlab.com", debug: true }, "production");
+    expect(o.debug).toBe(true);
   });
 
   it("defaults strict to false in development", () => {
