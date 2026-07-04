@@ -23,6 +23,10 @@ export interface PluginOptions {
   /** Remove a redundant "Table of Contents" section (and any `[[_TOC_]]` marker)
    *  from included markdown — Docusaurus renders its own. Default: `false`. */
   stripToc?: boolean;
+  /** Hostnames (exact, case-insensitive) allowed as remote `::include{file=https://…}`
+   *  targets inside fetched GitLab markdown. Empty ⇒ remote includes are rejected.
+   *  Default: `[]`. */
+  includeAllowedHosts?: string[];
   /** Extra post-processors applied to the markdown generated from includes,
    *  in order, after the built-in fixes (when enabled). */
   outProcessors?: OutProcessor[];
@@ -40,6 +44,7 @@ export interface ResolvedOptions {
   fixInlineStyles: boolean;
   convertAlerts: boolean;
   stripToc: boolean;
+  includeAllowedHosts: string[];
 }
 
 const schema = Joi.object({
@@ -60,6 +65,7 @@ const schema = Joi.object({
   fixInlineStyles: Joi.boolean().optional(),
   convertAlerts: Joi.boolean().optional(),
   stripToc: Joi.boolean().optional(),
+  includeAllowedHosts: Joi.array().items(Joi.string()).optional(),
   outProcessors: Joi.array().items(Joi.function()).optional(),
 });
 
@@ -83,5 +89,6 @@ export function resolveOptions(
     fixInlineStyles: opts.fixInlineStyles ?? true,
     convertAlerts: opts.convertAlerts ?? true,
     stripToc: opts.stripToc ?? false,
+    includeAllowedHosts: opts.includeAllowedHosts ?? [],
   };
 }

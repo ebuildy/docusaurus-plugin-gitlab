@@ -89,4 +89,26 @@ describe("resolveOptions", () => {
     );
     expect("outProcessors" in resolved).toBe(false);
   });
+
+  it("defaults includeAllowedHosts to an empty array", () => {
+    const o = resolveOptions({ host: "https://gitlab.com" }, "production");
+    expect(o.includeAllowedHosts).toEqual([]);
+  });
+
+  it("passes through a configured includeAllowedHosts list", () => {
+    const o = resolveOptions(
+      { host: "https://gitlab.com", includeAllowedHosts: ["example.org"] },
+      "production",
+    );
+    expect(o.includeAllowedHosts).toEqual(["example.org"]);
+  });
+
+  it("rejects a non-array includeAllowedHosts", () => {
+    expect(() =>
+      resolveOptions(
+        { host: "https://gitlab.com", includeAllowedHosts: "example.org" } as any,
+        "production",
+      ),
+    ).toThrow();
+  });
 });
