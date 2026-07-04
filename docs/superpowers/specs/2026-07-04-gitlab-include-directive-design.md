@@ -47,9 +47,12 @@ main markdown" semantics we want, so `::include` expansion belongs here.
 `{@includeGitlabFile}` includes (any content for which `isMarkdownSource` is
 true).
 
-**Out of scope:** the JSX-component HTML path (`src/gitlab/markdown.ts`
-`renderMarkdown`, used by `<GitlabReadme>` / `<GitlabFile>` React components).
-`::include` is not expanded there.
+**Also in scope (added later):** the JSX-component path (`<GitlabReadme>` /
+markdown `<GitlabFile>`). The `fetchReadme` / `fetchFile` fetchers expand
+`::include` on the raw markdown **before** `renderMarkdown`, so the components
+behave consistently with the loader placeholders. This required threading the
+include settings (`strict`, `includeAllowedHosts`, `debug`) into the
+`GitLabContext.options` populated by `buildContext`.
 
 ## Grammar
 
@@ -64,9 +67,13 @@ A leaf directive occupying its own line, matching GitLab:
 - No `ref`, line-range, or `project` extensions (YAGNI). A relative include
   inherits the **`ref` of the enclosing include** and targets the **same
   project**, matching GitLab's same-repo semantics.
-- The directive is recognized only as a standalone block (its own line). A
-  `::include{…}` appearing inside a fenced/indented/inline code region is left
-  **literal** and never expanded.
+- The directive is recognized as a standalone block (its own line), **including
+  inside a fenced/indented/inline code region**. Per GitLab
+  ([Use includes in code blocks](https://docs.gitlab.com/user/markdown/#use-includes-in-code-blocks)),
+  a directive inside a code region has its target inserted **verbatim** (not
+  processed as markdown, not wrapped in another fence, not recursed into) so the
+  file's content appears in the surrounding code block. Outside code regions,
+  targets are expanded as described below.
 
 ## Design
 
@@ -108,7 +115,7 @@ Consequences of this ordering:
 
 ### Resolution per directive
 
-For each `::include{file=X}` found in a non-code prose region:
+For each `::include{file=X}` the target is fetched:
 
 - **Remote** — `X` matches `^https?://`: parse the URL, check its host against
   `allowedHosts`. If not listed → error. If listed → fetch the body via native
@@ -116,14 +123,23 @@ For each `::include{file=X}` found in a non-code prose region:
 - **Relative** — otherwise: `fetchFileSource(ctx, { project: o.project, path: X,
   ref: o.ref })`, reusing the existing GitLab client and on-disk cache.
 
-Fetched markdown is `stripFrontmatter`-ed and **recursively expanded** before
-being spliced.
+How the fetched content is spliced depends on where the directive sits:
 
-### Code-fence safety
+- **Inside a code region** (fenced/indented/inline) → inserted **verbatim**: no
+  frontmatter stripping, no fence wrapping, no recursion. The content lands in
+  the author's existing code block.
+- **In prose, markdown target** (`.md`/`.mdx`/`.markdown`) → `stripFrontmatter`-ed
+  and **recursively expanded** before being spliced.
+- **In prose, non-markdown target** → wrapped in a fenced, syntax-highlighted
+  code block (`` ```<lang> `` via `languageFromPath`) so raw YAML/JSON/etc.
+  renders cleanly instead of as garbled markdown.
 
-Expansion runs only over non-code regions. Reuse the existing
-`codeRanges` / `mapProseRegions` approach from `render-source.ts` so a
-`::include{…}` inside a code block is preserved verbatim.
+### Code-region detection
+
+Each directive's position is classified via `codeRanges` from
+`render-source.ts`: a match whose offset falls inside a code range is treated as
+"inside a code block" (verbatim insertion above), otherwise as prose. Directives
+are **not** skipped — GitLab expands them in both contexts.
 
 ### Recursion guard
 
@@ -175,7 +191,9 @@ depth exceeded, malformed directive.
 - Nested include (an included file containing `::include`) expands recursively.
 - Cycle (A includes B includes A) throws `"cycle detected"`.
 - Depth beyond `MAX_INCLUDE_DEPTH` throws.
-- `::include{…}` inside a fenced code block is left literal.
+- `::include{…}` inside a fenced code block inserts the target **verbatim** (no
+  extra fence, no processing).
+- A non-markdown target in prose is wrapped in a highlighted code block.
 - Quoted and bare `file=` values both parse.
 - Strict vs non-strict error behavior.
 
@@ -199,6 +217,5 @@ build (`test/e2e/build.test.ts`) since the loader pipeline is touched.
 ## Non-goals / future work
 
 - No `ref`, line-range, or `project` attributes on `::include`.
-- No expansion in the JSX-component HTML render path.
 - File-relative (as opposed to project-root-relative) image/link resolution is
   not addressed here; it inherits the existing behavior and limitation.

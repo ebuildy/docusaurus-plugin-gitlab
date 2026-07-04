@@ -253,6 +253,17 @@ markdown:
 - Markdown targets (`.md`/`.mdx`/`.markdown`) are spliced inline and expanded
   recursively (max depth 8) with cycle detection. Any other file (e.g. `.yaml`,
   `.json`) is inserted as a fenced, syntax-highlighted code block.
+- Put the directive **inside a fenced code block** to insert a file's content
+  verbatim into that block ([GitLab: includes in code blocks](https://docs.gitlab.com/user/markdown/#use-includes-in-code-blocks)):
+
+  ````text
+  ```yaml
+  ::include{file=config/profiles.yaml}
+  ```
+  ````
+
+  The directive is replaced by the file content in place — no extra fence, no
+  markdown processing.
 - A failed include aborts the build in `strict` mode, or renders an inline
   warning otherwise.
 

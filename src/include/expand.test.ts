@@ -77,17 +77,44 @@ describe("expandFileIncludes — relative GitLab files", () => {
     expect(out).not.toContain("title: x");
   });
 
-  it("leaves a directive inside a fenced code block untouched", async () => {
-    const md = "```\n::include{file=chapter1.md}\n```";
+  it("expands a directive inside a fenced code block verbatim (GitLab 'includes in code blocks')", async () => {
+    mockedFetchFileSource.mockResolvedValue({ raw: 'const s = "hi";\nalert(s);', ref: "main" });
+    const md = "```javascript\n::include{file=code.js}\n```";
     const out = await expandFileIncludes(md, baseCtx(), baseGuard());
-    expect(out).toBe(md);
-    expect(mockedFetchFileSource).not.toHaveBeenCalled();
+    // Target inserted verbatim inside the existing fence — no extra fence, no processing.
+    expect(out).toBe('```javascript\nconst s = "hi";\nalert(s);\n```');
+    expect(mockedFetchFileSource).toHaveBeenCalledWith({} as any, {
+      project: "group/proj",
+      path: "code.js",
+      ref: "main",
+    });
   });
 
   it("returns the source unchanged when there is no directive", async () => {
     const out = await expandFileIncludes("plain text", baseCtx(), baseGuard());
     expect(out).toBe("plain text");
     expect(mockedFetchFileSource).not.toHaveBeenCalled();
+  });
+
+  it("expands a directive embedded in a multi-line document, preserving surrounding lines", async () => {
+    mockedFetchFileSource.mockResolvedValue({ raw: "name: prod\nport: 8080", ref: "main" });
+    const md = `## Includes
+
+\`\`\`yaml
+::include{file=profiles.yaml}
+\`\`\``;
+    const out = await expandFileIncludes(md, baseCtx(), baseGuard());
+    // Heading + the author's ```yaml fence kept; the directive is replaced by the
+    // file content inserted verbatim inside that fence (GitLab "includes in code blocks").
+    expect(out).toContain("## Includes");
+    expect(out).toContain("```yaml");
+    expect(out).toContain("name: prod");
+    expect(out).not.toContain("::include");
+    expect(mockedFetchFileSource).toHaveBeenCalledWith({} as any, {
+      project: "group/proj",
+      path: "profiles.yaml",
+      ref: "main",
+    });
   });
 });
 
@@ -265,8 +292,7 @@ describe("expandFileIncludes — debug logging", () => {
       baseGuard(),
     );
     expect(out).toContain("Body");
-    expect(debug).toHaveBeenCalledTimes(1);
-    expect(debug.mock.calls[0][0]).toContain("::include chapter1.md");
+    expect(debug.mock.calls.some((c) => String(c[0]).includes("::include chapter1.md"))).toBe(true);
   });
 
   it("does nothing when no logger is provided", async () => {

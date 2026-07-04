@@ -16,5 +16,15 @@ export function buildContext(options: ResolvedOptions): GitLabContext {
     assetBaseUrl: options.assetBaseUrl,
     host: options.host,
   });
-  return { client, cache, assets, options: { host: options.host } };
+  return {
+    client,
+    cache,
+    assets,
+    options: {
+      host: options.host,
+      strict: options.strict,
+      allowedHosts: options.includeAllowedHosts,
+      debug: options.debug,
+    },
+  };
 }

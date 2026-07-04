@@ -118,6 +118,35 @@ describe("fetchReadme", () => {
     expect(client.getFileRaw).toHaveBeenCalledWith("g/r", "README.md", "v2");
   });
 
+  it("expands ::include directives in the README before rendering", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async (_p: unknown, path: string) => {
+        if (path === "README.md") return "# Title\n\n::include{file=chapter1.md}\n";
+        if (path === "chapter1.md") return "Chapter one body.";
+        throw new Error(`unexpected ${path}`);
+      }),
+    };
+    const data = await fetchReadme(ctx(client), { project: "g/r" });
+    expect(data.html).toContain("Chapter one body.");
+    expect(data.html).not.toContain("::include");
+    expect(client.getFileRaw).toHaveBeenCalledWith("g/r", "chapter1.md", "main");
+  });
+
+  it("inserts a non-markdown ::include target inside its code fence verbatim", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async (_p: unknown, path: string) => {
+        if (path === "README.md") return "## Config\n\n```yaml\n::include{file=profiles.yaml}\n```\n";
+        if (path === "profiles.yaml") return "name: prod\nport: 8080";
+        throw new Error(`unexpected ${path}`);
+      }),
+    };
+    const data = await fetchReadme(ctx(client), { project: "g/r" });
+    expect(data.html).toContain("name: prod");
+    expect(data.html).not.toContain("::include");
+  });
+
   it("sidebar mode returns toc entries and assigns heading ids", async () => {
     const client: any = {
       getProject: vi.fn(async () => ({ default_branch: "main" })),
