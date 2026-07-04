@@ -1,5 +1,6 @@
 import type { GitLabContext } from "../gitlab/fetchers.js";
 import { fetchFileSource, fetchReadmeSource } from "../gitlab/fetchers.js";
+import { expandFileIncludes } from "./expand.js";
 import { parseInclude } from "./grammar.js";
 import {
   applyOutProcessors,
@@ -28,6 +29,8 @@ export interface TransformOptions {
   stripToc?: boolean;
   /** Extra post-processors applied to the generated markdown of each markdown include. */
   outProcessors?: OutProcessor[];
+  /** Hostnames allowed as remote `::include{file=https://…}` targets. Default: none. */
+  allowedHosts?: string[];
 }
 
 export async function transformIncludes(
@@ -67,7 +70,24 @@ export async function transformIncludes(
           kind === "readme"
             ? await fetchReadmeSource(ctx, { project: spec.project, ref: spec.ref })
             : await fetchFileSource(ctx, { project: spec.project, path: spec.path!, ref: spec.ref });
-        let body = await renderSource(raw, {
+        let expanded = raw;
+        if (isMarkdownSource(kind, spec.path)) {
+          expanded = await expandFileIncludes(
+            raw,
+            {
+              ctx,
+              project: spec.project,
+              ref,
+              allowedHosts: options.allowedHosts ?? [],
+              strict: options.strict,
+            },
+            {
+              depth: 0,
+              stack: new Set([`${spec.project}@${ref}/-/${spec.path ?? "README.md"}`]),
+            },
+          );
+        }
+        let body = await renderSource(expanded, {
           ctx,
           project: spec.project,
           ref,
