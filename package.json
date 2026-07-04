@@ -50,8 +50,14 @@
     "prepare": "husky"
   },
   "peerDependencies": {
+    "@docusaurus/logger": "^3.0.0",
     "react": ">=18",
     "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@docusaurus/logger": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@gitbeaker/core": "^43.8.0",
@@ -74,6 +80,7 @@
     "unist-util-visit-parents": "^6.0.0"
   },
   "devDependencies": {
+    "@docusaurus/logger": "^3.10.1",
     "@eslint/js": "^9.39.4",
     "@testing-library/jest-dom": "^6.4.0",
     "@testing-library/react": "^16.0.0",

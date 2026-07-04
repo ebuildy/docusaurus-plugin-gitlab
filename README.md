@@ -234,6 +234,39 @@ Both components render [scoped labels/topics](https://docs.gitlab.com/ee/user/pr
 (`scope::value`, e.g. `Abilities::Performance`) as a two-part badge — the scope keeps its
 color and the value gets a dark-gray background. The split is on the last `::`.
 
+### `::include` directives inside included markdown
+
+When a fetched GitLab README or markdown file contains a GitLab
+[`::include`](https://docs.gitlab.com/user/markdown/#includes) directive, the
+plugin expands it at build time, splicing the referenced file in as raw
+markdown:
+
+```text
+::include{file=docs/chapter1.md}
+```
+
+- Relative paths resolve to a file in the **same GitLab project and ref** as the
+  enclosing include, fetched through the same cached client.
+- Remote URLs (`::include{file=https://…}`) are fetched only when their host is
+  listed in the `includeAllowedHosts` plugin option (empty by default, so remote
+  includes are off until you opt in).
+- Markdown targets (`.md`/`.mdx`/`.markdown`) are spliced inline and expanded
+  recursively (max depth 8) with cycle detection. Any other file (e.g. `.yaml`,
+  `.json`) is inserted as a fenced, syntax-highlighted code block.
+- Put the directive **inside a fenced code block** to insert a file's content
+  verbatim into that block ([GitLab: includes in code blocks](https://docs.gitlab.com/user/markdown/#use-includes-in-code-blocks)):
+
+  ````text
+  ```yaml
+  ::include{file=config/profiles.yaml}
+  ```
+  ````
+
+  The directive is replaced by the file content in place — no extra fence, no
+  markdown processing.
+- A failed include aborts the build in `strict` mode, or renders an inline
+  warning otherwise.
+
 ## Plugin options
 
 | Option | Type | Default | Description |
@@ -250,6 +283,8 @@ color and the value gets a dark-gray background. The split is on the last `::`.
 | `convertAlerts` | boolean | `true` | Translate GitLab alert blockquotes (`> [!note]`) to Docusaurus admonitions (`:::note`) in included markdown |
 | `stripToc` | boolean | `false` | Remove a redundant "Table of Contents" section (and `[[_TOC_]]` marker) from included markdown |
 | `outProcessors` | `Array<(md: string) => string \| Promise<string>>` | `[]` | Extra post-processors for included markdown, run after the built-in fixes |
+| `includeAllowedHosts` | `string[]` | `[]` | Hostnames allowed as remote `::include{file=https://…}` targets |
+| `debug` | boolean | `false` | Emit build-time debug traces for the include pipeline (resolved placeholders and `::include` directives) via `@docusaurus/logger` |
 
 The token is read at build time only. Provide it via an environment variable
 (`GITLAB_TOKEN`) — never commit it.

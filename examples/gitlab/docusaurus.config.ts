@@ -14,6 +14,7 @@ const gitlabOptions = {
   token: process.env.GITLAB_TOKEN,
   strict: false,
   stripToc: true,
+  debug: true,
 };
 
 // Live example: embeds REAL public content from gitlab.com.
