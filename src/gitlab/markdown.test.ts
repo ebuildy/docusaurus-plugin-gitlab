@@ -1,5 +1,8 @@
+import rehypeRaw from "rehype-raw";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
 import { describe, it, expect } from "vitest";
-import { renderMarkdown } from "./markdown";
+import { renderMarkdown, defaultMarkdownRenderChain } from "./markdown";
 
 describe("renderMarkdown", () => {
   it("renders gfm markdown to html", async () => {
@@ -50,5 +53,19 @@ describe("renderMarkdown", () => {
       transformLinkHref: async (href) => `https://x/${href}`,
     });
     expect(html).toContain('href="https://x/./b.md"');
+  });
+
+  it("uses a custom renderChain verbatim (omitting sanitize lets raw html through)", async () => {
+    const html = await renderMarkdown('<b onclick="x()">hi</b>', {
+      renderChain: [remarkParse, [remarkRehype, { allowDangerousHtml: true }], rehypeRaw],
+    });
+    expect(html).toContain("onclick");
+    expect(html).toContain("hi");
+  });
+
+  it("exports the default chain used when no renderChain is given", async () => {
+    expect(defaultMarkdownRenderChain.length).toBe(6);
+    const html = await renderMarkdown('<b onclick="x()">hi</b>', {});
+    expect(html).not.toContain("onclick");
   });
 });

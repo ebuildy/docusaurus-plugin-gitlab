@@ -6,16 +6,34 @@ import remarkGemoji from "remark-gemoji";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
-import { unified } from "unified";
+import { unified, type PluggableList } from "unified";
 import { visit } from "unist-util-visit";
 import { rehypeGitlabAlerts } from "./alerts.js";
 import { rehypeGitlabToc, TOC_PLACEHOLDER, type TocMode, type TocEntry } from "./toc.js";
+
+/**
+ * The default configurable prefix of the render pipeline: markdown → sanitized
+ * hast. Users can spread it (`[...defaultMarkdownRenderChain, myPlugin]`) or
+ * replace it wholesale via the `markdownRenderChain` plugin option. The internal
+ * stages (TOC, alerts, asset collector, stringify) are appended by
+ * `renderMarkdown` and are not part of this list.
+ */
+export const defaultMarkdownRenderChain: PluggableList = [
+  remarkParse,
+  remarkGemoji,
+  remarkGfm,
+  [remarkRehype, { allowDangerousHtml: true }],
+  rehypeRaw,
+  rehypeSanitize,
+];
 
 export interface RenderOptions {
   transformImageSrc?: (src: string) => Promise<string>;
   transformLinkHref?: (href: string) => Promise<string>;
   tocMode?: TocMode;
   collectToc?: TocEntry[];
+  /** Overrides the default markdown→sanitized-hast plugin chain. */
+  renderChain?: PluggableList;
 }
 
 // Matches a standalone `[[_TOC_]]` line (allowing leading/trailing spaces/tabs).
@@ -38,12 +56,7 @@ export async function renderMarkdown(md: string, opts: RenderOptions): Promise<s
   };
 
   const processor = unified()
-    .use(remarkParse)
-    .use(remarkGemoji)
-    .use(remarkGfm)
-    .use(remarkRehype, { allowDangerousHtml: true })
-    .use(rehypeRaw)
-    .use(rehypeSanitize)
+    .use(opts.renderChain ?? defaultMarkdownRenderChain)
     .use(rehypeGitlabToc, { mode: opts.tocMode ?? "auto", collect: opts.collectToc })
     .use(rehypeGitlabAlerts)
     .use(collect)
