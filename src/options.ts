@@ -1,4 +1,5 @@
 import Joi from "joi";
+import type { PluggableList } from "unified";
 import type { OutProcessor } from "./include/out-processors.js";
 
 export interface PluginOptions {
@@ -34,6 +35,11 @@ export interface PluginOptions {
   /** Extra post-processors applied to the markdown generated from includes,
    *  in order, after the built-in fixes (when enabled). */
   outProcessors?: OutProcessor[];
+  /** Replaces the default markdown→sanitized-hast plugin chain used to render
+   *  fetched GitLab markdown (descriptions, release notes, READMEs, files).
+   *  Defaults to `defaultMarkdownRenderChain`. Omitting `rehype-sanitize`
+   *  disables sanitization of untrusted content (a build warning is emitted). */
+  markdownRenderChain?: PluggableList;
 }
 
 export interface ResolvedOptions {
@@ -50,6 +56,7 @@ export interface ResolvedOptions {
   stripToc: boolean;
   includeAllowedHosts: string[];
   debug: boolean;
+  markdownRenderChain?: PluggableList;
 }
 
 const schema = Joi.object({
@@ -73,6 +80,7 @@ const schema = Joi.object({
   includeAllowedHosts: Joi.array().items(Joi.string()).optional(),
   debug: Joi.boolean().optional(),
   outProcessors: Joi.array().items(Joi.function()).optional(),
+  markdownRenderChain: Joi.array().items(Joi.alternatives(Joi.function(), Joi.array())).optional(),
 });
 
 export function resolveOptions(
@@ -97,5 +105,10 @@ export function resolveOptions(
     stripToc: opts.stripToc ?? false,
     includeAllowedHosts: opts.includeAllowedHosts ?? [],
     debug: opts.debug ?? false,
+    // Read from the original `input` (not Joi's validated `value`) so the
+    // caller's array/function references are preserved — Joi clones arrays
+    // during validation, which would break identity for consumers that rely
+    // on `===` (e.g. memoization keyed on the chain reference).
+    markdownRenderChain: input.markdownRenderChain,
   };
 }
