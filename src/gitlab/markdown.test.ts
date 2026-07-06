@@ -1,8 +1,9 @@
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { describe, it, expect } from "vitest";
-import { renderMarkdown, defaultMarkdownRenderChain } from "./markdown";
+import { renderMarkdown, defaultMarkdownRenderChain, chainHasSanitize } from "./markdown";
 
 describe("renderMarkdown", () => {
   it("renders gfm markdown to html", async () => {
@@ -67,5 +68,18 @@ describe("renderMarkdown", () => {
     expect(defaultMarkdownRenderChain.length).toBe(6);
     const html = await renderMarkdown('<b onclick="x()">hi</b>', {});
     expect(html).not.toContain("onclick");
+  });
+});
+
+describe("chainHasSanitize", () => {
+  it("is true when rehype-sanitize is present (bare, tuple, or default chain)", () => {
+    expect(chainHasSanitize(defaultMarkdownRenderChain)).toBe(true);
+    expect(chainHasSanitize([rehypeSanitize])).toBe(true);
+    expect(chainHasSanitize([[rehypeSanitize, {}]])).toBe(true);
+  });
+
+  it("is false when rehype-sanitize is absent", () => {
+    expect(chainHasSanitize([remarkParse])).toBe(false);
+    expect(chainHasSanitize([])).toBe(false);
   });
 });

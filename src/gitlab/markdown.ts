@@ -27,6 +27,19 @@ export const defaultMarkdownRenderChain: PluggableList = [
   rehypeSanitize,
 ];
 
+/**
+ * True when `chain` contains `rehype-sanitize` (as a bare plugin or a
+ * `[plugin, options]` tuple), matched by reference or by function name. Used to
+ * warn when a user-supplied chain would render untrusted GitLab content without
+ * sanitization.
+ */
+export function chainHasSanitize(chain: PluggableList): boolean {
+  return chain.some((entry) => {
+    const plugin = Array.isArray(entry) ? entry[0] : entry;
+    return plugin === rehypeSanitize || (typeof plugin === "function" && plugin.name === "rehypeSanitize");
+  });
+}
+
 export interface RenderOptions {
   transformImageSrc?: (src: string) => Promise<string>;
   transformLinkHref?: (href: string) => Promise<string>;
