@@ -285,9 +285,45 @@ markdown:
 | `outProcessors` | `Array<(md: string) => string \| Promise<string>>` | `[]` | Extra post-processors for included markdown, run after the built-in fixes |
 | `includeAllowedHosts` | `string[]` | `[]` | Hostnames allowed as remote `::include{file=https://…}` targets |
 | `debug` | boolean | `false` | Emit build-time debug traces for the include pipeline (resolved placeholders and `::include` directives) via `@docusaurus/logger` |
+| `markdownRenderChain` | `PluggableList` | _default chain_ | Override the markdown→sanitized-HTML plugin chain (see below) |
 
 The token is read at build time only. Provide it via an environment variable
 (`GITLAB_TOKEN`) — never commit it.
+
+### Customizing the markdown render chain
+
+Fetched GitLab markdown (project descriptions, release notes, READMEs, and
+markdown files) is rendered at build time by a `unified` plugin chain. By default
+it is:
+
+```text
+remarkParse → remarkGemoji → remarkGfm → remarkRehype({ allowDangerousHtml })
+  → rehypeRaw → rehypeSanitize
+```
+
+Override or extend it with the `markdownRenderChain` option. Spread the exported
+default to add plugins:
+
+```ts
+import { defaultMarkdownRenderChain } from "@ebuildy/docusaurus-plugin-gitlab";
+import rehypeHighlight from "rehype-highlight";
+
+// docusaurus.config.ts — plugin options
+{
+  host: "https://gitlab.com",
+  markdownRenderChain: [...defaultMarkdownRenderChain, rehypeHighlight],
+}
+```
+
+Internal stages (heading anchors/TOC, GitLab alert admonitions, asset
+localization, HTML serialization) always run **after** your chain and are not
+configurable.
+
+> **Security:** GitLab content is untrusted. The default chain runs
+> `rehype-sanitize`. If your custom `markdownRenderChain` omits it, that content
+> is rendered **without sanitization** (XSS risk); the plugin emits a build-time
+> warning when this is detected. Keep `rehype-sanitize` in the chain unless you
+> fully control the GitLab source.
 
 ## How it works
 
