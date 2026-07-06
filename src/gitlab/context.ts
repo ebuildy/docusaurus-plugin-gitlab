@@ -38,7 +38,11 @@ export function buildContext(options: ResolvedOptions): GitLabContext {
     assetBaseUrl: options.assetBaseUrl,
     host: options.host,
   });
-  if (options.markdownRenderChain) void warnIfChainMissingSanitize(options.markdownRenderChain);
+  if (options.markdownRenderChain) {
+    // Fire-and-forget: the warning lazily imports @docusaurus/logger; swallow a
+    // rejected import so it never surfaces as an unhandled rejection.
+    void warnIfChainMissingSanitize(options.markdownRenderChain).catch(() => {});
+  }
   return {
     client,
     cache,
