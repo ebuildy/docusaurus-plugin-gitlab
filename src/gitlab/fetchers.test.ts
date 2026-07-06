@@ -1,6 +1,9 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import rehypeRaw from "rehype-raw";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
 import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile, fetchTopics, fetchLabels } from "./fetchers";
@@ -73,6 +76,19 @@ describe("fetchReleases", () => {
     };
     const data = await fetchReleases(ctx(client), { project: "g/r" });
     expect(data.map((r) => r.tagName)).toEqual(["v1"]);
+  });
+
+  it("applies a configured markdownRenderChain to release notes", async () => {
+    const client = {
+      getReleases: vi.fn(async () => [
+        { name: "v1", tag_name: "v1", released_at: "x", description: '<b onclick="e()">n</b>',
+          upcoming_release: false, assets: { links: [] } },
+      ]),
+    };
+    const c = ctx(client);
+    c.options.markdownRenderChain = [remarkParse, [remarkRehype, { allowDangerousHtml: true }], rehypeRaw];
+    const data = await fetchReleases(c, { project: "g/r", includePrereleases: true });
+    expect(data[0].descriptionHtml).toContain("onclick");
   });
 });
 

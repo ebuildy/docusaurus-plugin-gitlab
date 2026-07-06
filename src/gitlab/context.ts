@@ -38,6 +38,7 @@ export function buildContext(options: ResolvedOptions): GitLabContext {
     assetBaseUrl: options.assetBaseUrl,
     host: options.host,
   });
+  if (options.markdownRenderChain) void warnIfChainMissingSanitize(options.markdownRenderChain);
   return {
     client,
     cache,
@@ -47,6 +48,7 @@ export function buildContext(options: ResolvedOptions): GitLabContext {
       strict: options.strict,
       allowedHosts: options.includeAllowedHosts,
       debug: options.debug,
+      markdownRenderChain: options.markdownRenderChain,
     },
   };
 }

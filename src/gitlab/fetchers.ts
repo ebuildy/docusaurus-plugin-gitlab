@@ -1,6 +1,7 @@
 // `expandIncludes` lives in the include subsystem, which imports `fetchFileSource`
 // from this module — a benign call-time-only cycle (both are hoisted function
 // declarations, used only at runtime, never at module-eval time).
+import type { PluggableList } from "unified";
 import { expandIncludes } from "../include/expand.js";
 import { createIncludeLogger } from "../include/logger.js";
 import type { AssetManager } from "./assets";
@@ -29,6 +30,7 @@ export interface GitLabContext {
     strict?: boolean;
     allowedHosts?: string[];
     debug?: boolean;
+    markdownRenderChain?: PluggableList;
   };
 }
 
@@ -79,7 +81,7 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
       id: p.id,
       path: p.path_with_namespace,
       name: p.name,
-      descriptionHtml: await renderMarkdown(p.description ?? "", {}),
+      descriptionHtml: await renderMarkdown(p.description ?? "", { renderChain: ctx.options.markdownRenderChain }),
       webUrl: p.web_url,
       starCount: p.star_count,
       forksCount: p.forks_count,
@@ -102,7 +104,7 @@ export async function fetchReleases(ctx: GitLabContext, attrs: Attrs): Promise<R
         name: r.name,
         tagName: r.tag_name,
         releasedAt: r.released_at,
-        descriptionHtml: await renderMarkdown(r.description ?? "", {}),
+        descriptionHtml: await renderMarkdown(r.description ?? "", { renderChain: ctx.options.markdownRenderChain }),
         upcomingRelease: Boolean(r.upcoming_release),
         assets: (r.assets?.links ?? []).map((l: any) => ({ name: l.name, url: l.url })),
       })),
@@ -191,6 +193,7 @@ export async function fetchReadme(ctx: GitLabContext, attrs: Attrs): Promise<Rea
       tocMode,
       collectToc,
       transformImageSrc: (src) => ctx.assets.localize(src, ref, project),
+      renderChain: ctx.options.markdownRenderChain,
     });
     const result: ReadmeData = { ref, html };
     if (tocMode === "sidebar") result.toc = collectToc;
@@ -355,6 +358,7 @@ export async function fetchFile(ctx: GitLabContext, attrs: Attrs): Promise<FileD
         const expanded = await expandDirectives(ctx, String(project), ref, path, raw);
         const html = await renderMarkdown(expanded, {
           transformImageSrc: (src) => ctx.assets.localize(src, ref, String(project)),
+          renderChain: ctx.options.markdownRenderChain,
         });
         return { kind: "markdown", html, ref, path } satisfies FileData;
       }
