@@ -19,13 +19,15 @@ describe("fetchProjectInfo", () => {
   it("normalizes the project payload", async () => {
     const client = {
       getProject: vi.fn(async () => ({
-        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        id: 7, path_with_namespace: "g/r", name: "r", description: "ship **it** :rocket:", web_url: "https://gitlab.com/g/r",
         star_count: 3, forks_count: 1, topics: ["x"], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
       })),
     };
     const c = ctx(client);
     const data = await fetchProjectInfo(c, { project: "g/r" });
     expect(data).toMatchObject({ id: 7, path: "g/r", starCount: 3, topics: ["x"] });
+    expect(data.descriptionHtml).toContain("<strong>it</strong>");
+    expect(data.descriptionHtml).toContain("🚀");
     expect(data.avatarUrl).toBeNull();
     expect(c.assets.localize).not.toHaveBeenCalled();
     expect(client.getProject).toHaveBeenCalledWith("g/r");

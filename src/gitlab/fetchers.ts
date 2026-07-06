@@ -79,7 +79,7 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
       id: p.id,
       path: p.path_with_namespace,
       name: p.name,
-      description: p.description ?? null,
+      descriptionHtml: await renderMarkdown(p.description ?? "", {}),
       webUrl: p.web_url,
       starCount: p.star_count,
       forksCount: p.forks_count,

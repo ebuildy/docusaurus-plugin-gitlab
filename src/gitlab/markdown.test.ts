@@ -8,6 +8,12 @@ describe("renderMarkdown", () => {
     expect(html).toContain("<li>a</li>");
   });
 
+  it("converts :emoji: shortcodes to unicode emoji", async () => {
+    const html = await renderMarkdown("Ship it :rocket:", {});
+    expect(html).toContain("🚀");
+    expect(html).not.toContain(":rocket:");
+  });
+
   it("strips dangerous html", async () => {
     const html = await renderMarkdown("<script>alert(1)</script>ok", {});
     expect(html).not.toContain("<script>");

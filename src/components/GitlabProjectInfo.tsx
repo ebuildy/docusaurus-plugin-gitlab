@@ -22,7 +22,12 @@ export function GitlabProjectInfo({ data, error, showStats = true }: ComponentPa
           <a href={data.webUrl}>{data.name}</a>
         </div>
       </div>
-      {data.description && <p className="gitlab-muted">{data.description}</p>}
+      {data.descriptionHtml && (
+        <div
+          className="gitlab-description gitlab-muted"
+          dangerouslySetInnerHTML={{ __html: data.descriptionHtml }}
+        />
+      )}
       {data.topics.length > 0 && (
         <div>
           {data.topics.map((t) => (

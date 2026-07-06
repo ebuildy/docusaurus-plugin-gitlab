@@ -2,6 +2,7 @@ import type { Root, Element } from "hast";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
+import remarkGemoji from "remark-gemoji";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -38,6 +39,7 @@ export async function renderMarkdown(md: string, opts: RenderOptions): Promise<s
 
   const processor = unified()
     .use(remarkParse)
+    .use(remarkGemoji)
     .use(remarkGfm)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
