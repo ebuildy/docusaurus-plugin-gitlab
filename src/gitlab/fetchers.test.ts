@@ -1,6 +1,9 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import rehypeRaw from "rehype-raw";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
 import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile, fetchTopics, fetchLabels } from "./fetchers";
@@ -19,13 +22,15 @@ describe("fetchProjectInfo", () => {
   it("normalizes the project payload", async () => {
     const client = {
       getProject: vi.fn(async () => ({
-        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        id: 7, path_with_namespace: "g/r", name: "r", description: "ship **it** :rocket:", web_url: "https://gitlab.com/g/r",
         star_count: 3, forks_count: 1, topics: ["x"], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
       })),
     };
     const c = ctx(client);
     const data = await fetchProjectInfo(c, { project: "g/r" });
     expect(data).toMatchObject({ id: 7, path: "g/r", starCount: 3, topics: ["x"] });
+    expect(data.descriptionHtml).toContain("<strong>it</strong>");
+    expect(data.descriptionHtml).toContain("🚀");
     expect(data.avatarUrl).toBeNull();
     expect(c.assets.localize).not.toHaveBeenCalled();
     expect(client.getProject).toHaveBeenCalledWith("g/r");
@@ -71,6 +76,19 @@ describe("fetchReleases", () => {
     };
     const data = await fetchReleases(ctx(client), { project: "g/r" });
     expect(data.map((r) => r.tagName)).toEqual(["v1"]);
+  });
+
+  it("applies a configured markdownRenderChain to release notes", async () => {
+    const client = {
+      getReleases: vi.fn(async () => [
+        { name: "v1", tag_name: "v1", released_at: "x", description: '<b onclick="e()">n</b>',
+          upcoming_release: false, assets: { links: [] } },
+      ]),
+    };
+    const c = ctx(client);
+    c.options.markdownRenderChain = [remarkParse, [remarkRehype, { allowDangerousHtml: true }], rehypeRaw];
+    const data = await fetchReleases(c, { project: "g/r", includePrereleases: true });
+    expect(data[0].descriptionHtml).toContain("onclick");
   });
 });
 

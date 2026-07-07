@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { GitlabProjectInfo } from "./GitlabProjectInfo";
 
 const data = {
-  id: 1, path: "g/r", name: "My Repo", description: "A thing", webUrl: "https://gitlab.com/g/r",
+  id: 1, path: "g/r", name: "My Repo", descriptionHtml: "<p>A thing</p>", webUrl: "https://gitlab.com/g/r",
   starCount: 12, forksCount: 3, topics: ["docs", "tooling"], lastActivityAt: "2026-01-01T00:00:00Z", avatarUrl: null,
 };
 
@@ -14,6 +14,17 @@ describe("GitlabProjectInfo", () => {
     expect(screen.getByText("A thing")).toBeInTheDocument();
     expect(screen.getByText("docs")).toBeInTheDocument();
     expect(screen.getByText(/12/)).toBeInTheDocument();
+  });
+
+  it("renders markdown and emoji from the description html", () => {
+    render(<GitlabProjectInfo data={{ ...data, descriptionHtml: "<p>A <strong>bold</strong> thing 🚀</p>" } as any} />);
+    expect(screen.getByText("bold")).toBeInTheDocument();
+    expect(screen.getByText(/🚀/)).toBeInTheDocument();
+  });
+
+  it("renders no description block when descriptionHtml is empty", () => {
+    const { container } = render(<GitlabProjectInfo data={{ ...data, descriptionHtml: "" } as any} />);
+    expect(container.querySelector(".gitlab-description")).toBeNull();
   });
 
   it("humanizes large star and fork counts", () => {

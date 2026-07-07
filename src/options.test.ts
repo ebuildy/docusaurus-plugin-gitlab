@@ -117,4 +117,18 @@ describe("resolveOptions", () => {
       ),
     ).toThrow();
   });
+
+  it("passes markdownRenderChain through unchanged", () => {
+    const chain = [function myPlugin() {}];
+    const o = resolveOptions(
+      { host: "https://gitlab.com", markdownRenderChain: chain as any },
+      "production",
+    );
+    expect(o.markdownRenderChain).toBe(chain);
+  });
+
+  it("leaves markdownRenderChain undefined when not given", () => {
+    const o = resolveOptions({ host: "https://gitlab.com" }, "production");
+    expect(o.markdownRenderChain).toBeUndefined();
+  });
 });

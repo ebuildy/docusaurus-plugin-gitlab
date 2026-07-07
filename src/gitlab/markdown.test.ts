@@ -1,11 +1,21 @@
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
 import { describe, it, expect } from "vitest";
-import { renderMarkdown } from "./markdown";
+import { renderMarkdown, defaultMarkdownRenderChain, chainHasSanitize } from "./markdown";
 
 describe("renderMarkdown", () => {
   it("renders gfm markdown to html", async () => {
     const html = await renderMarkdown("# Hello\n\n- a\n- b", {});
     expect(html).toContain("<h1>Hello</h1>");
     expect(html).toContain("<li>a</li>");
+  });
+
+  it("converts :emoji: shortcodes to unicode emoji", async () => {
+    const html = await renderMarkdown("Ship it :rocket:", {});
+    expect(html).toContain("🚀");
+    expect(html).not.toContain(":rocket:");
   });
 
   it("strips dangerous html", async () => {
@@ -44,5 +54,32 @@ describe("renderMarkdown", () => {
       transformLinkHref: async (href) => `https://x/${href}`,
     });
     expect(html).toContain('href="https://x/./b.md"');
+  });
+
+  it("uses a custom renderChain verbatim (omitting sanitize lets raw html through)", async () => {
+    const html = await renderMarkdown('<b onclick="x()">hi</b>', {
+      renderChain: [remarkParse, [remarkRehype, { allowDangerousHtml: true }], rehypeRaw],
+    });
+    expect(html).toContain("onclick");
+    expect(html).toContain("hi");
+  });
+
+  it("exports the default chain used when no renderChain is given", async () => {
+    expect(defaultMarkdownRenderChain.length).toBe(6);
+    const html = await renderMarkdown('<b onclick="x()">hi</b>', {});
+    expect(html).not.toContain("onclick");
+  });
+});
+
+describe("chainHasSanitize", () => {
+  it("is true when rehype-sanitize is present (bare, tuple, or default chain)", () => {
+    expect(chainHasSanitize(defaultMarkdownRenderChain)).toBe(true);
+    expect(chainHasSanitize([rehypeSanitize])).toBe(true);
+    expect(chainHasSanitize([[rehypeSanitize, {}]])).toBe(true);
+  });
+
+  it("is false when rehype-sanitize is absent", () => {
+    expect(chainHasSanitize([remarkParse])).toBe(false);
+    expect(chainHasSanitize([])).toBe(false);
   });
 });
