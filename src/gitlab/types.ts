@@ -41,6 +41,14 @@ export interface IssueData {
   createdAt: string;
 }
 
+export interface CommitData {
+  shortId: string;
+  title: string;
+  webUrl: string;
+  authorName: string;
+  createdAt: string;
+}
+
 export interface ReadmeData {
   ref: string;
   html: string;

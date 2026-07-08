@@ -10,6 +10,7 @@ import type { GitLabClient, PageOptions } from "./client";
 import { renderMarkdown } from "./markdown.js";
 import type { TocEntry, TocMode } from "./toc.js";
 import type {
+  CommitData,
   FileData,
   IssueData,
   LabelData,
@@ -132,6 +133,21 @@ export async function fetchIssues(ctx: GitLabContext, attrs: Attrs): Promise<Iss
       authorWebUrl: i.author?.web_url ?? "",
       createdAt: i.created_at,
     } satisfies IssueData));
+  });
+}
+
+export async function fetchCommits(ctx: GitLabContext, attrs: Attrs): Promise<CommitData[]> {
+  const project = String(attrs.project);
+  const limit = typeof attrs.limit === "number" ? attrs.limit : 10;
+  return memo(ctx, `commits:${project}:${limit}`, async () => {
+    const raw = await ctx.client.getCommits(attrs.project as string | number, limit);
+    return raw.map((c: any) => ({
+      shortId: c.short_id,
+      title: c.title,
+      webUrl: c.web_url,
+      authorName: c.author_name ?? "",
+      createdAt: c.created_at,
+    } satisfies CommitData));
   });
 }
 

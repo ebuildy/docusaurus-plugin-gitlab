@@ -6,7 +6,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile, fetchTopics, fetchLabels } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -106,6 +106,24 @@ describe("fetchIssues", () => {
       "g/r",
       { state: "opened", labels: "bug", milestone: undefined, limit: 10 },
     );
+  });
+});
+
+describe("fetchCommits", () => {
+  it("normalizes commits and respects the limit", async () => {
+    const client = {
+      getCommits: vi.fn(async () => [
+        { short_id: "a1b2c3d", title: "fix: thing", web_url: "https://gitlab.com/g/r/-/commit/a1b2c3d",
+          author_name: "Ada", created_at: "2026-01-02T00:00:00Z" },
+      ]),
+    };
+    const c = ctx(client);
+    const data = await fetchCommits(c, { project: "g/r", limit: 5 });
+    expect(client.getCommits).toHaveBeenCalledWith("g/r", 5);
+    expect(data).toEqual([
+      { shortId: "a1b2c3d", title: "fix: thing", webUrl: "https://gitlab.com/g/r/-/commit/a1b2c3d",
+        authorName: "Ada", createdAt: "2026-01-02T00:00:00Z" },
+    ]);
   });
 });
 
