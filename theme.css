@@ -267,7 +267,9 @@
   font-size: 0.85em;
   color: var(--ifm-color-primary);
 }
-/* Issue rows pin their "x ago" date to the right edge. */
+/* Release / commit / issue rows pin their "x ago" date to the right edge. */
+.gitlab-section-releases .gitlab-section-item,
+.gitlab-section-commits .gitlab-section-item,
 .gitlab-section-issues .gitlab-section-item {
   display: flex;
   align-items: baseline;

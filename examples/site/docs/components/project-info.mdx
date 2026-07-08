@@ -45,11 +45,10 @@ rendered) when its count prop is a positive number.
 - Embedded sections are independent: any combination of `releases`, `commits`,
   and `issues` may be set, in any order.
 - `*Layout` props default to `"list"` — a compact single line per item:
-  release = tag + name; commit = linked short SHA + title + author + relative
-  date; issue = linked `#iid` + title with a relative date on the right.
-  Commit and issue dates use a relative `"x ago"` format. `"cards"` renders a
-  richer variant of the same data. An invalid layout value (anything other
-  than `"list"` or `"cards"`) fails the build.
+  release = tag + name; commit = linked short SHA + title + author; issue =
+  linked `#iid` + title. Every item shows a relative `"x ago"` date pinned to
+  the right. `"cards"` renders a richer variant of the same data. An invalid
+  layout value (anything other than `"list"` or `"cards"`) fails the build.
 - On a failed fetch in non-strict mode, a fallback notice is rendered instead.
 - The stats row (`showStats`) can show up to four extra pills — total commit
   count, contributor count, open issue count, and repository size — but only

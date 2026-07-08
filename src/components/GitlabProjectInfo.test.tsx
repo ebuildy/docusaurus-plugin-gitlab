@@ -85,13 +85,16 @@ describe("GitlabProjectInfo", () => {
     expect(screen.getByText(/Ada/)).toBeInTheDocument();
   });
 
-  it("renders a relative 'ago' date on each issue", () => {
+  it("renders a relative 'ago' date on each release, commit, and issue", () => {
     const { container } = render(<GitlabProjectInfo data={{ ...data,
+      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2020-01-01T00:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [] }],
+      commits: [{ shortId: "a1b2c3d", title: "old", webUrl: "u", authorName: "Ada", createdAt: "2020-01-01T00:00:00Z" }],
       issues: [{ iid: 7, title: "Old", state: "opened", webUrl: "u", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2020-01-01T00:00:00Z" }],
     } as any} />);
-    const date = container.querySelector(".gitlab-section-issues .gitlab-section-date");
-    expect(date).not.toBeNull();
-    expect(date?.textContent).toMatch(/ago/);
+    for (const section of ["releases", "commits", "issues"]) {
+      const date = container.querySelector(`.gitlab-section-${section} .gitlab-section-date`);
+      expect(date?.textContent).toMatch(/ago/);
+    }
   });
 
   it("appends stat pills when their data is present", () => {

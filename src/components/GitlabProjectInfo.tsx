@@ -15,10 +15,6 @@ interface ProjectInfoProps extends ComponentPayload<ProjectInfoData> {
   issuesLayout?: SectionLayout;
 }
 
-function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString();
-}
-
 function Releases({ items, layout }: { items: ReleaseData[]; layout: SectionLayout }) {
   return (
     <div className="gitlab-section gitlab-section-releases">
@@ -28,9 +24,7 @@ function Releases({ items, layout }: { items: ReleaseData[]; layout: SectionLayo
           <li key={r.tagName} className="gitlab-section-item">
             <span className="gitlab-badge">{r.tagName}</span>
             <span className="gitlab-section-name"> {r.name || r.tagName}</span>
-            {layout === "cards" && (
-              <span className="gitlab-muted"> · {shortDate(r.releasedAt)}</span>
-            )}
+            <span className="gitlab-section-date gitlab-muted">{timeAgo(r.releasedAt)}</span>
           </li>
         ))}
       </ul>
@@ -47,7 +41,8 @@ function Commits({ items, layout }: { items: CommitData[]; layout: SectionLayout
           <li key={c.shortId} className="gitlab-section-item">
             <a className="gitlab-commit-sha" href={c.webUrl}>{c.shortId}</a>
             <span className="gitlab-section-name"> {c.title}</span>
-            <span className="gitlab-muted"> · {c.authorName} · {timeAgo(c.createdAt)}</span>
+            <span className="gitlab-muted"> · {c.authorName}</span>
+            <span className="gitlab-section-date gitlab-muted">{timeAgo(c.createdAt)}</span>
           </li>
         ))}
       </ul>
