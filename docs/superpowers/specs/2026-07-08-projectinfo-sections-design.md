@@ -1,8 +1,19 @@
-# GitlabProjectInfo: embedded releases / commits / issues sections
+# GitlabProjectInfo: embedded sections + extended stats
 
 **Date:** 2026-07-08
 **Status:** Approved design
 **Component:** `<GitlabProjectInfo>`
+
+Two related enhancements to `<GitlabProjectInfo>`:
+
+1. **Embedded sections** — opt-in latest releases / commits / issues rendered
+   inside the card, plus a title-link override.
+2. **Extended stats** — additional pills (commits, contributors, open issues,
+   repository size) appended to the existing stats row when available.
+
+---
+
+# Feature 1 — Embedded releases / commits / issues sections
 
 ## Goal
 
@@ -177,9 +188,119 @@ the two layouts.
   `examples/site/docs/components/`; the e2e Docusaurus build
   (`test/e2e/build.test.ts`) exercises the render path.
 
-## Out of scope
+---
+
+# Feature 2 — Extended project stats
+
+## Goal
+
+Enrich the existing `gitlab-stats` row in `GitlabProjectInfo` with more
+project metrics, sourced cheaply from the GitLab API. The existing `showStats`
+prop still gates the whole row; the extra pills are appended automatically
+whenever their data is available. No new opt-in attributes.
+
+Stats added: **commits count**, **contributors count**, **open issues count**,
+**repository size**. (Code-lines count was requested but is **not feasible** —
+GitLab exposes no lines-of-code API; `repository_size` is bytes-on-disk,
+`languages` is percentages, and contributor `additions`/`deletions` are churn,
+not current LOC.)
+
+## API feasibility (verified against installed gitbeaker)
+
+| Stat | Source | Cost |
+|---|---|---|
+| Commits count | `statistics.commit_count` on `Projects.show(project, {statistics:true})` | Free (same call) |
+| Repository size | `statistics.repository_size` (bytes) on the same call | Free (same call) |
+| Open issues count | `open_issues_count` on the base project object | Free (already fetched) |
+| Contributors count | `X-Total` pagination header from `Repositories.allContributors` | 1 cheap request |
+
+**Permission caveat:** the `statistics` object is only returned when the
+build-time token has **Reporter+** access. For anonymous/public builds it is
+omitted, so `commitCount` / `repositorySize` are `undefined` and their pills
+are simply not rendered.
+
+## Data model (`src/gitlab/types.ts`)
+
+`ProjectInfoData` gains four optional, best-effort fields (omitted when
+unavailable):
+
+```ts
+export interface ProjectInfoData {
+  // …existing: starCount, forksCount, lastActivityAt…
+  openIssuesCount?: number;    // project.open_issues_count (only when issues_enabled)
+  commitCount?: number;        // statistics.commit_count — needs Reporter+ token
+  repositorySize?: number;     // statistics.repository_size (bytes) — needs Reporter+ token
+  contributorsCount?: number;  // from the contributors endpoint's X-Total header
+}
+```
+
+## Client (`src/gitlab/client.ts`)
+
+- `getProject(project, opts?)` gains an optional `{ statistics?: boolean }`.
+  `fetchProjectInfo` passes `{ statistics: true }`; all other callers
+  (readme / file / labels) keep today's behavior — no extra cost or permission
+  change elsewhere.
+- New `getContributorsCount(project): Promise<number | undefined>`:
+  calls `Repositories.allContributors(project, { showExpanded: true, perPage: 1, maxPages: 1 })`
+  and returns `paginationInfo.total` (the `X-Total` header). Returns `undefined`
+  when the header is absent — no full-list walk.
+
+## Fetcher (`fetchProjectInfo`)
+
+After the project fetch (now with `statistics: true`), map:
+
+- `commitCount` ← `p.statistics?.commit_count` (undefined when statistics withheld)
+- `repositorySize` ← `p.statistics?.repository_size` (same)
+- `openIssuesCount` ← `p.open_issues_count` only when `p.issues_enabled`
+- `contributorsCount` ← `await getContributorsCount(project)`
+
+**All four are best-effort:** any absence or failure leaves the field
+`undefined`, renders no pill, and **never aborts the build — even in `strict`
+mode** (they are supplementary, unlike the Feature 1 section fetches, which
+respect `strict`). The contributors call is wrapped so a failure degrades to
+`undefined`. No cache-key change — these are deterministic per project and
+already covered by the existing `projectInfo:` key.
+
+## Component (`src/components/GitlabProjectInfo.tsx`)
+
+Inside the existing `showStats` block, append one pill per **defined** field:
+
+- Commits — `formatCount(commitCount)` (e.g. "1.2k commits")
+- Contributors — `formatCount(contributorsCount)` (e.g. "8 contributors")
+- Open issues — `formatCount(openIssuesCount)` (e.g. "12 issues")
+- Repository size — new `formatBytes(repositorySize)` helper (e.g. "4.2 MB")
+
+`showStats={false}` still hides the entire row. Existing star / fork / updated
+pills are unchanged.
+
+## Testing (TDD)
+
+- **Client:** `getProject` forwards `statistics: true` when requested;
+  `getContributorsCount` returns the pagination `total` and `undefined` when the
+  header is absent.
+- **Fetcher:** maps all four fields; omits `commitCount`/`repositorySize` when
+  `statistics` is absent; omits `openIssuesCount` when issues disabled; a
+  contributors-fetch failure yields `undefined` and does **not** throw (even in
+  strict mode).
+- **Component:** each pill renders only when its value is defined; `formatBytes`
+  formatting (bytes → KB/MB/GB); `showStats={false}` hides the row.
+- **`formatBytes`:** unit-tested directly (0, bytes, KB, MB, GB boundaries).
+
+## Documentation
+
+- Update the `GitlabProjectInfo` README section and the
+  `examples/site/docs/components/` page to describe the new stat pills and the
+  Reporter+ token requirement for commits/size.
+
+---
+
+# Out of scope (both features)
 
 - No standalone `GitlabCommits` component (commits live only inside
   `GitlabProjectInfo`).
-- No new pagination ceiling work; each section fetches a single page bounded by
-  its `limit` (`maxPages: 1`), consistent with `getReleases` / `getIssues`.
+- No new pagination ceiling work for the sections; each fetches a single page
+  bounded by its `limit` (`maxPages: 1`), consistent with `getReleases` /
+  `getIssues`.
+- No code-lines-count stat (no GitLab API for LOC).
+- No new opt-in attributes for stats; visibility is governed by `showStats`
+  plus data availability.
