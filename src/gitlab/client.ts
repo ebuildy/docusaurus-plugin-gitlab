@@ -57,6 +57,11 @@ export class GitLabClient {
     return issues.slice(0, opts.limit);
   }
 
+  async getCommits(project: ProjectRef, limit: number): Promise<any[]> {
+    const commits = await this.api.Commits.all(project, { perPage: limit, maxPages: 1 });
+    return commits.slice(0, limit);
+  }
+
   async getFileRaw(project: ProjectRef, path: string, ref: string): Promise<string> {
     const raw = await this.api.RepositoryFiles.showRaw(project, path, ref);
     return typeof raw === "string" ? raw : await raw.text();

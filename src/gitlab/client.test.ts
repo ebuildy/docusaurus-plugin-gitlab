@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const showMock = vi.fn();
 const releasesAllMock = vi.fn();
 const issuesAllMock = vi.fn();
+const commitsAllMock = vi.fn();
 const showRawMock = vi.fn();
 const gitlabCtor = vi.fn();
 const topicsAllMock = vi.fn();
@@ -19,6 +20,7 @@ vi.mock("@gitbeaker/rest", () => ({
       Projects: { show: showMock },
       ProjectReleases: { all: releasesAllMock },
       Issues: { all: issuesAllMock },
+      Commits: { all: commitsAllMock },
       RepositoryFiles: { showRaw: showRawMock },
       Topics: { all: topicsAllMock },
       ProjectLabels: { all: projectLabelsAllMock },
@@ -37,6 +39,7 @@ beforeEach(() => {
   showMock.mockReset();
   releasesAllMock.mockReset();
   issuesAllMock.mockReset();
+  commitsAllMock.mockReset();
   showRawMock.mockReset();
   gitlabCtor.mockReset();
   topicsAllMock.mockReset();
@@ -88,6 +91,19 @@ describe("GitLabClient", () => {
       maxPages: 1,
     });
     expect(data).toEqual([{ iid: 1 }, { iid: 2 }]);
+  });
+
+  it("getCommits fetches one page and slices to the limit", async () => {
+    commitsAllMock.mockResolvedValue([
+      { short_id: "a1", title: "one" },
+      { short_id: "b2", title: "two" },
+      { short_id: "c3", title: "three" },
+    ]);
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    const commits = await client.getCommits("g/r", 2);
+    expect(commitsAllMock).toHaveBeenCalledWith("g/r", { perPage: 2, maxPages: 1 });
+    expect(commits).toHaveLength(2);
+    expect(commits[0].short_id).toBe("a1");
   });
 
   it("getFileRaw delegates to RepositoryFiles.showRaw with the given path and ref", async () => {
