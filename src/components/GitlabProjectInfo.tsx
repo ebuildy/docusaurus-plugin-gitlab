@@ -2,6 +2,7 @@ import React from "react";
 import { Fallback } from "./Fallback.js";
 import { formatCount } from "./format.js";
 import { formatBytes } from "./formatBytes.js";
+import { timeAgo } from "./timeAgo.js";
 import type { ComponentPayload, ProjectInfoData, ReleaseData, CommitData, IssueData } from "./types.js";
 
 type SectionLayout = "list" | "cards";
@@ -46,7 +47,7 @@ function Commits({ items, layout }: { items: CommitData[]; layout: SectionLayout
           <li key={c.shortId} className="gitlab-section-item">
             <a className="gitlab-commit-sha" href={c.webUrl}>{c.shortId}</a>
             <span className="gitlab-section-name"> {c.title}</span>
-            <span className="gitlab-muted"> · {c.authorName} · {shortDate(c.createdAt)}</span>
+            <span className="gitlab-muted"> · {c.authorName} · {timeAgo(c.createdAt)}</span>
           </li>
         ))}
       </ul>
@@ -65,6 +66,7 @@ function Issues({ items, layout }: { items: IssueData[]; layout: SectionLayout }
             {layout === "cards" && (
               <span className="gitlab-muted"> · {i.state} · {i.authorName}</span>
             )}
+            <span className="gitlab-section-date gitlab-muted">{timeAgo(i.createdAt)}</span>
           </li>
         ))}
       </ul>

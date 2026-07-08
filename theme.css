@@ -44,7 +44,9 @@
 .gitlab-stats {
   display: flex;
   gap: 1rem;
-  margin-top: 0.5rem;
+  margin-top: 1rem;
+  border-top: 1px solid lightgray;
+  padding-top: 0.5rem;
 }
 
 /* Badges: topics, tags, labels, release assets */
@@ -264,6 +266,17 @@
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.85em;
   color: var(--ifm-color-primary);
+}
+/* Issue rows pin their "x ago" date to the right edge. */
+.gitlab-section-issues .gitlab-section-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.gitlab-section-date {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 0.85em;
 }
 
 /* Cards layout: each item becomes a bordered chip-card instead of a plain line */

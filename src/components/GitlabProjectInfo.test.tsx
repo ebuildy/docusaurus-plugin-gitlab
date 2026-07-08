@@ -85,6 +85,15 @@ describe("GitlabProjectInfo", () => {
     expect(screen.getByText(/Ada/)).toBeInTheDocument();
   });
 
+  it("renders a relative 'ago' date on each issue", () => {
+    const { container } = render(<GitlabProjectInfo data={{ ...data,
+      issues: [{ iid: 7, title: "Old", state: "opened", webUrl: "u", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2020-01-01T00:00:00Z" }],
+    } as any} />);
+    const date = container.querySelector(".gitlab-section-issues .gitlab-section-date");
+    expect(date).not.toBeNull();
+    expect(date?.textContent).toMatch(/ago/);
+  });
+
   it("appends stat pills when their data is present", () => {
     render(<GitlabProjectInfo data={{ ...data,
       commitCount: 1200, contributorsCount: 8, openIssuesCount: 12, repositorySize: 4404019,
