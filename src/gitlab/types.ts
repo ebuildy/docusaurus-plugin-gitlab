@@ -14,6 +14,9 @@ export interface ProjectInfoData {
   topics: string[];
   lastActivityAt: string;
   avatarUrl: string | null;
+  releases?: ReleaseData[];
+  commits?: CommitData[];
+  issues?: IssueData[];
 }
 
 export interface ReleaseAsset {

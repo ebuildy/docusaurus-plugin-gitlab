@@ -71,14 +71,47 @@ async function memo<T>(ctx: GitLabContext, key: string, fn: () => Promise<T>): P
   return value;
 }
 
+function readSectionLayout(value: unknown, attr: string): "list" | "cards" {
+  if (value === undefined || value === "list" || value === "cards") {
+    return value === undefined ? "list" : value;
+  }
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabProjectInfo> "${attr}" must be "list" or "cards"; ` +
+      `got ${JSON.stringify(value)}.`,
+  );
+}
+
 export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promise<ProjectInfoData> {
   const project = String(attrs.project);
-  return memo(ctx, `projectInfo:${project}`, async () => {
+  // Validate presentational layout literals early (values are read by the component).
+  readSectionLayout(attrs.releasesLayout, "releasesLayout");
+  readSectionLayout(attrs.commitsLayout, "commitsLayout");
+  readSectionLayout(attrs.issuesLayout, "issuesLayout");
+
+  const rN = typeof attrs.releases === "number" ? attrs.releases : 0;
+  const cN = typeof attrs.commits === "number" ? attrs.commits : 0;
+  const iN = typeof attrs.issues === "number" ? attrs.issues : 0;
+  const strict = ctx.options.strict ?? true;
+
+  async function section<T>(count: number, fn: () => Promise<T[]>): Promise<T[] | undefined> {
+    if (!(count > 0)) return undefined;
+    try {
+      return await fn();
+    } catch (err) {
+      if (strict) throw err;
+      return undefined;
+    }
+  }
+
+  return memo(ctx, `projectInfo:${project}:r${rN}:c${cN}:i${iN}`, async () => {
     const p = await ctx.client.getProject(attrs.project as string | number);
-    const avatarUrl = p.avatar_url
-      ? await ctx.assets.localize(p.avatar_url, "", project)
-      : null;
-    return {
+    const avatarUrl = p.avatar_url ? await ctx.assets.localize(p.avatar_url, "", project) : null;
+    const [releases, commits, issues] = await Promise.all([
+      section(rN, () => fetchReleases(ctx, { project, limit: rN })),
+      section(cN, () => fetchCommits(ctx, { project, limit: cN })),
+      section(iN, () => fetchIssues(ctx, { project, limit: iN })),
+    ]);
+    const base: ProjectInfoData = {
       id: p.id,
       path: p.path_with_namespace,
       name: p.name,
@@ -89,7 +122,11 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
       topics: p.topics ?? [],
       lastActivityAt: p.last_activity_at,
       avatarUrl,
-    } satisfies ProjectInfoData;
+    };
+    if (releases) base.releases = releases;
+    if (commits) base.commits = commits;
+    if (issues) base.issues = issues;
+    return base;
   }).then((v) => ({ ...v, path: v.path || project }));
 }
 

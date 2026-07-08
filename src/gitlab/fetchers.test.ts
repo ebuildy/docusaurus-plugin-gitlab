@@ -49,6 +49,81 @@ describe("fetchProjectInfo", () => {
     expect(c.assets.localize).toHaveBeenCalledWith("https://gitlab.com/uploads/avatar.png", "", "g/r");
     expect(data.avatarUrl).toBe("/gitlab-assets/httpsgitlabcomuploadsavatarpng.png");
   });
+
+  it("attaches sections only when their count is > 0", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async () => [
+        { name: "v1", tag_name: "v1", released_at: "2026-01-01T00:00:00Z", description: "", upcoming_release: false, assets: { links: [] } },
+      ]),
+      getCommits: vi.fn(async () => [
+        { short_id: "a1", title: "t", web_url: "u", author_name: "Ada", created_at: "2026-01-02T00:00:00Z" },
+      ]),
+      getIssues: vi.fn(async () => []),
+    };
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r", releases: 2, commits: 3 });
+    expect(client.getReleases).toHaveBeenCalledWith("g/r", 2);
+    expect(client.getCommits).toHaveBeenCalledWith("g/r", 3);
+    expect(client.getIssues).not.toHaveBeenCalled();
+    expect(data.releases).toHaveLength(1);
+    expect(data.commits).toHaveLength(1);
+    expect(data.issues).toBeUndefined();
+  });
+
+  it("does not fetch a section when its count is 0 or absent", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async () => []),
+      getCommits: vi.fn(async () => []),
+      getIssues: vi.fn(async () => []),
+    };
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r", commits: 0 });
+    expect(client.getReleases).not.toHaveBeenCalled();
+    expect(client.getCommits).not.toHaveBeenCalled();
+    expect(client.getIssues).not.toHaveBeenCalled();
+    expect(data.releases).toBeUndefined();
+  });
+
+  it("omits a failing section in non-strict mode instead of throwing", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async () => { throw new Error("boom"); }),
+    };
+    const c = ctx(client);
+    c.options.strict = false;
+    const data = await fetchProjectInfo(c, { project: "g/r", releases: 2 });
+    expect(data.releases).toBeUndefined();
+    expect(data.name).toBe("r");
+  });
+
+  it("rethrows a failing section in strict mode", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async () => { throw new Error("boom"); }),
+    };
+    const c = ctx(client);
+    c.options.strict = true;
+    await expect(fetchProjectInfo(c, { project: "g/r", releases: 2 })).rejects.toThrow("boom");
+  });
+
+  it("rejects an invalid section layout", async () => {
+    const client = { getProject: vi.fn(async () => ({ id: 1, path_with_namespace: "g/r", name: "r", description: "", web_url: "u", star_count: 0, forks_count: 0, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null })) };
+    await expect(fetchProjectInfo(ctx(client), { project: "g/r", releasesLayout: "grid" })).rejects.toThrow(/releasesLayout/);
+  });
 });
 
 describe("fetchReleases", () => {
