@@ -1,5 +1,6 @@
 export { default } from "./plugin/index.js";
 export { default as remarkGitlab } from "./remark/index.js";
+export { defaultMarkdownRenderChain } from "./gitlab/markdown.js";
 export {
   convertAlerts,
   fixAutolinks,

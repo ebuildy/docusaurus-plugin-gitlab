@@ -6,7 +6,8 @@ export interface ProjectInfoData {
   id: number;
   path: string;
   name: string;
-  description: string | null;
+  /** Project description rendered to sanitized HTML (markdown + emoji); "" when absent. */
+  descriptionHtml: string;
   webUrl: string;
   starCount: number;
   forksCount: number;
