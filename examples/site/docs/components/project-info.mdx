@@ -8,12 +8,25 @@ sidebar_position: 1
 Renders a card with a project's name, description, topics, star/fork counts, and
 last activity. Data is fetched at build time.
 
+It can also embed compact **releases**, **commits**, and **issues** sections
+directly in the card — each section is opt-in: it's only fetched (and only
+rendered) when its count prop is a positive number.
+
 ## Usage
 
 ```mdx
 <GitlabProjectInfo project="group/repo" />
 
 <GitlabProjectInfo project={12345} showStats={false} />
+
+<GitlabProjectInfo project="group/app" releases={3} commits={5} issues={5} />
+
+<GitlabProjectInfo
+  project="group/app"
+  releases={3}
+  releasesLayout="cards"
+  link="https://example.com/app"
+/>
 ```
 
 ## Props
@@ -22,8 +35,23 @@ last activity. Data is fetched at build time.
 |---|---|---|---|
 | `project` | `string \| number` | — | **Required.** Project path (`group/sub/repo`) or numeric ID. |
 | `showStats` | `boolean` | `true` | Show the stars / forks / last-activity row. |
+| `link` | `string` | project's `web_url` | Override the card title's link target. |
+| `releases` | `number` | — | Embed the latest N releases. Absent or `≤ 0` ⇒ not fetched, not rendered. |
+| `commits` | `number` | — | Embed the latest N commits. Absent or `≤ 0` ⇒ not fetched, not rendered. |
+| `issues` | `number` | — | Embed the latest N issues. Absent or `≤ 0` ⇒ not fetched, not rendered. |
+| `releasesLayout` | `"list" \| "cards"` | `"list"` | Layout for the embedded releases section. |
+| `commitsLayout` | `"list" \| "cards"` | `"list"` | Layout for the embedded commits section. |
+| `issuesLayout` | `"list" \| "cards"` | `"list"` | Layout for the embedded issues section. |
 
 ## Notes
 
-- The link in the card points to the project's GitLab page (`web_url`).
+- The link in the card points to the project's GitLab page (`web_url`) unless
+  overridden with `link`.
+- Embedded sections are independent: any combination of `releases`, `commits`,
+  and `issues` may be set, in any order.
+- `*Layout` props default to `"list"` — a compact single line per item:
+  release = tag + name; commit = linked short SHA + title + author + date;
+  issue = linked `#iid` + title. `"cards"` renders a richer variant of the
+  same data. An invalid layout value (anything other than `"list"` or
+  `"cards"`) fails the build.
 - On a failed fetch in non-strict mode, a fallback notice is rendered instead.

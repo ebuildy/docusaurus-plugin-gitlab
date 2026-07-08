@@ -89,17 +89,39 @@ namespace path (`project="group/subgroup/repo"`).
 
 ### `<GitlabProjectInfo>`
 
-A card with name, description, topics, stars/forks, and last activity.
+A card with name, description, topics, stars/forks, and last activity. It can
+also embed compact **releases**, **commits**, and **issues** sections — each is
+opt-in and only fetched when its count prop is a positive number.
 
 ```mdx
 <GitlabProjectInfo project="group/repo" />
 <GitlabProjectInfo project="group/repo" showStats={false} />
+
+<GitlabProjectInfo project="group/app" releases={3} commits={5} issues={5} />
+
+<GitlabProjectInfo
+  project="group/app"
+  releases={3}
+  releasesLayout="cards"
+  link="https://example.com/app"
+/>
 ```
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `project` | string \| number | — | **Required.** Project path or ID |
 | `showStats` | boolean | `true` | Show stars/forks/last-activity row |
+| `link` | string | project's `web_url` | Override the card title's link target |
+| `releases` | number | — | Embed the latest N releases. Absent or `≤ 0` — not fetched, not rendered |
+| `commits` | number | — | Embed the latest N commits. Absent or `≤ 0` — not fetched, not rendered |
+| `issues` | number | — | Embed the latest N issues. Absent or `≤ 0` — not fetched, not rendered |
+| `releasesLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the releases section. An invalid value fails the build |
+| `commitsLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the commits section. An invalid value fails the build |
+| `issuesLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the issues section. An invalid value fails the build |
+
+> Each section's `list` layout renders one compact line per item — release:
+> tag + name; commit: linked short SHA + title + author + date; issue:
+> linked `#iid` + title. `cards` renders a richer variant of the same data.
 
 ### `<GitlabReadme>`
 
