@@ -99,12 +99,7 @@ opt-in and only fetched when its count prop is a positive number.
 
 <GitlabProjectInfo project="group/app" releases={3} commits={5} issues={5} />
 
-<GitlabProjectInfo
-  project="group/app"
-  releases={3}
-  releasesLayout="cards"
-  link="https://example.com/app"
-/>
+<GitlabProjectInfo project="group/app" releases={3} releasesLayout="cards" link="https://example.com/app" />
 ```
 
 | Prop | Type | Default | Description |
