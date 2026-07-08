@@ -25,6 +25,7 @@ describe("fetchProjectInfo", () => {
         id: 7, path_with_namespace: "g/r", name: "r", description: "ship **it** :rocket:", web_url: "https://gitlab.com/g/r",
         star_count: 3, forks_count: 1, topics: ["x"], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
       })),
+      getContributorsCount: vi.fn(async () => undefined),
     };
     const c = ctx(client);
     const data = await fetchProjectInfo(c, { project: "g/r" });
@@ -95,6 +96,7 @@ describe("fetchProjectInfo", () => {
         star_count: 3, forks_count: 1, topics: ["x"], last_activity_at: "2026-01-01T00:00:00Z",
         avatar_url: "https://gitlab.com/uploads/avatar.png",
       })),
+      getContributorsCount: vi.fn(async () => undefined),
     };
     const c = ctx(client);
     const data = await fetchProjectInfo(c, { project: "g/r" });
@@ -115,6 +117,7 @@ describe("fetchProjectInfo", () => {
         { short_id: "a1", title: "t", web_url: "u", author_name: "Ada", created_at: "2026-01-02T00:00:00Z" },
       ]),
       getIssues: vi.fn(async () => []),
+      getContributorsCount: vi.fn(async () => undefined),
     };
     const c = ctx(client);
     const data = await fetchProjectInfo(c, { project: "g/r", releases: 2, commits: 3 });
@@ -135,6 +138,7 @@ describe("fetchProjectInfo", () => {
       getReleases: vi.fn(async () => []),
       getCommits: vi.fn(async () => []),
       getIssues: vi.fn(async () => []),
+      getContributorsCount: vi.fn(async () => undefined),
     };
     const c = ctx(client);
     const data = await fetchProjectInfo(c, { project: "g/r", commits: 0 });
@@ -151,6 +155,7 @@ describe("fetchProjectInfo", () => {
         star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
       })),
       getReleases: vi.fn(async () => { throw new Error("boom"); }),
+      getContributorsCount: vi.fn(async () => undefined),
     };
     const c = ctx(client);
     c.options.strict = false;
@@ -166,6 +171,7 @@ describe("fetchProjectInfo", () => {
         star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
       })),
       getReleases: vi.fn(async () => { throw new Error("boom"); }),
+      getContributorsCount: vi.fn(async () => undefined),
     };
     const c = ctx(client);
     c.options.strict = true;
@@ -191,6 +197,7 @@ describe("fetchProjectInfo", () => {
       ),
       getCommits: vi.fn(async () => []),
       getIssues: vi.fn(async () => []),
+      getContributorsCount: vi.fn(async () => undefined),
     };
     const c = ctx(client);
     const first = await fetchProjectInfo(c, { project: "g/r", releases: 1 });

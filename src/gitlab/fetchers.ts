@@ -106,12 +106,9 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
   return memo(ctx, `projectInfo:${project}:r${rN}:c${cN}:i${iN}`, async () => {
     const p = await ctx.client.getProject(attrs.project as string | number, { statistics: true });
     const avatarUrl = p.avatar_url ? await ctx.assets.localize(p.avatar_url, "", project) : null;
-    let contributorsCount: number | undefined;
-    try {
-      contributorsCount = await ctx.client.getContributorsCount(attrs.project as string | number);
-    } catch {
-      contributorsCount = undefined;
-    }
+    const contributorsCount = await ctx.client
+      .getContributorsCount(attrs.project as string | number)
+      .catch(() => undefined);
     const [releases, commits, issues] = await Promise.all([
       section(rN, () => fetchReleases(ctx, { project, limit: rN })),
       section(cN, () => fetchCommits(ctx, { project, limit: cN })),
