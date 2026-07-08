@@ -29,7 +29,7 @@ rendered) when its count prop is a positive number.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `project` | `string \| number` | — | **Required.** Project path (`group/sub/repo`) or numeric ID. |
-| `showStats` | `boolean` | `true` | Show the stars / forks / last-activity row. |
+| `showStats` | `boolean` | `true` | Show the stars / forks / created / last-activity row. |
 | `showLinks` | `boolean` | `true` | Link the release / commit / issue items. Set `false` to render them as plain text; the card title stays a link either way. |
 | `link` | `string` | project's `web_url` | Override the card title's link target. |
 | `releases` | `number` | — | Embed the latest N releases. Absent or `≤ 0` ⇒ not fetched, not rendered. |
@@ -47,7 +47,8 @@ rendered) when its count prop is a positive number.
   and `issues` may be set, in any order.
 - `*Layout` props default to `"list"` — a compact single line per item:
   release = tag + name; commit = linked short SHA + title + author; issue =
-  linked `#iid` + title. Every item shows a relative `"x ago"` date pinned to
+  linked `#iid` + title. Every item shows its date (absolute, e.g.
+  `May 1, 2020` — not "x ago", so a page built once stays correct) pinned to
   the right. `"cards"` renders a richer variant of the same data. An invalid
   layout value (anything other than `"list"` or `"cards"`) fails the build.
 - On a failed fetch in non-strict mode, a fallback notice is rendered instead.

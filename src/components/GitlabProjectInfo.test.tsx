@@ -4,7 +4,8 @@ import { GitlabProjectInfo } from "./GitlabProjectInfo";
 
 const data = {
   id: 1, path: "g/r", name: "My Repo", descriptionHtml: "<p>A thing</p>", webUrl: "https://gitlab.com/g/r",
-  starCount: 12, forksCount: 3, topics: ["docs", "tooling"], lastActivityAt: "2026-01-01T00:00:00Z", avatarUrl: null,
+  starCount: 12, forksCount: 3, topics: ["docs", "tooling"],
+  createdAt: "2020-05-01T00:00:00Z", lastActivityAt: "2026-01-01T00:00:00Z", avatarUrl: null,
 };
 
 describe("GitlabProjectInfo", () => {
@@ -94,6 +95,11 @@ describe("GitlabProjectInfo", () => {
     expect(screen.getByText("First")).toBeInTheDocument();
   });
 
+  it("shows a created date in the stats row", () => {
+    render(<GitlabProjectInfo data={data as any} />);
+    expect(screen.getByText(/^created /)).toBeInTheDocument();
+  });
+
   it("renders no section blocks when arrays are absent", () => {
     const { container } = render(<GitlabProjectInfo data={data as any} />);
     expect(container.querySelector(".gitlab-section")).toBeNull();
@@ -117,15 +123,16 @@ describe("GitlabProjectInfo", () => {
     expect(screen.getByText(/Ada/)).toBeInTheDocument();
   });
 
-  it("renders a relative 'ago' date on each release, commit, and issue", () => {
+  it("renders an absolute (not relative) date on each release, commit, and issue", () => {
     const { container } = render(<GitlabProjectInfo data={{ ...data,
-      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2020-01-01T00:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [] }],
-      commits: [{ shortId: "a1b2c3d", title: "old", webUrl: "u", authorName: "Ada", createdAt: "2020-01-01T00:00:00Z" }],
-      issues: [{ iid: 7, title: "Old", state: "opened", webUrl: "u", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2020-01-01T00:00:00Z" }],
+      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2020-06-15T12:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [] }],
+      commits: [{ shortId: "a1b2c3d", title: "old", webUrl: "u", authorName: "Ada", createdAt: "2020-06-15T12:00:00Z" }],
+      issues: [{ iid: 7, title: "Old", state: "opened", webUrl: "u", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2020-06-15T12:00:00Z" }],
     } as any} />);
     for (const section of ["releases", "commits", "issues"]) {
       const date = container.querySelector(`.gitlab-section-${section} .gitlab-section-date`);
-      expect(date?.textContent).toMatch(/ago/);
+      expect(date?.textContent).toMatch(/2020/);
+      expect(date?.textContent).not.toMatch(/ago/);
     }
   });
 

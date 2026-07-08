@@ -2,7 +2,7 @@ import React from "react";
 import { Fallback } from "./Fallback.js";
 import { formatCount } from "./format.js";
 import { formatBytes } from "./formatBytes.js";
-import { timeAgo } from "./timeAgo.js";
+import { formatDate } from "./formatDate.js";
 import type { ComponentPayload, ProjectInfoData, ReleaseData, CommitData, IssueData } from "./types.js";
 
 type SectionLayout = "list" | "cards";
@@ -41,7 +41,7 @@ function Releases({ items, layout, showLinks }: { items: ReleaseData[]; layout: 
           <li key={r.tagName} className="gitlab-section-item">
             <span className="gitlab-badge">{r.tagName}</span>
             <MaybeLink className="gitlab-section-name" href={r.webUrl} showLinks={showLinks}> {r.name || r.tagName}</MaybeLink>
-            <span className="gitlab-section-date gitlab-muted">{timeAgo(r.releasedAt)}</span>
+            <span className="gitlab-section-date gitlab-muted">{formatDate(r.releasedAt)}</span>
           </li>
         ))}
       </ul>
@@ -59,7 +59,7 @@ function Commits({ items, layout, showLinks }: { items: CommitData[]; layout: Se
             <MaybeLink className="gitlab-commit-sha" href={c.webUrl} showLinks={showLinks}>{c.shortId}</MaybeLink>
             <span className="gitlab-section-name"> {c.title}</span>
             <span className="gitlab-muted"> · {c.authorName}</span>
-            <span className="gitlab-section-date gitlab-muted">{timeAgo(c.createdAt)}</span>
+            <span className="gitlab-section-date gitlab-muted">{formatDate(c.createdAt)}</span>
           </li>
         ))}
       </ul>
@@ -78,7 +78,7 @@ function Issues({ items, layout, showLinks }: { items: IssueData[]; layout: Sect
             {layout === "cards" && (
               <span className="gitlab-muted"> · {i.state} · {i.authorName}</span>
             )}
-            <span className="gitlab-section-date gitlab-muted">{timeAgo(i.createdAt)}</span>
+            <span className="gitlab-section-date gitlab-muted">{formatDate(i.createdAt)}</span>
           </li>
         ))}
       </ul>
@@ -110,7 +110,7 @@ export function GitlabProjectInfo({
       </div>
       {data.descriptionHtml && (
         <div
-          className="gitlab-description gitlab-muted"
+          className="gitlab-description"
           dangerouslySetInnerHTML={{ __html: data.descriptionHtml }}
         />
       )}
@@ -147,7 +147,10 @@ export function GitlabProjectInfo({
           {typeof data.repositorySize === "number" && (
             <span>▤ {formatBytes(data.repositorySize)}</span>
           )}
-          <span className="gitlab-muted">updated {new Date(data.lastActivityAt).toLocaleDateString()}</span>
+          {data.createdAt && (
+            <span className="gitlab-muted">created {formatDate(data.createdAt)}</span>
+          )}
+          <span className="gitlab-muted">updated {formatDate(data.lastActivityAt)}</span>
         </div>
       )}
     </div>

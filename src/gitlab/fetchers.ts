@@ -123,6 +123,7 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
       starCount: p.star_count,
       forksCount: p.forks_count,
       topics: p.topics ?? [],
+      createdAt: p.created_at,
       lastActivityAt: p.last_activity_at,
       avatarUrl,
     };

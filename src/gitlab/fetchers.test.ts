@@ -41,7 +41,8 @@ describe("fetchProjectInfo", () => {
     const client = {
       getProject: vi.fn(async () => ({
         id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
-        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+        star_count: 3, forks_count: 1, topics: [], created_at: "2020-05-01T00:00:00Z",
+        last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
         issues_enabled: true, open_issues_count: 12,
         statistics: { commit_count: 1200, repository_size: 4404019 },
       })),
@@ -50,6 +51,7 @@ describe("fetchProjectInfo", () => {
     const c = ctx(client);
     const data = await fetchProjectInfo(c, { project: "g/r" });
     expect(client.getProject).toHaveBeenCalledWith("g/r", { statistics: true });
+    expect(data.createdAt).toBe("2020-05-01T00:00:00Z");
     expect(data.commitCount).toBe(1200);
     expect(data.repositorySize).toBe(4404019);
     expect(data.openIssuesCount).toBe(12);

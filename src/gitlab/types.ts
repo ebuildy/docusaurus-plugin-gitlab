@@ -12,6 +12,7 @@ export interface ProjectInfoData {
   starCount: number;
   forksCount: number;
   topics: string[];
+  createdAt: string;
   lastActivityAt: string;
   avatarUrl: string | null;
   releases?: ReleaseData[];

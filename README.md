@@ -105,7 +105,7 @@ opt-in and only fetched when its count prop is a positive number.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `project` | string \| number | — | **Required.** Project path or ID |
-| `showStats` | boolean | `true` | Show stars/forks/last-activity row |
+| `showStats` | boolean | `true` | Show the stars / forks / created / last-activity row |
 | `showLinks` | boolean | `true` | Link the release / commit / issue items. Set `false` to render them as plain text (the card title stays a link) |
 | `link` | string | project's `web_url` | Override the card title's link target |
 | `releases` | number | — | Embed the latest N releases. Absent or `≤ 0` — not fetched, not rendered |
@@ -118,8 +118,8 @@ opt-in and only fetched when its count prop is a positive number.
 > Each section's `list` layout renders one compact line per item — release:
 > tag + name; commit: linked short SHA + title + author; issue: linked `#iid`
 >
-> - title. Every item shows a relative `"x ago"` date pinned to the right.
-> `cards` renders a richer variant of the same data.
+> - title. Every item shows its date (absolute, e.g. `May 1, 2020`) pinned to
+> the right. `cards` renders a richer variant of the same data.
 >
 > The `showStats` row can also show extra pills — total commit count,
 > contributor count, open issue count, repository size — automatically,
