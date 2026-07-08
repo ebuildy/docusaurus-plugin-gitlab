@@ -84,4 +84,26 @@ describe("GitlabProjectInfo", () => {
     expect(screen.getByText(/opened/)).toBeInTheDocument();
     expect(screen.getByText(/Ada/)).toBeInTheDocument();
   });
+
+  it("appends stat pills when their data is present", () => {
+    render(<GitlabProjectInfo data={{ ...data,
+      commitCount: 1200, contributorsCount: 8, openIssuesCount: 12, repositorySize: 4404019,
+    } as any} />);
+    expect(screen.getByText(/1.2k commits/)).toBeInTheDocument();
+    expect(screen.getByText(/8 contributors/)).toBeInTheDocument();
+    expect(screen.getByText(/12 issues/)).toBeInTheDocument();
+    expect(screen.getByText(/4.2 MB/)).toBeInTheDocument();
+  });
+
+  it("omits stat pills whose data is absent", () => {
+    render(<GitlabProjectInfo data={data as any} />);
+    expect(screen.queryByText(/commits/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/contributors/)).not.toBeInTheDocument();
+  });
+
+  it("hides all stats including new pills when showStats is false", () => {
+    render(<GitlabProjectInfo showStats={false} data={{ ...data, commitCount: 1200 } as any} />);
+    expect(screen.queryByText(/commits/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
+  });
 });

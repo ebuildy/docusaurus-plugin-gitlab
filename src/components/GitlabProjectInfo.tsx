@@ -1,6 +1,7 @@
 import React from "react";
 import { Fallback } from "./Fallback.js";
 import { formatCount } from "./format.js";
+import { formatBytes } from "./formatBytes.js";
 import type { ComponentPayload, ProjectInfoData, ReleaseData, CommitData, IssueData } from "./types.js";
 
 type SectionLayout = "list" | "cards";
@@ -118,6 +119,18 @@ export function GitlabProjectInfo({
         <div className="gitlab-stats">
           <span>★ {formatCount(data.starCount)}</span>
           <span>⑂ {formatCount(data.forksCount)}</span>
+          {typeof data.commitCount === "number" && (
+            <span>⎇ {formatCount(data.commitCount)} commits</span>
+          )}
+          {typeof data.contributorsCount === "number" && (
+            <span>👥 {formatCount(data.contributorsCount)} contributors</span>
+          )}
+          {typeof data.openIssuesCount === "number" && (
+            <span>⊙ {formatCount(data.openIssuesCount)} issues</span>
+          )}
+          {typeof data.repositorySize === "number" && (
+            <span>▤ {formatBytes(data.repositorySize)}</span>
+          )}
           <span className="gitlab-muted">updated {new Date(data.lastActivityAt).toLocaleDateString()}</span>
         </div>
       )}
