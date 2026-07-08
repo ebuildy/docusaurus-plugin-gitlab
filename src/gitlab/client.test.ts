@@ -10,6 +10,7 @@ const topicsAllMock = vi.fn();
 const projectLabelsAllMock = vi.fn();
 const groupLabelsAllMock = vi.fn();
 const groupShowMock = vi.fn();
+const contributorsAllMock = vi.fn();
 
 vi.mock("@gitbeaker/rest", () => ({
   // Vitest 4 invokes the mock implementation as a real constructor under
@@ -26,6 +27,7 @@ vi.mock("@gitbeaker/rest", () => ({
       ProjectLabels: { all: projectLabelsAllMock },
       GroupLabels: { all: groupLabelsAllMock },
       Groups: { show: groupShowMock },
+      Repositories: { allContributors: contributorsAllMock },
     };
   }),
 }));
@@ -46,6 +48,7 @@ beforeEach(() => {
   projectLabelsAllMock.mockReset();
   groupLabelsAllMock.mockReset();
   groupShowMock.mockReset();
+  contributorsAllMock.mockReset();
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -185,5 +188,33 @@ describe("GitLabClient", () => {
     const data = await c.getGroup("my-group");
     expect(data).toEqual({ id: 9, web_url: "https://x/groups/my-group" });
     expect(groupShowMock).toHaveBeenCalledWith("my-group");
+  });
+
+  it("getProject forwards the statistics option", async () => {
+    showMock.mockResolvedValue({ id: 1 });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    await client.getProject("g/r", { statistics: true });
+    expect(showMock).toHaveBeenCalledWith("g/r", { statistics: true });
+  });
+
+  it("getProject omits options by default", async () => {
+    showMock.mockResolvedValue({ id: 1 });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    await client.getProject("g/r");
+    expect(showMock).toHaveBeenCalledWith("g/r");
+  });
+
+  it("getContributorsCount returns the pagination total", async () => {
+    contributorsAllMock.mockResolvedValue({ data: [{}], paginationInfo: { total: 8 } });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    const count = await client.getContributorsCount("g/r");
+    expect(contributorsAllMock).toHaveBeenCalledWith("g/r", { showExpanded: true, perPage: 1, maxPages: 1 });
+    expect(count).toBe(8);
+  });
+
+  it("getContributorsCount returns undefined when total is absent", async () => {
+    contributorsAllMock.mockResolvedValue({ data: [], paginationInfo: {} });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    expect(await client.getContributorsCount("g/r")).toBeUndefined();
   });
 });
