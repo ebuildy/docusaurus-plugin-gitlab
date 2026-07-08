@@ -217,4 +217,10 @@ describe("GitLabClient", () => {
     const client = new GitLabClient({ host: "https://gitlab.com" });
     expect(await client.getContributorsCount("g/r")).toBeUndefined();
   });
+
+  it("getContributorsCount returns undefined when total is NaN", async () => {
+    contributorsAllMock.mockResolvedValue({ data: [], paginationInfo: { total: NaN } });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    expect(await client.getContributorsCount("g/r")).toBeUndefined();
+  });
 });

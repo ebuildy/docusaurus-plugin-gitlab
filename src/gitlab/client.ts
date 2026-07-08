@@ -47,7 +47,7 @@ export class GitLabClient {
       maxPages: 1,
     } as any);
     const total = res?.paginationInfo?.total;
-    return typeof total === "number" ? total : undefined;
+    return Number.isFinite(total) ? total : undefined;
   }
 
   async getReleases(project: ProjectRef, limit: number): Promise<any[]> {
