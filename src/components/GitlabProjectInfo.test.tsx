@@ -62,6 +62,13 @@ describe("GitlabProjectInfo", () => {
     expect(screen.getByRole("link", { name: /Broken thing/ })).toHaveAttribute("href", "https://gitlab.com/i/42");
   });
 
+  it("renders the project path below the description", () => {
+    const { container } = render(<GitlabProjectInfo data={data as any} />);
+    const path = container.querySelector(".gitlab-path");
+    expect(path).not.toBeNull();
+    expect(path?.textContent).toBe("g/r");
+  });
+
   it("renders no section blocks when arrays are absent", () => {
     const { container } = render(<GitlabProjectInfo data={data as any} />);
     expect(container.querySelector(".gitlab-section")).toBeNull();

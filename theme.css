@@ -238,6 +238,14 @@
   margin-top: 0.75rem;
 }
 
+/* Project path (group/name), shown just below the description */
+.gitlab-path {
+  margin-top: 0.15rem;
+  color: var(--ifm-color-success);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85em;
+}
+
 /* Embedded sections inside the project card (releases / commits / issues) */
 .gitlab-section {
   margin-top: 0.85rem;

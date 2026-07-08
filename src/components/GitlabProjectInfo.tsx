@@ -96,6 +96,7 @@ export function GitlabProjectInfo({
           dangerouslySetInnerHTML={{ __html: data.descriptionHtml }}
         />
       )}
+      <div className="gitlab-path">{data.path}</div>
       {data.releases && data.releases.length > 0 && (
         <Releases items={data.releases} layout={releasesLayout} />
       )}
