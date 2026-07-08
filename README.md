@@ -116,10 +116,9 @@ opt-in and only fetched when its count prop is a positive number.
 | `issuesLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the issues section. An invalid value fails the build |
 
 > Each section's `list` layout renders one compact line per item — release:
-> tag + name; commit: linked short SHA + title + author; issue: linked `#iid`
->
-> - title. Every item shows its date (absolute, e.g. `May 1, 2020`) pinned to
-> the right. `cards` renders a richer variant of the same data.
+> tag and name; commit: linked short SHA, title, and author; issue: linked
+> `#iid` and title. Every item shows its date (absolute, e.g. `May 1, 2020`)
+> pinned to the right. `cards` renders a richer variant of the same data.
 >
 > The `showStats` row can also show extra pills — total commit count,
 > contributor count, open issue count, repository size — automatically,
