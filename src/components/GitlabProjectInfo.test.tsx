@@ -48,4 +48,32 @@ describe("GitlabProjectInfo", () => {
     render(<GitlabProjectInfo data={data as any} />);
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
+
+  it("renders compact release, commit, and issue lines after the description", () => {
+    render(<GitlabProjectInfo data={{ ...data,
+      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2026-01-01T00:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [] }],
+      commits: [{ shortId: "a1b2c3d", title: "fix: bug", webUrl: "https://gitlab.com/c/a1b2c3d", authorName: "Ada", createdAt: "2026-01-02T00:00:00Z" }],
+      issues: [{ iid: 42, title: "Broken thing", state: "opened", webUrl: "https://gitlab.com/i/42", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2026-01-03T00:00:00Z" }],
+    } as any} />);
+    expect(screen.getByText("First")).toBeInTheDocument();
+    expect(screen.getByText("v1.0")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "a1b2c3d" })).toHaveAttribute("href", "https://gitlab.com/c/a1b2c3d");
+    expect(screen.getByText("fix: bug")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Broken thing/ })).toHaveAttribute("href", "https://gitlab.com/i/42");
+  });
+
+  it("renders no section blocks when arrays are absent", () => {
+    const { container } = render(<GitlabProjectInfo data={data as any} />);
+    expect(container.querySelector(".gitlab-section")).toBeNull();
+  });
+
+  it("overrides the title link when link is provided", () => {
+    render(<GitlabProjectInfo data={data as any} link="https://example.com/app" />);
+    expect(screen.getByRole("link", { name: "My Repo" })).toHaveAttribute("href", "https://example.com/app");
+  });
+
+  it("defaults the title link to the project webUrl", () => {
+    render(<GitlabProjectInfo data={data as any} />);
+    expect(screen.getByRole("link", { name: "My Repo" })).toHaveAttribute("href", "https://gitlab.com/g/r");
+  });
 });
