@@ -117,6 +117,15 @@ opt-in and only fetched when its count prop is a positive number.
 > Each section's `list` layout renders one compact line per item — release:
 > tag + name; commit: linked short SHA + title + author + date; issue:
 > linked `#iid` + title. `cards` renders a richer variant of the same data.
+>
+> The `showStats` row can also show extra pills — total commit count,
+> contributor count, open issue count, repository size — automatically,
+> whenever that data is available; there's no attribute to request them. Set
+> `showStats={false}` to hide the whole row (pills included). Commit count and
+> repository size come from the project's `statistics`, which GitLab only
+> returns to tokens with **Reporter role or higher**; on anonymous/public
+> builds those two pills are simply omitted. Contributor count also depends
+> on the API returning a total count header, and is omitted if it isn't.
 
 ### `<GitlabReadme>`
 

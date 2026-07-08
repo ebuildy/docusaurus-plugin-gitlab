@@ -50,3 +50,18 @@ rendered) when its count prop is a positive number.
   same data. An invalid layout value (anything other than `"list"` or
   `"cards"`) fails the build.
 - On a failed fetch in non-strict mode, a fallback notice is rendered instead.
+- The stats row (`showStats`) can show up to four extra pills — total commit
+  count, contributor count, open issue count, and repository size — but only
+  when that data is available. There's no prop to request them; they just
+  appear when GitLab returns the underlying data, and disappear along with
+  the rest of the row when `showStats={false}`.
+  - Commit count and repository size come from the project's `statistics`,
+    which GitLab only includes in the API response for tokens with
+    **Reporter role or higher**. On anonymous or public builds, those two
+    pills are omitted.
+  - Contributor count relies on the contributors API returning a total-count
+    header; if it's unavailable, that pill is omitted too.
+  - Open issue count has no such requirement (as long as the project has
+    issues enabled).
+  - There's no lines-of-code pill — GitLab has no API for it, so it's
+    intentionally not offered.
