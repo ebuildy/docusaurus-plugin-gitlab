@@ -17,6 +17,10 @@ export interface ProjectInfoData {
   releases?: ReleaseData[];
   commits?: CommitData[];
   issues?: IssueData[];
+  openIssuesCount?: number;
+  commitCount?: number;
+  repositorySize?: number;
+  contributorsCount?: number;
 }
 
 export interface ReleaseAsset {

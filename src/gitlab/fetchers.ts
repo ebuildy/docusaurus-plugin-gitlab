@@ -104,8 +104,14 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
   }
 
   return memo(ctx, `projectInfo:${project}:r${rN}:c${cN}:i${iN}`, async () => {
-    const p = await ctx.client.getProject(attrs.project as string | number);
+    const p = await ctx.client.getProject(attrs.project as string | number, { statistics: true });
     const avatarUrl = p.avatar_url ? await ctx.assets.localize(p.avatar_url, "", project) : null;
+    let contributorsCount: number | undefined;
+    try {
+      contributorsCount = await ctx.client.getContributorsCount(attrs.project as string | number);
+    } catch {
+      contributorsCount = undefined;
+    }
     const [releases, commits, issues] = await Promise.all([
       section(rN, () => fetchReleases(ctx, { project, limit: rN })),
       section(cN, () => fetchCommits(ctx, { project, limit: cN })),
@@ -123,6 +129,10 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
       lastActivityAt: p.last_activity_at,
       avatarUrl,
     };
+    if (typeof p.statistics?.commit_count === "number") base.commitCount = p.statistics.commit_count;
+    if (typeof p.statistics?.repository_size === "number") base.repositorySize = p.statistics.repository_size;
+    if (p.issues_enabled && typeof p.open_issues_count === "number") base.openIssuesCount = p.open_issues_count;
+    if (typeof contributorsCount === "number") base.contributorsCount = contributorsCount;
     if (releases) base.releases = releases;
     if (commits) base.commits = commits;
     if (issues) base.issues = issues;

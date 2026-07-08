@@ -33,7 +33,59 @@ describe("fetchProjectInfo", () => {
     expect(data.descriptionHtml).toContain("🚀");
     expect(data.avatarUrl).toBeNull();
     expect(c.assets.localize).not.toHaveBeenCalled();
-    expect(client.getProject).toHaveBeenCalledWith("g/r");
+    expect(client.getProject).toHaveBeenCalledWith("g/r", { statistics: true });
+  });
+
+  it("maps statistics, open issues, and contributors count", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+        issues_enabled: true, open_issues_count: 12,
+        statistics: { commit_count: 1200, repository_size: 4404019 },
+      })),
+      getContributorsCount: vi.fn(async () => 8),
+    };
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r" });
+    expect(client.getProject).toHaveBeenCalledWith("g/r", { statistics: true });
+    expect(data.commitCount).toBe(1200);
+    expect(data.repositorySize).toBe(4404019);
+    expect(data.openIssuesCount).toBe(12);
+    expect(data.contributorsCount).toBe(8);
+  });
+
+  it("omits statistics-derived stats when statistics is absent", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+        issues_enabled: false,
+      })),
+      getContributorsCount: vi.fn(async () => undefined),
+    };
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r" });
+    expect(data.commitCount).toBeUndefined();
+    expect(data.repositorySize).toBeUndefined();
+    expect(data.openIssuesCount).toBeUndefined();
+    expect(data.contributorsCount).toBeUndefined();
+  });
+
+  it("never throws when the contributors fetch fails, even in strict mode", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+        issues_enabled: true, open_issues_count: 5, statistics: { commit_count: 1, repository_size: 1 },
+      })),
+      getContributorsCount: vi.fn(async () => { throw new Error("no perms"); }),
+    };
+    const c = ctx(client);
+    c.options.strict = true;
+    const data = await fetchProjectInfo(c, { project: "g/r" });
+    expect(data.contributorsCount).toBeUndefined();
+    expect(data.commitCount).toBe(1);
   });
 
   it("localizes the avatar when the project has one", async () => {
