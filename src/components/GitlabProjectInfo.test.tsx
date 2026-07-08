@@ -76,4 +76,12 @@ describe("GitlabProjectInfo", () => {
     render(<GitlabProjectInfo data={data as any} />);
     expect(screen.getByRole("link", { name: "My Repo" })).toHaveAttribute("href", "https://gitlab.com/g/r");
   });
+
+  it("shows richer metadata in cards layout", () => {
+    render(<GitlabProjectInfo issuesLayout="cards" data={{ ...data,
+      issues: [{ iid: 42, title: "Broken thing", state: "opened", webUrl: "u", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2026-01-03T00:00:00Z" }],
+    } as any} />);
+    expect(screen.getByText(/opened/)).toBeInTheDocument();
+    expect(screen.getByText(/Ada/)).toBeInTheDocument();
+  });
 });
