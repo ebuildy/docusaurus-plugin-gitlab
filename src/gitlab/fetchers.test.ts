@@ -124,6 +124,29 @@ describe("fetchProjectInfo", () => {
     const client = { getProject: vi.fn(async () => ({ id: 1, path_with_namespace: "g/r", name: "r", description: "", web_url: "u", star_count: 0, forks_count: 0, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null })) };
     await expect(fetchProjectInfo(ctx(client), { project: "g/r", releasesLayout: "grid" })).rejects.toThrow(/releasesLayout/);
   });
+
+  it("caches sections separately per count (cache key varies)", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async (_p: unknown, limit: number) =>
+        Array.from({ length: limit }, (_, i) => ({
+          name: `v${i}`, tag_name: `v${i}`, released_at: "2026-01-01T00:00:00Z",
+          description: "", upcoming_release: false, assets: { links: [] },
+        })),
+      ),
+      getCommits: vi.fn(async () => []),
+      getIssues: vi.fn(async () => []),
+    };
+    const c = ctx(client);
+    const first = await fetchProjectInfo(c, { project: "g/r", releases: 1 });
+    const second = await fetchProjectInfo(c, { project: "g/r", releases: 2 });
+    expect(first.releases).toHaveLength(1);
+    expect(second.releases).toHaveLength(2);
+    expect(client.getReleases).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("fetchReleases", () => {
