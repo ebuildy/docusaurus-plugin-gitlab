@@ -35,6 +35,8 @@ export interface ReleaseData {
   descriptionHtml: string;
   upcomingRelease: boolean;
   assets: ReleaseAsset[];
+  /** Release page URL (GitLab `_links.self`); absent if the API omits it. */
+  webUrl?: string;
 }
 
 export interface IssueData {

@@ -213,12 +213,14 @@ describe("fetchReleases", () => {
     const client = {
       getReleases: vi.fn(async () => [
         { name: "v1", tag_name: "v1", released_at: "2026-01-01T00:00:00Z", description: "**notes**",
-          upcoming_release: false, assets: { links: [{ name: "bin", url: "https://x/bin" }] } },
+          upcoming_release: false, assets: { links: [{ name: "bin", url: "https://x/bin" }] },
+          _links: { self: "https://gitlab.com/g/r/-/releases/v1" } },
       ]),
     };
     const data = await fetchReleases(ctx(client), { project: "g/r", limit: 5, includePrereleases: true });
     expect(data).toHaveLength(1);
     expect(data[0].tagName).toBe("v1");
+    expect(data[0].webUrl).toBe("https://gitlab.com/g/r/-/releases/v1");
     expect(data[0].descriptionHtml).toContain("<strong>notes</strong>");
     expect(data[0].assets).toEqual([{ name: "bin", url: "https://x/bin" }]);
     expect(client.getReleases).toHaveBeenCalledWith("g/r", 5);

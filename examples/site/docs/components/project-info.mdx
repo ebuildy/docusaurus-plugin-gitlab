@@ -30,6 +30,7 @@ rendered) when its count prop is a positive number.
 |---|---|---|---|
 | `project` | `string \| number` | — | **Required.** Project path (`group/sub/repo`) or numeric ID. |
 | `showStats` | `boolean` | `true` | Show the stars / forks / last-activity row. |
+| `showLinks` | `boolean` | `true` | Link the release / commit / issue items. Set `false` to render them as plain text; the card title stays a link either way. |
 | `link` | `string` | project's `web_url` | Override the card title's link target. |
 | `releases` | `number` | — | Embed the latest N releases. Absent or `≤ 0` ⇒ not fetched, not rendered. |
 | `commits` | `number` | — | Embed the latest N commits. Absent or `≤ 0` ⇒ not fetched, not rendered. |

@@ -152,6 +152,7 @@ export async function fetchReleases(ctx: GitLabContext, attrs: Attrs): Promise<R
         descriptionHtml: await renderMarkdown(r.description ?? "", { renderChain: ctx.options.markdownRenderChain }),
         upcomingRelease: Boolean(r.upcoming_release),
         assets: (r.assets?.links ?? []).map((l: any) => ({ name: l.name, url: l.url })),
+        webUrl: r._links?.self,
       })),
     );
   });

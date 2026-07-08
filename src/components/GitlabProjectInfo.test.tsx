@@ -69,6 +69,31 @@ describe("GitlabProjectInfo", () => {
     expect(path?.textContent).toBe("g/r");
   });
 
+  it("links commit, issue, and release items by default", () => {
+    render(<GitlabProjectInfo data={{ ...data,
+      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2020-01-01T00:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [], webUrl: "https://gitlab.com/r/v1.0" }],
+      commits: [{ shortId: "a1b2c3d", title: "fix", webUrl: "https://gitlab.com/c/a1b2c3d", authorName: "Ada", createdAt: "2020-01-01T00:00:00Z" }],
+      issues: [{ iid: 42, title: "Bug", state: "opened", webUrl: "https://gitlab.com/i/42", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2020-01-01T00:00:00Z" }],
+    } as any} />);
+    expect(screen.getByRole("link", { name: "a1b2c3d" })).toHaveAttribute("href", "https://gitlab.com/c/a1b2c3d");
+    expect(screen.getByRole("link", { name: /Bug/ })).toHaveAttribute("href", "https://gitlab.com/i/42");
+    expect(screen.getByRole("link", { name: /First/ })).toHaveAttribute("href", "https://gitlab.com/r/v1.0");
+  });
+
+  it("renders section items as plain text when showLinks is false, keeping the title link", () => {
+    render(<GitlabProjectInfo showLinks={false} data={{ ...data,
+      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2020-01-01T00:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [], webUrl: "https://gitlab.com/r/v1.0" }],
+      commits: [{ shortId: "a1b2c3d", title: "fix", webUrl: "https://gitlab.com/c/a1b2c3d", authorName: "Ada", createdAt: "2020-01-01T00:00:00Z" }],
+      issues: [{ iid: 42, title: "Bug", state: "opened", webUrl: "https://gitlab.com/i/42", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2020-01-01T00:00:00Z" }],
+    } as any} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent("My Repo");
+    expect(screen.getByText("a1b2c3d")).toBeInTheDocument();
+    expect(screen.getByText(/#42 Bug/)).toBeInTheDocument();
+    expect(screen.getByText("First")).toBeInTheDocument();
+  });
+
   it("renders no section blocks when arrays are absent", () => {
     const { container } = render(<GitlabProjectInfo data={data as any} />);
     expect(container.querySelector(".gitlab-section")).toBeNull();
