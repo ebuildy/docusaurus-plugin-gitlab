@@ -8,6 +8,8 @@ Embed **GitLab** resources — project info, README, releases, issues, and any
 file or code snippet — directly in your **Docusaurus 3** documentation using MDX
 components.
 
+![Screenshot](./docs/screenshot1.png)
+
 All data is fetched **at build time** and baked into your static site. No API
 tokens or network calls ever reach the browser, and pages stay fast.
 
