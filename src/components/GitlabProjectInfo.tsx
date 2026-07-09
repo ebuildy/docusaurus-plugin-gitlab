@@ -148,9 +148,8 @@ export function GitlabProjectInfo({
             <span>▤ {formatBytes(data.repositorySize)}</span>
           )}
           {data.createdAt && (
-            <span className="gitlab-muted">created {formatDate(data.createdAt)}</span>
+            <span className="gitlab-muted gitlab-section-date">created {formatDate(data.createdAt)} - updated {formatDate(data.lastActivityAt)}</span>
           )}
-          <span className="gitlab-muted">updated {formatDate(data.lastActivityAt)}</span>
         </div>
       )}
     </div>
