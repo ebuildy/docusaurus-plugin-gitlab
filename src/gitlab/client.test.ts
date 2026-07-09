@@ -3,12 +3,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const showMock = vi.fn();
 const releasesAllMock = vi.fn();
 const issuesAllMock = vi.fn();
+const commitsAllMock = vi.fn();
 const showRawMock = vi.fn();
 const gitlabCtor = vi.fn();
 const topicsAllMock = vi.fn();
 const projectLabelsAllMock = vi.fn();
 const groupLabelsAllMock = vi.fn();
 const groupShowMock = vi.fn();
+const contributorsAllMock = vi.fn();
 
 vi.mock("@gitbeaker/rest", () => ({
   // Vitest 4 invokes the mock implementation as a real constructor under
@@ -19,11 +21,13 @@ vi.mock("@gitbeaker/rest", () => ({
       Projects: { show: showMock },
       ProjectReleases: { all: releasesAllMock },
       Issues: { all: issuesAllMock },
+      Commits: { all: commitsAllMock },
       RepositoryFiles: { showRaw: showRawMock },
       Topics: { all: topicsAllMock },
       ProjectLabels: { all: projectLabelsAllMock },
       GroupLabels: { all: groupLabelsAllMock },
       Groups: { show: groupShowMock },
+      Repositories: { allContributors: contributorsAllMock },
     };
   }),
 }));
@@ -37,12 +41,14 @@ beforeEach(() => {
   showMock.mockReset();
   releasesAllMock.mockReset();
   issuesAllMock.mockReset();
+  commitsAllMock.mockReset();
   showRawMock.mockReset();
   gitlabCtor.mockReset();
   topicsAllMock.mockReset();
   projectLabelsAllMock.mockReset();
   groupLabelsAllMock.mockReset();
   groupShowMock.mockReset();
+  contributorsAllMock.mockReset();
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -88,6 +94,19 @@ describe("GitLabClient", () => {
       maxPages: 1,
     });
     expect(data).toEqual([{ iid: 1 }, { iid: 2 }]);
+  });
+
+  it("getCommits fetches one page and slices to the limit", async () => {
+    commitsAllMock.mockResolvedValue([
+      { short_id: "a1", title: "one" },
+      { short_id: "b2", title: "two" },
+      { short_id: "c3", title: "three" },
+    ]);
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    const commits = await client.getCommits("g/r", 2);
+    expect(commitsAllMock).toHaveBeenCalledWith("g/r", { perPage: 2, maxPages: 1 });
+    expect(commits).toHaveLength(2);
+    expect(commits[0].short_id).toBe("a1");
   });
 
   it("getFileRaw delegates to RepositoryFiles.showRaw with the given path and ref", async () => {
@@ -169,5 +188,39 @@ describe("GitLabClient", () => {
     const data = await c.getGroup("my-group");
     expect(data).toEqual({ id: 9, web_url: "https://x/groups/my-group" });
     expect(groupShowMock).toHaveBeenCalledWith("my-group");
+  });
+
+  it("getProject forwards the statistics option", async () => {
+    showMock.mockResolvedValue({ id: 1 });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    await client.getProject("g/r", { statistics: true });
+    expect(showMock).toHaveBeenCalledWith("g/r", { statistics: true });
+  });
+
+  it("getProject omits options by default", async () => {
+    showMock.mockResolvedValue({ id: 1 });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    await client.getProject("g/r");
+    expect(showMock).toHaveBeenCalledWith("g/r");
+  });
+
+  it("getContributorsCount returns the pagination total", async () => {
+    contributorsAllMock.mockResolvedValue({ data: [{}], paginationInfo: { total: 8 } });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    const count = await client.getContributorsCount("g/r");
+    expect(contributorsAllMock).toHaveBeenCalledWith("g/r", { showExpanded: true, perPage: 1, maxPages: 1 });
+    expect(count).toBe(8);
+  });
+
+  it("getContributorsCount returns undefined when total is absent", async () => {
+    contributorsAllMock.mockResolvedValue({ data: [], paginationInfo: {} });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    expect(await client.getContributorsCount("g/r")).toBeUndefined();
+  });
+
+  it("getContributorsCount returns undefined when total is NaN", async () => {
+    contributorsAllMock.mockResolvedValue({ data: [], paginationInfo: { total: NaN } });
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    expect(await client.getContributorsCount("g/r")).toBeUndefined();
   });
 });

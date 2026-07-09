@@ -8,12 +8,20 @@ sidebar_position: 1
 Renders a card with a project's name, description, topics, star/fork counts, and
 last activity. Data is fetched at build time.
 
+It can also embed compact **releases**, **commits**, and **issues** sections
+directly in the card — each section is opt-in: it's only fetched (and only
+rendered) when its count prop is a positive number.
+
 ## Usage
 
 ```mdx
 <GitlabProjectInfo project="group/repo" />
 
 <GitlabProjectInfo project={12345} showStats={false} />
+
+<GitlabProjectInfo project="group/app" releases={3} commits={5} issues={5} />
+
+<GitlabProjectInfo project="group/app" releases={3} releasesLayout="cards" link="https://example.com/app" />
 ```
 
 ## Props
@@ -21,9 +29,41 @@ last activity. Data is fetched at build time.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `project` | `string \| number` | — | **Required.** Project path (`group/sub/repo`) or numeric ID. |
-| `showStats` | `boolean` | `true` | Show the stars / forks / last-activity row. |
+| `showStats` | `boolean` | `true` | Show the stars / forks / created / last-activity row. |
+| `showLinks` | `boolean` | `true` | Link the release / commit / issue items. Set `false` to render them as plain text; the card title stays a link either way. |
+| `link` | `string` | project's `web_url` | Override the card title's link target. |
+| `releases` | `number` | — | Embed the latest N releases. Absent or `≤ 0` ⇒ not fetched, not rendered. |
+| `commits` | `number` | — | Embed the latest N commits. Absent or `≤ 0` ⇒ not fetched, not rendered. |
+| `issues` | `number` | — | Embed the latest N issues. Absent or `≤ 0` ⇒ not fetched, not rendered. |
+| `releasesLayout` | `"list" \| "cards"` | `"list"` | Layout for the embedded releases section. |
+| `commitsLayout` | `"list" \| "cards"` | `"list"` | Layout for the embedded commits section. |
+| `issuesLayout` | `"list" \| "cards"` | `"list"` | Layout for the embedded issues section. |
 
 ## Notes
 
-- The link in the card points to the project's GitLab page (`web_url`).
+- The link in the card points to the project's GitLab page (`web_url`) unless
+  overridden with `link`.
+- Embedded sections are independent: any combination of `releases`, `commits`,
+  and `issues` may be set, in any order.
+- `*Layout` props default to `"list"` — a compact single line per item:
+  release = tag + name; commit = linked short SHA + title + author; issue =
+  linked `#iid` + title. Every item shows its date (absolute, e.g.
+  `May 1, 2020` — not "x ago", so a page built once stays correct) pinned to
+  the right. `"cards"` renders a richer variant of the same data. An invalid
+  layout value (anything other than `"list"` or `"cards"`) fails the build.
 - On a failed fetch in non-strict mode, a fallback notice is rendered instead.
+- The stats row (`showStats`) can show up to four extra pills — total commit
+  count, contributor count, open issue count, and repository size — but only
+  when that data is available. There's no prop to request them; they just
+  appear when GitLab returns the underlying data, and disappear along with
+  the rest of the row when `showStats={false}`.
+  - Commit count and repository size come from the project's `statistics`,
+    which GitLab only includes in the API response for tokens with
+    **Reporter role or higher**. On anonymous or public builds, those two
+    pills are omitted.
+  - Contributor count relies on the contributors API returning a total-count
+    header; if it's unavailable, that pill is omitted too.
+  - Open issue count has no such requirement (as long as the project has
+    issues enabled).
+  - There's no lines-of-code pill — GitLab has no API for it, so it's
+    intentionally not offered.

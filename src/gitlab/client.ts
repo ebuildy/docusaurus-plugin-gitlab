@@ -36,8 +36,18 @@ export class GitLabClient {
       : new Gitlab({ host: config.host });
   }
 
-  async getProject(project: ProjectRef): Promise<any> {
-    return this.api.Projects.show(project);
+  async getProject(project: ProjectRef, opts?: { statistics?: boolean }): Promise<any> {
+    return opts ? this.api.Projects.show(project, opts) : this.api.Projects.show(project);
+  }
+
+  async getContributorsCount(project: ProjectRef): Promise<number | undefined> {
+    const res: any = await this.api.Repositories.allContributors(project, {
+      showExpanded: true,
+      perPage: 1,
+      maxPages: 1,
+    } as any);
+    const total = res?.paginationInfo?.total;
+    return Number.isFinite(total) ? total : undefined;
   }
 
   async getReleases(project: ProjectRef, limit: number): Promise<any[]> {
@@ -55,6 +65,11 @@ export class GitLabClient {
       maxPages: 1,
     });
     return issues.slice(0, opts.limit);
+  }
+
+  async getCommits(project: ProjectRef, limit: number): Promise<any[]> {
+    const commits = await this.api.Commits.all(project, { perPage: limit, maxPages: 1 });
+    return commits.slice(0, limit);
   }
 
   async getFileRaw(project: ProjectRef, path: string, ref: string): Promise<string> {

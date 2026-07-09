@@ -10,6 +10,7 @@ import type { GitLabClient, PageOptions } from "./client";
 import { renderMarkdown } from "./markdown.js";
 import type { TocEntry, TocMode } from "./toc.js";
 import type {
+  CommitData,
   FileData,
   IssueData,
   LabelData,
@@ -70,14 +71,50 @@ async function memo<T>(ctx: GitLabContext, key: string, fn: () => Promise<T>): P
   return value;
 }
 
+function readSectionLayout(value: unknown, attr: string): "list" | "cards" {
+  if (value === undefined || value === "list" || value === "cards") {
+    return value === undefined ? "list" : value;
+  }
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabProjectInfo> "${attr}" must be "list" or "cards"; ` +
+      `got ${JSON.stringify(value)}.`,
+  );
+}
+
 export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promise<ProjectInfoData> {
   const project = String(attrs.project);
-  return memo(ctx, `projectInfo:${project}`, async () => {
-    const p = await ctx.client.getProject(attrs.project as string | number);
-    const avatarUrl = p.avatar_url
-      ? await ctx.assets.localize(p.avatar_url, "", project)
-      : null;
-    return {
+  // Validate presentational layout literals early (values are read by the component).
+  readSectionLayout(attrs.releasesLayout, "releasesLayout");
+  readSectionLayout(attrs.commitsLayout, "commitsLayout");
+  readSectionLayout(attrs.issuesLayout, "issuesLayout");
+
+  const rN = typeof attrs.releases === "number" ? attrs.releases : 0;
+  const cN = typeof attrs.commits === "number" ? attrs.commits : 0;
+  const iN = typeof attrs.issues === "number" ? attrs.issues : 0;
+  const strict = ctx.options.strict ?? true;
+
+  async function section<T>(count: number, fn: () => Promise<T[]>): Promise<T[] | undefined> {
+    if (!(count > 0)) return undefined;
+    try {
+      return await fn();
+    } catch (err) {
+      if (strict) throw err;
+      return undefined;
+    }
+  }
+
+  return memo(ctx, `projectInfo:${project}:r${rN}:c${cN}:i${iN}`, async () => {
+    const p = await ctx.client.getProject(attrs.project as string | number, { statistics: true });
+    const avatarUrl = p.avatar_url ? await ctx.assets.localize(p.avatar_url, "", project) : null;
+    const contributorsCount = await ctx.client
+      .getContributorsCount(attrs.project as string | number)
+      .catch(() => undefined);
+    const [releases, commits, issues] = await Promise.all([
+      section(rN, () => fetchReleases(ctx, { project, limit: rN })),
+      section(cN, () => fetchCommits(ctx, { project, limit: cN })),
+      section(iN, () => fetchIssues(ctx, { project, limit: iN })),
+    ]);
+    const base: ProjectInfoData = {
       id: p.id,
       path: p.path_with_namespace,
       name: p.name,
@@ -86,9 +123,18 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
       starCount: p.star_count,
       forksCount: p.forks_count,
       topics: p.topics ?? [],
+      createdAt: p.created_at,
       lastActivityAt: p.last_activity_at,
       avatarUrl,
-    } satisfies ProjectInfoData;
+    };
+    if (typeof p.statistics?.commit_count === "number") base.commitCount = p.statistics.commit_count;
+    if (typeof p.statistics?.repository_size === "number") base.repositorySize = p.statistics.repository_size;
+    if (p.issues_enabled && typeof p.open_issues_count === "number") base.openIssuesCount = p.open_issues_count;
+    if (typeof contributorsCount === "number") base.contributorsCount = contributorsCount;
+    if (releases) base.releases = releases;
+    if (commits) base.commits = commits;
+    if (issues) base.issues = issues;
+    return base;
   }).then((v) => ({ ...v, path: v.path || project }));
 }
 
@@ -107,6 +153,7 @@ export async function fetchReleases(ctx: GitLabContext, attrs: Attrs): Promise<R
         descriptionHtml: await renderMarkdown(r.description ?? "", { renderChain: ctx.options.markdownRenderChain }),
         upcomingRelease: Boolean(r.upcoming_release),
         assets: (r.assets?.links ?? []).map((l: any) => ({ name: l.name, url: l.url })),
+        webUrl: r._links?.self,
       })),
     );
   });
@@ -132,6 +179,21 @@ export async function fetchIssues(ctx: GitLabContext, attrs: Attrs): Promise<Iss
       authorWebUrl: i.author?.web_url ?? "",
       createdAt: i.created_at,
     } satisfies IssueData));
+  });
+}
+
+export async function fetchCommits(ctx: GitLabContext, attrs: Attrs): Promise<CommitData[]> {
+  const project = String(attrs.project);
+  const limit = typeof attrs.limit === "number" ? attrs.limit : 10;
+  return memo(ctx, `commits:${project}:${limit}`, async () => {
+    const raw = await ctx.client.getCommits(attrs.project as string | number, limit);
+    return raw.map((c: any) => ({
+      shortId: c.short_id,
+      title: c.title,
+      webUrl: c.web_url,
+      authorName: c.author_name ?? "",
+      createdAt: c.created_at,
+    } satisfies CommitData));
   });
 }
 
