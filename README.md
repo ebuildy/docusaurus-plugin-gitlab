@@ -8,6 +8,8 @@ Embed **GitLab** resources — project info, README, releases, issues, and any
 file or code snippet — directly in your **Docusaurus 3** documentation using MDX
 components.
 
+![Screenshot](./docs/screenshot1.png)
+
 All data is fetched **at build time** and baked into your static site. No API
 tokens or network calls ever reach the browser, and pages stay fast.
 
@@ -89,17 +91,45 @@ namespace path (`project="group/subgroup/repo"`).
 
 ### `<GitlabProjectInfo>`
 
-A card with name, description, topics, stars/forks, and last activity.
+A card with name, description, topics, stars/forks, and last activity. It can
+also embed compact **releases**, **commits**, and **issues** sections — each is
+opt-in and only fetched when its count prop is a positive number.
 
 ```mdx
 <GitlabProjectInfo project="group/repo" />
 <GitlabProjectInfo project="group/repo" showStats={false} />
+
+<GitlabProjectInfo project="group/app" releases={3} commits={5} issues={5} />
+
+<GitlabProjectInfo project="group/app" releases={3} releasesLayout="cards" link="https://example.com/app" />
 ```
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `project` | string \| number | — | **Required.** Project path or ID |
-| `showStats` | boolean | `true` | Show stars/forks/last-activity row |
+| `showStats` | boolean | `true` | Show the stars / forks / created / last-activity row |
+| `showLinks` | boolean | `true` | Link the release / commit / issue items. Set `false` to render them as plain text (the card title stays a link) |
+| `link` | string | project's `web_url` | Override the card title's link target |
+| `releases` | number | — | Embed the latest N releases. Absent or `≤ 0` — not fetched, not rendered |
+| `commits` | number | — | Embed the latest N commits. Absent or `≤ 0` — not fetched, not rendered |
+| `issues` | number | — | Embed the latest N issues. Absent or `≤ 0` — not fetched, not rendered |
+| `releasesLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the releases section. An invalid value fails the build |
+| `commitsLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the commits section. An invalid value fails the build |
+| `issuesLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the issues section. An invalid value fails the build |
+
+> Each section's `list` layout renders one compact line per item — release:
+> tag and name; commit: linked short SHA, title, and author; issue: linked
+> `#iid` and title. Every item shows its date (absolute, e.g. `May 1, 2020`)
+> pinned to the right. `cards` renders a richer variant of the same data.
+>
+> The `showStats` row can also show extra pills — total commit count,
+> contributor count, open issue count, repository size — automatically,
+> whenever that data is available; there's no attribute to request them. Set
+> `showStats={false}` to hide the whole row (pills included). Commit count and
+> repository size come from the project's `statistics`, which GitLab only
+> returns to tokens with **Reporter role or higher**; on anonymous/public
+> builds those two pills are simply omitted. Contributor count also depends
+> on the API returning a total count header, and is omitted if it isn't.
 
 ### `<GitlabReadme>`
 

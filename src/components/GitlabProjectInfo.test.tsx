@@ -4,7 +4,8 @@ import { GitlabProjectInfo } from "./GitlabProjectInfo";
 
 const data = {
   id: 1, path: "g/r", name: "My Repo", descriptionHtml: "<p>A thing</p>", webUrl: "https://gitlab.com/g/r",
-  starCount: 12, forksCount: 3, topics: ["docs", "tooling"], lastActivityAt: "2026-01-01T00:00:00Z", avatarUrl: null,
+  starCount: 12, forksCount: 3, topics: ["docs", "tooling"],
+  createdAt: "2020-05-01T00:00:00Z", lastActivityAt: "2026-01-01T00:00:00Z", avatarUrl: null,
 };
 
 describe("GitlabProjectInfo", () => {
@@ -47,5 +48,113 @@ describe("GitlabProjectInfo", () => {
   it("renders no avatar when avatarUrl is null", () => {
     render(<GitlabProjectInfo data={data as any} />);
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("renders compact release, commit, and issue lines after the description", () => {
+    render(<GitlabProjectInfo data={{ ...data,
+      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2026-01-01T00:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [] }],
+      commits: [{ shortId: "a1b2c3d", title: "fix: bug", webUrl: "https://gitlab.com/c/a1b2c3d", authorName: "Ada", createdAt: "2026-01-02T00:00:00Z" }],
+      issues: [{ iid: 42, title: "Broken thing", state: "opened", webUrl: "https://gitlab.com/i/42", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2026-01-03T00:00:00Z" }],
+    } as any} />);
+    expect(screen.getByText("First")).toBeInTheDocument();
+    expect(screen.getByText("v1.0")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "a1b2c3d" })).toHaveAttribute("href", "https://gitlab.com/c/a1b2c3d");
+    expect(screen.getByText("fix: bug")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Broken thing/ })).toHaveAttribute("href", "https://gitlab.com/i/42");
+  });
+
+  it("renders the project path below the description", () => {
+    const { container } = render(<GitlabProjectInfo data={data as any} />);
+    const path = container.querySelector(".gitlab-path");
+    expect(path).not.toBeNull();
+    expect(path?.textContent).toBe("g/r");
+  });
+
+  it("links commit, issue, and release items by default", () => {
+    render(<GitlabProjectInfo data={{ ...data,
+      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2020-01-01T00:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [], webUrl: "https://gitlab.com/r/v1.0" }],
+      commits: [{ shortId: "a1b2c3d", title: "fix", webUrl: "https://gitlab.com/c/a1b2c3d", authorName: "Ada", createdAt: "2020-01-01T00:00:00Z" }],
+      issues: [{ iid: 42, title: "Bug", state: "opened", webUrl: "https://gitlab.com/i/42", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2020-01-01T00:00:00Z" }],
+    } as any} />);
+    expect(screen.getByRole("link", { name: "a1b2c3d" })).toHaveAttribute("href", "https://gitlab.com/c/a1b2c3d");
+    expect(screen.getByRole("link", { name: /Bug/ })).toHaveAttribute("href", "https://gitlab.com/i/42");
+    expect(screen.getByRole("link", { name: /First/ })).toHaveAttribute("href", "https://gitlab.com/r/v1.0");
+  });
+
+  it("renders section items as plain text when showLinks is false, keeping the title link", () => {
+    render(<GitlabProjectInfo showLinks={false} data={{ ...data,
+      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2020-01-01T00:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [], webUrl: "https://gitlab.com/r/v1.0" }],
+      commits: [{ shortId: "a1b2c3d", title: "fix", webUrl: "https://gitlab.com/c/a1b2c3d", authorName: "Ada", createdAt: "2020-01-01T00:00:00Z" }],
+      issues: [{ iid: 42, title: "Bug", state: "opened", webUrl: "https://gitlab.com/i/42", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2020-01-01T00:00:00Z" }],
+    } as any} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent("My Repo");
+    expect(screen.getByText("a1b2c3d")).toBeInTheDocument();
+    expect(screen.getByText(/#42 Bug/)).toBeInTheDocument();
+    expect(screen.getByText("First")).toBeInTheDocument();
+  });
+
+  it("shows a created date in the stats row", () => {
+    render(<GitlabProjectInfo data={data as any} />);
+    expect(screen.getByText(/^created /)).toBeInTheDocument();
+  });
+
+  it("renders no section blocks when arrays are absent", () => {
+    const { container } = render(<GitlabProjectInfo data={data as any} />);
+    expect(container.querySelector(".gitlab-section")).toBeNull();
+  });
+
+  it("overrides the title link when link is provided", () => {
+    render(<GitlabProjectInfo data={data as any} link="https://example.com/app" />);
+    expect(screen.getByRole("link", { name: "My Repo" })).toHaveAttribute("href", "https://example.com/app");
+  });
+
+  it("defaults the title link to the project webUrl", () => {
+    render(<GitlabProjectInfo data={data as any} />);
+    expect(screen.getByRole("link", { name: "My Repo" })).toHaveAttribute("href", "https://gitlab.com/g/r");
+  });
+
+  it("shows richer metadata in cards layout", () => {
+    render(<GitlabProjectInfo issuesLayout="cards" data={{ ...data,
+      issues: [{ iid: 42, title: "Broken thing", state: "opened", webUrl: "u", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2026-01-03T00:00:00Z" }],
+    } as any} />);
+    expect(screen.getByText(/opened/)).toBeInTheDocument();
+    expect(screen.getByText(/Ada/)).toBeInTheDocument();
+  });
+
+  it("renders an absolute (not relative) date on each release, commit, and issue", () => {
+    const { container } = render(<GitlabProjectInfo data={{ ...data,
+      releases: [{ name: "First", tagName: "v1.0", releasedAt: "2020-06-15T12:00:00Z", descriptionHtml: "", upcomingRelease: false, assets: [] }],
+      commits: [{ shortId: "a1b2c3d", title: "old", webUrl: "u", authorName: "Ada", createdAt: "2020-06-15T12:00:00Z" }],
+      issues: [{ iid: 7, title: "Old", state: "opened", webUrl: "u", labels: [], authorName: "Ada", authorWebUrl: "", createdAt: "2020-06-15T12:00:00Z" }],
+    } as any} />);
+    for (const section of ["releases", "commits", "issues"]) {
+      const date = container.querySelector(`.gitlab-section-${section} .gitlab-section-date`);
+      expect(date?.textContent).toMatch(/2020/);
+      expect(date?.textContent).not.toMatch(/ago/);
+    }
+  });
+
+  it("appends stat pills when their data is present", () => {
+    render(<GitlabProjectInfo data={{ ...data,
+      commitCount: 1200, contributorsCount: 8, openIssuesCount: 12, repositorySize: 4404019,
+    } as any} />);
+    expect(screen.getByText(/1.2k commits/)).toBeInTheDocument();
+    expect(screen.getByText(/8 contributors/)).toBeInTheDocument();
+    expect(screen.getByText(/12 issues/)).toBeInTheDocument();
+    expect(screen.getByText(/4.2 MB/)).toBeInTheDocument();
+  });
+
+  it("omits stat pills whose data is absent", () => {
+    render(<GitlabProjectInfo data={data as any} />);
+    expect(screen.queryByText(/commits/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/contributors/)).not.toBeInTheDocument();
+  });
+
+  it("hides all stats including new pills when showStats is false", () => {
+    render(<GitlabProjectInfo showStats={false} data={{ ...data, commitCount: 1200 } as any} />);
+    expect(screen.queryByText(/commits/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
   });
 });

@@ -12,8 +12,16 @@ export interface ProjectInfoData {
   starCount: number;
   forksCount: number;
   topics: string[];
+  createdAt: string;
   lastActivityAt: string;
   avatarUrl: string | null;
+  releases?: ReleaseData[];
+  commits?: CommitData[];
+  issues?: IssueData[];
+  openIssuesCount?: number;
+  commitCount?: number;
+  repositorySize?: number;
+  contributorsCount?: number;
 }
 
 export interface ReleaseAsset {
@@ -28,6 +36,8 @@ export interface ReleaseData {
   descriptionHtml: string;
   upcomingRelease: boolean;
   assets: ReleaseAsset[];
+  /** Release page URL (GitLab `_links.self`); absent if the API omits it. */
+  webUrl?: string;
 }
 
 export interface IssueData {
@@ -38,6 +48,14 @@ export interface IssueData {
   labels: string[];
   authorName: string;
   authorWebUrl: string;
+  createdAt: string;
+}
+
+export interface CommitData {
+  shortId: string;
+  title: string;
+  webUrl: string;
+  authorName: string;
   createdAt: string;
 }
 

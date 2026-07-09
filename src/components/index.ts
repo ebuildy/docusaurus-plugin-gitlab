@@ -10,6 +10,7 @@ export type {
   ProjectInfoData,
   ReleaseData,
   IssueData,
+  CommitData,
   ReadmeData,
   FileData,
   TopicData,

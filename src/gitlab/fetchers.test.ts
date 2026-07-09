@@ -6,7 +6,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchReadme, fetchFile, fetchTopics, fetchLabels } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -25,6 +25,7 @@ describe("fetchProjectInfo", () => {
         id: 7, path_with_namespace: "g/r", name: "r", description: "ship **it** :rocket:", web_url: "https://gitlab.com/g/r",
         star_count: 3, forks_count: 1, topics: ["x"], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
       })),
+      getContributorsCount: vi.fn(async () => undefined),
     };
     const c = ctx(client);
     const data = await fetchProjectInfo(c, { project: "g/r" });
@@ -33,7 +34,61 @@ describe("fetchProjectInfo", () => {
     expect(data.descriptionHtml).toContain("🚀");
     expect(data.avatarUrl).toBeNull();
     expect(c.assets.localize).not.toHaveBeenCalled();
-    expect(client.getProject).toHaveBeenCalledWith("g/r");
+    expect(client.getProject).toHaveBeenCalledWith("g/r", { statistics: true });
+  });
+
+  it("maps statistics, open issues, and contributors count", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], created_at: "2020-05-01T00:00:00Z",
+        last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+        issues_enabled: true, open_issues_count: 12,
+        statistics: { commit_count: 1200, repository_size: 4404019 },
+      })),
+      getContributorsCount: vi.fn(async () => 8),
+    };
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r" });
+    expect(client.getProject).toHaveBeenCalledWith("g/r", { statistics: true });
+    expect(data.createdAt).toBe("2020-05-01T00:00:00Z");
+    expect(data.commitCount).toBe(1200);
+    expect(data.repositorySize).toBe(4404019);
+    expect(data.openIssuesCount).toBe(12);
+    expect(data.contributorsCount).toBe(8);
+  });
+
+  it("omits statistics-derived stats when statistics is absent", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+        issues_enabled: false,
+      })),
+      getContributorsCount: vi.fn(async () => undefined),
+    };
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r" });
+    expect(data.commitCount).toBeUndefined();
+    expect(data.repositorySize).toBeUndefined();
+    expect(data.openIssuesCount).toBeUndefined();
+    expect(data.contributorsCount).toBeUndefined();
+  });
+
+  it("never throws when the contributors fetch fails, even in strict mode", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+        issues_enabled: true, open_issues_count: 5, statistics: { commit_count: 1, repository_size: 1 },
+      })),
+      getContributorsCount: vi.fn(async () => { throw new Error("no perms"); }),
+    };
+    const c = ctx(client);
+    c.options.strict = true;
+    const data = await fetchProjectInfo(c, { project: "g/r" });
+    expect(data.contributorsCount).toBeUndefined();
+    expect(data.commitCount).toBe(1);
   });
 
   it("localizes the avatar when the project has one", async () => {
@@ -43,11 +98,115 @@ describe("fetchProjectInfo", () => {
         star_count: 3, forks_count: 1, topics: ["x"], last_activity_at: "2026-01-01T00:00:00Z",
         avatar_url: "https://gitlab.com/uploads/avatar.png",
       })),
+      getContributorsCount: vi.fn(async () => undefined),
     };
     const c = ctx(client);
     const data = await fetchProjectInfo(c, { project: "g/r" });
     expect(c.assets.localize).toHaveBeenCalledWith("https://gitlab.com/uploads/avatar.png", "", "g/r");
     expect(data.avatarUrl).toBe("/gitlab-assets/httpsgitlabcomuploadsavatarpng.png");
+  });
+
+  it("attaches sections only when their count is > 0", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async () => [
+        { name: "v1", tag_name: "v1", released_at: "2026-01-01T00:00:00Z", description: "", upcoming_release: false, assets: { links: [] } },
+      ]),
+      getCommits: vi.fn(async () => [
+        { short_id: "a1", title: "t", web_url: "u", author_name: "Ada", created_at: "2026-01-02T00:00:00Z" },
+      ]),
+      getIssues: vi.fn(async () => []),
+      getContributorsCount: vi.fn(async () => undefined),
+    };
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r", releases: 2, commits: 3 });
+    expect(client.getReleases).toHaveBeenCalledWith("g/r", 2);
+    expect(client.getCommits).toHaveBeenCalledWith("g/r", 3);
+    expect(client.getIssues).not.toHaveBeenCalled();
+    expect(data.releases).toHaveLength(1);
+    expect(data.commits).toHaveLength(1);
+    expect(data.issues).toBeUndefined();
+  });
+
+  it("does not fetch a section when its count is 0 or absent", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async () => []),
+      getCommits: vi.fn(async () => []),
+      getIssues: vi.fn(async () => []),
+      getContributorsCount: vi.fn(async () => undefined),
+    };
+    const c = ctx(client);
+    const data = await fetchProjectInfo(c, { project: "g/r", commits: 0 });
+    expect(client.getReleases).not.toHaveBeenCalled();
+    expect(client.getCommits).not.toHaveBeenCalled();
+    expect(client.getIssues).not.toHaveBeenCalled();
+    expect(data.releases).toBeUndefined();
+  });
+
+  it("omits a failing section in non-strict mode instead of throwing", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async () => { throw new Error("boom"); }),
+      getContributorsCount: vi.fn(async () => undefined),
+    };
+    const c = ctx(client);
+    c.options.strict = false;
+    const data = await fetchProjectInfo(c, { project: "g/r", releases: 2 });
+    expect(data.releases).toBeUndefined();
+    expect(data.name).toBe("r");
+  });
+
+  it("rethrows a failing section in strict mode", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async () => { throw new Error("boom"); }),
+      getContributorsCount: vi.fn(async () => undefined),
+    };
+    const c = ctx(client);
+    c.options.strict = true;
+    await expect(fetchProjectInfo(c, { project: "g/r", releases: 2 })).rejects.toThrow("boom");
+  });
+
+  it("rejects an invalid section layout", async () => {
+    const client = { getProject: vi.fn(async () => ({ id: 1, path_with_namespace: "g/r", name: "r", description: "", web_url: "u", star_count: 0, forks_count: 0, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null })) };
+    await expect(fetchProjectInfo(ctx(client), { project: "g/r", releasesLayout: "grid" })).rejects.toThrow(/releasesLayout/);
+  });
+
+  it("caches sections separately per count (cache key varies)", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "d", web_url: "https://gitlab.com/g/r",
+        star_count: 3, forks_count: 1, topics: [], last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null,
+      })),
+      getReleases: vi.fn(async (_p: unknown, limit: number) =>
+        Array.from({ length: limit }, (_, i) => ({
+          name: `v${i}`, tag_name: `v${i}`, released_at: "2026-01-01T00:00:00Z",
+          description: "", upcoming_release: false, assets: { links: [] },
+        })),
+      ),
+      getCommits: vi.fn(async () => []),
+      getIssues: vi.fn(async () => []),
+      getContributorsCount: vi.fn(async () => undefined),
+    };
+    const c = ctx(client);
+    const first = await fetchProjectInfo(c, { project: "g/r", releases: 1 });
+    const second = await fetchProjectInfo(c, { project: "g/r", releases: 2 });
+    expect(first.releases).toHaveLength(1);
+    expect(second.releases).toHaveLength(2);
+    expect(client.getReleases).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -56,12 +215,14 @@ describe("fetchReleases", () => {
     const client = {
       getReleases: vi.fn(async () => [
         { name: "v1", tag_name: "v1", released_at: "2026-01-01T00:00:00Z", description: "**notes**",
-          upcoming_release: false, assets: { links: [{ name: "bin", url: "https://x/bin" }] } },
+          upcoming_release: false, assets: { links: [{ name: "bin", url: "https://x/bin" }] },
+          _links: { self: "https://gitlab.com/g/r/-/releases/v1" } },
       ]),
     };
     const data = await fetchReleases(ctx(client), { project: "g/r", limit: 5, includePrereleases: true });
     expect(data).toHaveLength(1);
     expect(data[0].tagName).toBe("v1");
+    expect(data[0].webUrl).toBe("https://gitlab.com/g/r/-/releases/v1");
     expect(data[0].descriptionHtml).toContain("<strong>notes</strong>");
     expect(data[0].assets).toEqual([{ name: "bin", url: "https://x/bin" }]);
     expect(client.getReleases).toHaveBeenCalledWith("g/r", 5);
@@ -106,6 +267,24 @@ describe("fetchIssues", () => {
       "g/r",
       { state: "opened", labels: "bug", milestone: undefined, limit: 10 },
     );
+  });
+});
+
+describe("fetchCommits", () => {
+  it("normalizes commits and respects the limit", async () => {
+    const client = {
+      getCommits: vi.fn(async () => [
+        { short_id: "a1b2c3d", title: "fix: thing", web_url: "https://gitlab.com/g/r/-/commit/a1b2c3d",
+          author_name: "Ada", created_at: "2026-01-02T00:00:00Z" },
+      ]),
+    };
+    const c = ctx(client);
+    const data = await fetchCommits(c, { project: "g/r", limit: 5 });
+    expect(client.getCommits).toHaveBeenCalledWith("g/r", 5);
+    expect(data).toEqual([
+      { shortId: "a1b2c3d", title: "fix: thing", webUrl: "https://gitlab.com/g/r/-/commit/a1b2c3d",
+        authorName: "Ada", createdAt: "2026-01-02T00:00:00Z" },
+    ]);
   });
 });
 
