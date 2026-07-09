@@ -417,6 +417,10 @@ function asBool(value: unknown): boolean {
   return value === true || value === "true";
 }
 
+export async function fetchGroup(ctx: GitLabContext, group: string | number): Promise<any> {
+  return memo(ctx, `group:${String(group)}`, () => ctx.client.getGroup(group));
+}
+
 export async function fetchGroupProjects(ctx: GitLabContext, attrs: Attrs): Promise<GroupProjectData[]> {
   const group = attrs.group as string | number | undefined;
   if (group === undefined) {
@@ -427,7 +431,7 @@ export async function fetchGroupProjects(ctx: GitLabContext, attrs: Attrs): Prom
   const topics = parseTopicList(attrs.topics);
   const key = `groupProjects:${String(group)}:sub=${includeSubgroups}:arch=${includeArchived}:t=${topics.join(",")}`;
   return memo(ctx, key, async () => {
-    const info = await ctx.client.getGroup(group);
+    const info = await fetchGroup(ctx, group);
     const prefix = `${String(info.full_path)}/`;
     const raw = await ctx.client.getGroupProjects(group, {
       includeSubgroups,
