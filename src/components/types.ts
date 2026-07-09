@@ -7,6 +7,7 @@ export type {
   FileData,
   TopicData,
   LabelData,
+  GroupProjectData,
   FetchError,
   ComponentPayload,
 } from "../gitlab/types.js";

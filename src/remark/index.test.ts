@@ -15,6 +15,7 @@ vi.mock("../gitlab/fetchers.js", () => ({
   fetchFile: vi.fn(),
   fetchTopics: vi.fn(),
   fetchLabels: vi.fn(),
+  fetchGroupProjects: vi.fn(),
 }));
 
 function processor(opts: any) {
