@@ -30,4 +30,14 @@ describe("gitlab include loader", () => {
     });
     expect(out).toContain("> ⚠️");
   });
+
+  it("rewrites a generateGitlabPages directive to <GitlabProjectGrid>", async () => {
+    const out = await run(`{@generateGitlabPages group=1 sections="readme"}`, {
+      strict: true,
+      host: "https://gl",
+      cache: false,
+    });
+    expect(out).toContain("<GitlabProjectGrid ");
+    expect(out).not.toContain("{@generateGitlabPages");
+  });
 });
