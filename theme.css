@@ -426,3 +426,10 @@
   display: inline-block; margin-left: 0.3rem; padding: 0 0.3rem;
   border-radius: 3px; font-size: 0.7rem;
 }
+.gitlab-roadmap-spine { border-left: 2px solid var(--ifm-color-emphasis-300); margin-left: 0.5rem; padding-left: 1rem; }
+.gitlab-roadmap-node { position: relative; margin: 0.75rem 0; }
+.gitlab-roadmap-dot { position: absolute; left: -1.4rem; top: 0.25rem; width: 0.6rem; height: 0.6rem; border-radius: 50%; }
+.gitlab-roadmap-card { display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start; }
+.gitlab-roadmap-dates { color: var(--ifm-color-emphasis-600); font-size: 0.75rem; }
+.gitlab-roadmap-meter-track { width: 100%; max-width: 12rem; height: 0.4rem; background: var(--ifm-color-emphasis-200); border-radius: 3px; }
+.gitlab-roadmap-meter { height: 100%; border-radius: 3px; }
