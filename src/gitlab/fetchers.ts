@@ -647,12 +647,32 @@ async function fetchEpicItems(
 }
 
 async function fetchMilestoneItems(
-  _ctx: GitLabContext,
-  _scope: { group?: string | number; project?: string | number },
-  _state: string,
-  _limit: number,
+  ctx: GitLabContext,
+  scope: { group?: string | number; project?: string | number },
+  state: string,
+  limit: number,
 ): Promise<RoadmapItemData[]> {
-  throw new Error("milestones source not yet implemented");
+  // Milestone API state vocabulary is active/closed; map our opened→active.
+  const apiState = state === "opened" ? "active" : state; // "closed" and "all" pass through
+  const raw =
+    scope.project !== undefined
+      ? await ctx.client.getProjectMilestones(scope.project)
+      : await ctx.client.getGroupMilestones(scope.group!);
+  const filtered =
+    apiState === "all" ? raw : raw.filter((m: any) => m.state === apiState);
+  return filtered.slice(0, limit).map((m: any) => ({
+    id: m.id,
+    iid: m.iid,
+    title: m.title,
+    state: m.state === "closed" ? "closed" : "opened",
+    startDate: m.start_date ?? null,
+    dueDate: m.due_date ?? null,
+    webUrl: m.web_url,
+    progress: null,
+    parentId: null,
+    parentTitle: null,
+    labels: [],
+  } satisfies RoadmapItemData));
 }
 
 /** GitLab epic list payloads may include descendant issue counts; derive % from them. */

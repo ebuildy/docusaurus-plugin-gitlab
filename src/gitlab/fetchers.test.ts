@@ -721,3 +721,43 @@ describe("fetchRoadmap (epics)", () => {
     await expect(fetchRoadmap(c, { source: "epics", group: "g" })).rejects.toThrow("403 tier");
   });
 });
+
+describe("fetchRoadmap (milestones)", () => {
+  const milestones = [
+    { id: 1, iid: 5, title: "v1.0", state: "active", start_date: "2026-01-01", due_date: "2026-02-01",
+      web_url: "https://gitlab.com/g/r/-/milestones/5" },
+    { id: 2, iid: 6, title: "v1.1", state: "closed", start_date: "2026-02-01", due_date: "2026-03-01",
+      web_url: "https://gitlab.com/g/r/-/milestones/6" },
+  ];
+
+  it("normalizes project milestones and maps active→opened (state=all shows both)", async () => {
+    const client = {
+      getProjectMilestones: vi.fn(async () => milestones),
+      getProjectLabels: vi.fn(async () => []),
+    };
+    const c = ctx(client);
+    const data = await fetchRoadmap(c, { source: "milestones", project: "g/r", state: "all" });
+    expect(data.source).toBe("milestones");
+    const items = data.groups.flatMap((g) => g.items);
+    expect(items.find((i) => i.title === "v1.0")!.state).toBe("opened");
+    expect(items.find((i) => i.title === "v1.1")!.state).toBe("closed");
+    expect(items.every((i) => i.color === undefined)).toBe(true);
+    expect(client.getProjectMilestones).toHaveBeenCalledWith("g/r");
+  });
+
+  it("fetches group milestones when group is given", async () => {
+    const client = { getGroupMilestones: vi.fn(async () => milestones), getGroupLabels: vi.fn(async () => []) };
+    const c = ctx(client);
+    const data = await fetchRoadmap(c, { source: "milestones", group: "g", state: "all" });
+    expect(data.groups.flatMap((g) => g.items)).toHaveLength(2);
+    expect(client.getGroupMilestones).toHaveBeenCalledWith("g");
+  });
+
+  it("filters to active milestones by default (state defaults to opened)", async () => {
+    const client = { getProjectMilestones: vi.fn(async () => milestones), getProjectLabels: vi.fn(async () => []) };
+    const c = ctx(client);
+    const data = await fetchRoadmap(c, { source: "milestones", project: "g/r" });
+    const items = data.groups.flatMap((g) => g.items);
+    expect(items.map((i) => i.title)).toEqual(["v1.0"]);
+  });
+});
