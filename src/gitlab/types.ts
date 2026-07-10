@@ -107,3 +107,19 @@ export interface LabelData {
   description: string | null;
   webUrl: string;
 }
+
+export interface GroupProjectData {
+  id: number;
+  name: string;
+  path: string;
+  /** Full namespace path, e.g. "mygroup/team-x/acme-mobile". */
+  pathWithNamespace: string;
+  /** Path relative to the queried group root, e.g. "team-x/acme-mobile". Used
+   *  as both the generated file path and the card link target. */
+  slug: string;
+  description: string | null;
+  webUrl: string;
+  starCount: number;
+  defaultBranch: string | null;
+  topics: string[];
+}

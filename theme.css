@@ -365,3 +365,45 @@
   padding-left: 0;
   list-style: none;
 }
+
+/* Project grid — a responsive grid of project cards linking to generated pages. */
+.gitlab-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.gitlab-project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  margin: 0;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 10px;
+  background: var(--ifm-background-surface-color);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.04);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.gitlab-project-card:hover {
+  border-color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+.gitlab-project-card__name {
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+}
+.gitlab-project-card__desc {
+  font-size: 0.85em;
+  color: var(--ifm-color-emphasis-700);
+}
+.gitlab-project-card__stars {
+  font-size: 0.8em;
+  color: var(--ifm-color-emphasis-600);
+}
+.gitlab-project-card__stars::before {
+  content: "★ ";
+  color: var(--ifm-color-warning);
+}

@@ -12,6 +12,7 @@ import type { TocEntry, TocMode } from "./toc.js";
 import type {
   CommitData,
   FileData,
+  GroupProjectData,
   IssueData,
   LabelData,
   ProjectInfoData,
@@ -401,6 +402,58 @@ export async function fetchLabels(ctx: GitLabContext, attrs: Attrs): Promise<Lab
     if (match) items = items.filter((l) => match(l.name));
     items = sortByName(items, (l) => l.name, order.dir);
     if (limit !== undefined) items = items.slice(0, limit);
+    return items;
+  });
+}
+
+/** Parse a topic list attribute: `["a","b"]`, `"a,b"`, or undefined → string[]. */
+function parseTopicList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).map((s) => s.trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(",").map((s) => s.trim()).filter(Boolean);
+  return [];
+}
+
+function asBool(value: unknown): boolean {
+  return value === true || value === "true";
+}
+
+export async function fetchGroup(ctx: GitLabContext, group: string | number): Promise<any> {
+  return memo(ctx, `group:${String(group)}`, () => ctx.client.getGroup(group));
+}
+
+export async function fetchGroupProjects(ctx: GitLabContext, attrs: Attrs): Promise<GroupProjectData[]> {
+  const group = attrs.group as string | number | undefined;
+  if (group === undefined) {
+    throw new Error(`@ebuildy/docusaurus-plugin-gitlab: <GitlabProjectGrid> requires a "group".`);
+  }
+  const includeSubgroups = asBool(attrs.includeSubgroups);
+  const includeArchived = asBool(attrs.includeArchived);
+  const topics = parseTopicList(attrs.topics);
+  const key = `groupProjects:${String(group)}:sub=${includeSubgroups}:arch=${includeArchived}:t=${topics.join(",")}`;
+  return memo(ctx, key, async () => {
+    const info = await fetchGroup(ctx, group);
+    const prefix = `${String(info.full_path)}/`;
+    const raw = await ctx.client.getGroupProjects(group, {
+      includeSubgroups,
+      archived: includeArchived ? undefined : false,
+    });
+    let items: GroupProjectData[] = raw.map((p: any) => {
+      const pathWithNamespace = String(p.path_with_namespace);
+      return {
+        id: p.id,
+        name: p.name,
+        path: p.path,
+        pathWithNamespace,
+        slug: pathWithNamespace.startsWith(prefix) ? pathWithNamespace.slice(prefix.length) : p.path,
+        description: p.description ?? null,
+        webUrl: p.web_url,
+        starCount: p.star_count ?? 0,
+        defaultBranch: p.default_branch ?? null,
+        topics: Array.isArray(p.topics) ? p.topics : [],
+      };
+    });
+    if (topics.length) items = items.filter((p) => topics.every((t) => p.topics.includes(t)));
+    items = sortByName(items, (p) => p.slug, "asc");
     return items;
   });
 }

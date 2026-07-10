@@ -1,3 +1,4 @@
+import { rewriteGeneratePages } from "../generate/rewrite.js";
 import type { ResolvedOptions } from "../options.js";
 import { getContext } from "./context.js";
 import { getOutProcessors } from "./out-processors.js";
@@ -11,9 +12,12 @@ interface LoaderThis {
 export default function gitlabIncludeLoader(this: LoaderThis, source: string): void {
   const callback = this.async();
   const { resolved, processorsId } = this.getOptions();
+  // Directive-syntax errors here intentionally fail the build fast (unlike the
+  // include path's `strict` degrade): a malformed directive is an authoring bug.
+  const rewritten = rewriteGeneratePages(source);
 
-  if (!source.includes("{@includeGitlab")) {
-    callback(null, source);
+  if (!rewritten.includes("{@includeGitlab")) {
+    callback(null, rewritten);
     return;
   }
 
@@ -28,7 +32,7 @@ export default function gitlabIncludeLoader(this: LoaderThis, source: string): v
     debug: resolved.debug,
     outProcessors: processorsId ? getOutProcessors(processorsId) : [],
   };
-  transformIncludes(source, getContext(resolved), options).then(
+  transformIncludes(rewritten, getContext(resolved), options).then(
     (out) => callback(null, out),
     (err) => callback(err instanceof Error ? err : new Error(String(err))),
   );

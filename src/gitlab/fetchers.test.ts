@@ -6,7 +6,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -626,5 +626,59 @@ describe("fetchLabels", () => {
     await expect(
       fetchLabels(ctx(client), { project: "group/repo", layout: "grid" }),
     ).rejects.toThrow(/layout/);
+  });
+});
+
+describe("fetchGroupProjects", () => {
+  const project = (over: any) => ({
+    id: 1, name: "Acme Web", path: "acme-web",
+    path_with_namespace: "mygroup/acme-web", description: "web app",
+    web_url: "https://gitlab.com/mygroup/acme-web", star_count: 4,
+    default_branch: "main", topics: ["public-docs"], ...over,
+  });
+
+  function client(projects: any[]) {
+    return {
+      getGroup: vi.fn(async () => ({ full_path: "mygroup" })),
+      getGroupProjects: vi.fn(async () => projects),
+    };
+  }
+
+  it("normalizes projects and derives slug from the group prefix", async () => {
+    const c = ctx(client([
+      project({}),
+      project({ id: 2, name: "Mobile", path: "acme-mobile", path_with_namespace: "mygroup/team-x/acme-mobile" }),
+    ]));
+    const data = await fetchGroupProjects(c, { group: "mygroup", includeSubgroups: true });
+    expect(data.map((p) => p.slug)).toEqual(["acme-web", "team-x/acme-mobile"]);
+    expect(data[0]).toMatchObject({ id: 1, name: "Acme Web", pathWithNamespace: "mygroup/acme-web", starCount: 4, description: "web app" });
+  });
+
+  it("filters to projects carrying all requested topics", async () => {
+    const c = ctx(client([
+      project({ topics: ["public-docs", "featured"] }),
+      project({ id: 2, path: "hidden", path_with_namespace: "mygroup/hidden", topics: ["public-docs"] }),
+    ]));
+    const data = await fetchGroupProjects(c, { group: "mygroup", topics: "public-docs,featured" });
+    expect(data.map((p) => p.path)).toEqual(["acme-web"]);
+  });
+
+  it("excludes archived by default (passes archived:false to the client)", async () => {
+    const c = ctx(client([project({})]));
+    await fetchGroupProjects(c, { group: "mygroup" });
+    expect(c.client.getGroupProjects).toHaveBeenCalledWith("mygroup", { includeSubgroups: false, archived: false });
+  });
+
+  it("includes archived when includeArchived is true (archived undefined)", async () => {
+    const c = ctx(client([project({})]));
+    await fetchGroupProjects(c, { group: "mygroup", includeArchived: true });
+    expect(c.client.getGroupProjects).toHaveBeenCalledWith("mygroup", { includeSubgroups: false, archived: undefined });
+  });
+
+  it("memoizes on the second call", async () => {
+    const c = ctx(client([project({})]));
+    await fetchGroupProjects(c, { group: "mygroup" });
+    await fetchGroupProjects(c, { group: "mygroup" });
+    expect(c.client.getGroupProjects).toHaveBeenCalledTimes(1);
   });
 });

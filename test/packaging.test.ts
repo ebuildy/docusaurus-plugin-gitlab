@@ -50,10 +50,10 @@ describe("packaging: plugin default export", () => {
     // test` builds the package first, so the file exists at runtime.
     const entry = new URL("../dist/index.js", import.meta.url).href;
     const mod = (await import(entry)) as {
-      default: (context: unknown, options: unknown) => { name: string };
+      default: (context: unknown, options: unknown) => Promise<{ name: string }>;
     };
     expect(typeof mod.default).toBe("function");
-    const plugin = mod.default({}, { host: "https://gitlab.example.com", cache: false });
+    const plugin = await mod.default({}, { host: "https://gitlab.example.com", cache: false });
     expect(plugin.name).toBe("@ebuildy/docusaurus-plugin-gitlab");
   });
 });

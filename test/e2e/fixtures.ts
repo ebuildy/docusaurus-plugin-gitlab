@@ -49,13 +49,22 @@ export async function startGitlabStub(): Promise<{ url: string; stop: () => Prom
         { name: "api", title: "API", total_projects_count: 9 },
       ]);
     }
+    if (url.startsWith("/api/v4/groups/my-group/projects")) {
+      return send([
+        {
+          id: 1, name: "Repo", path: "repo", path_with_namespace: "group/repo",
+          description: "Desc", web_url: "https://x/group/repo", star_count: 5,
+          default_branch: "main", topics: ["docs"],
+        },
+      ]);
+    }
     if (url.startsWith("/api/v4/groups/my-group/labels")) {
       return send([
         { name: "epic", color: "#8e44ad", text_color: "#ffffff", description: "Cross-project", archived: false },
       ]);
     }
     if (url.startsWith("/api/v4/groups/my-group")) {
-      return send({ id: 42, web_url: "https://x/groups/my-group" });
+      return send({ id: 42, name: "My Group", full_path: "my-group", web_url: "https://x/groups/my-group" });
     }
     if (url.includes("/repository/files/README.md/raw")) {
       return send(

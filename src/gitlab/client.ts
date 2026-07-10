@@ -102,6 +102,20 @@ export class GitLabClient {
     return this.api.Groups.show(group);
   }
 
+  async getGroupProjects(
+    group: ProjectRef,
+    opts: { includeSubgroups?: boolean; archived?: boolean; perPage?: number; maxPages?: number } = {},
+  ): Promise<any[]> {
+    return this.api.Groups.allProjects(group, {
+      includeSubgroups: opts.includeSubgroups ?? false,
+      ...(opts.archived === undefined ? {} : { archived: opts.archived }),
+      perPage: opts.perPage ?? DEFAULT_PER_PAGE,
+      maxPages: opts.maxPages ?? DEFAULT_MAX_PAGES,
+      orderBy: "path",
+      sort: "asc",
+    });
+  }
+
   private headers(): Record<string, string> {
     const h: Record<string, string> = { Accept: "application/json" };
     if (this.config.token) h["PRIVATE-TOKEN"] = this.config.token;
