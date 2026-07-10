@@ -18,6 +18,13 @@ export interface IssuesQuery {
   limit: number;
 }
 
+export interface EpicsQuery {
+  state?: string;
+  labels?: string;
+  orderBy?: string;
+  sort?: string;
+}
+
 /** Pagination for the topic/label list endpoints. Defaults cap the fetch at 500 items. */
 export interface PageOptions {
   perPage?: number;
@@ -114,6 +121,25 @@ export class GitLabClient {
       orderBy: "path",
       sort: "asc",
     });
+  }
+
+  async getGroupEpics(group: ProjectRef, opts: EpicsQuery = {}): Promise<any[]> {
+    return this.api.Epics.all(group, {
+      ...(opts.state ? { state: opts.state } : {}),
+      ...(opts.labels ? { labels: opts.labels } : {}),
+      ...(opts.orderBy ? { orderBy: opts.orderBy } : {}),
+      ...(opts.sort ? { sort: opts.sort } : {}),
+      perPage: DEFAULT_PER_PAGE,
+      maxPages: DEFAULT_MAX_PAGES,
+    } as any);
+  }
+
+  async getGroupMilestones(group: ProjectRef): Promise<any[]> {
+    return this.api.GroupMilestones.all(group, { perPage: DEFAULT_PER_PAGE, maxPages: DEFAULT_MAX_PAGES });
+  }
+
+  async getProjectMilestones(project: ProjectRef): Promise<any[]> {
+    return this.api.ProjectMilestones.all(project, { perPage: DEFAULT_PER_PAGE, maxPages: DEFAULT_MAX_PAGES });
   }
 
   private headers(): Record<string, string> {
