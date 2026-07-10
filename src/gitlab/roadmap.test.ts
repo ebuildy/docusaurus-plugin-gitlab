@@ -103,4 +103,14 @@ describe("buildRoadmap", () => {
     expect(data.rangeStart).toBe("2026-01-01");
     expect(data.rangeEnd).toBe("2026-04-01");
   });
+
+  it("returns an empty roadmap instead of throwing when no items have dates", () => {
+    const data = buildRoadmap([item({ title: "undated" })], { source: "epics", order: "start", groupBy: "none" });
+    expect(data.groups).toEqual([]);
+    expect(data.ticks).toEqual([]);
+  });
+
+  it("does not throw on an empty item array", () => {
+    expect(() => buildRoadmap([], { source: "milestones", order: "start", groupBy: "none" })).not.toThrow();
+  });
 });

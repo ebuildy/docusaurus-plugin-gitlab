@@ -55,6 +55,7 @@ function snapUp(ms: number, scale: RoadmapScale): number {
 
 export function selectScale(startISO: string, endISO: string): RoadmapScale {
   const days = spanDays(startISO, endISO);
+  // ~a quarter (92d) → weeks; ~a year (366d) → months; longer → quarters
   if (days <= 92) return "weeks";
   if (days <= 366) return "months";
   return "quarters";
@@ -153,6 +154,16 @@ export interface BuildRoadmapOptions {
 
 export function buildRoadmap(items: RoadmapItemData[], opts: BuildRoadmapOptions): RoadmapData {
   const dated = items.filter((i) => i.startDate || i.dueDate);
+  if (dated.length === 0) {
+    return {
+      source: opts.source,
+      scale: opts.scale ?? "months",
+      rangeStart: opts.from ?? "",
+      rangeEnd: opts.to ?? "",
+      ticks: [],
+      groups: [],
+    };
+  }
   const sorted = sortItems(dated, opts.order);
   const raw = rawBounds(sorted);
   const scale = opts.scale ?? selectScale(raw.startISO, raw.endISO);
