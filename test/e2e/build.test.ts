@@ -1,11 +1,20 @@
 import { spawn } from "node:child_process";
-import { readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { startGitlabStub } from "./fixtures";
 
 const siteDir = join(process.cwd(), "examples/site");
 let stub: Awaited<ReturnType<typeof startGitlabStub>>;
+
+// Remove the files the plugin generates into the example's `docs/generate/` folder
+// (they sit alongside the committed `index.mdx`, which must be kept).
+function cleanGeneratedPages() {
+  const dir = join(siteDir, "docs", "generate");
+  for (const f of ["repo.mdx", ".gitlab-generated", ".gitignore"]) {
+    rmSync(join(dir, f), { force: true });
+  }
+}
 
 /**
  * Runs `npm run build` ASYNCHRONOUSLY and awaits it. We must NOT use
@@ -32,7 +41,7 @@ describe("e2e: docusaurus build", () => {
       recursive: true,
       force: true,
     });
-    rmSync(join(siteDir, "docs", "generate", "projects"), { recursive: true, force: true });
+    cleanGeneratedPages();
     await runBuild({ ...process.env, GITLAB_HOST: stub.url, GITLAB_TOKEN: "" });
   }, 180_000);
 
@@ -40,7 +49,7 @@ describe("e2e: docusaurus build", () => {
     await stub?.stop();
     rmSync(join(siteDir, "build"), { recursive: true, force: true });
     rmSync(join(siteDir, "static", "gitlab-assets"), { recursive: true, force: true });
-    rmSync(join(siteDir, "docs", "generate", "projects"), { recursive: true, force: true });
+    cleanGeneratedPages();
   });
 
   it("bakes project info, releases, and issues into the static html", () => {
@@ -96,19 +105,22 @@ describe("e2e: docusaurus build", () => {
     expect(html).toContain("/groups/my-group/-/issues?label_name[]=epic");
   });
 
-  it("generates a page per group project and a card grid on the index page", () => {
-    // The generator wrote the child page into the docs tree during the build.
-    const childSource = join(siteDir, "docs", "generate", "projects", "repo.mdx");
+  it("generates a child page nested under the declaring index page, with a card grid", () => {
+    // The generator wrote the child page as a SIBLING of the declaring index page
+    // (docs/generate/index.mdx), so Docusaurus nests it under that page.
+    const childSource = join(siteDir, "docs", "generate", "repo.mdx");
     expect(readFileSync(childSource, "utf8")).toContain('<GitlabReadme project="group/repo" />');
+    // No leftover subfolder from the old basePath model.
+    expect(existsSync(join(siteDir, "docs", "generate", "projects"))).toBe(false);
 
-    // The child page built and baked in the README.
-    const childHtml = readFileSync(join(siteDir, "build", "generate", "projects", "repo", "index.html"), "utf8");
+    // The child page built at /generate/repo and baked in the README.
+    const childHtml = readFileSync(join(siteDir, "build", "generate", "repo", "index.html"), "utf8");
     expect(childHtml).toContain("Readme body");
 
-    // The index page rendered the card grid linking to the generated child page.
-    const indexHtml = readFileSync(join(siteDir, "build", "generate", "projects", "index.html"), "utf8");
+    // The declaring page (/generate) rendered the card grid linking to the child.
+    const indexHtml = readFileSync(join(siteDir, "build", "generate", "index.html"), "utf8");
     expect(indexHtml).toContain("gitlab-project-grid");
-    expect(indexHtml).toContain('href="projects/repo"');
+    expect(indexHtml).toContain('href="generate/repo"');
     expect(indexHtml).toContain("Repo");
   });
 });

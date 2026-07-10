@@ -7,7 +7,6 @@ export interface GeneratePagesSpec {
   topics: string[];
   includeSubgroups: boolean;
   includeArchived: boolean;
-  basePath: string;
 }
 
 /** Tokenize `key=value` pairs; value may be "double"/'single' quoted or bare. */
@@ -52,6 +51,5 @@ export function parseGeneratePages(attrString: string): GeneratePagesSpec {
     topics: splitList(raw.topics),
     includeSubgroups: raw.includeSubgroups === "true",
     includeArchived: raw.includeArchived === "true",
-    basePath: raw.basePath || "projects",
   };
 }

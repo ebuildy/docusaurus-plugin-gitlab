@@ -4,7 +4,7 @@ import { parseGeneratePages, SECTION_NAMES } from "./directive.js";
 describe("parseGeneratePages", () => {
   it("parses all attributes with quoted and bare values", () => {
     const spec = parseGeneratePages(
-      `group=1 sections="info,readme,releases" topics="public-docs" includeSubgroups=true includeArchived=false basePath="projects"`,
+      `group=1 sections="info,readme,releases" topics="public-docs" includeSubgroups=true includeArchived=false`,
     );
     expect(spec).toEqual({
       group: "1",
@@ -12,18 +12,16 @@ describe("parseGeneratePages", () => {
       topics: ["public-docs"],
       includeSubgroups: true,
       includeArchived: false,
-      basePath: "projects",
     });
   });
 
-  it("applies defaults: sections=[readme], no topics, flags false, basePath=projects", () => {
+  it("applies defaults: sections=[readme], no topics, flags false", () => {
     expect(parseGeneratePages(`group=42`)).toEqual({
       group: "42",
       sections: ["readme"],
       topics: [],
       includeSubgroups: false,
       includeArchived: false,
-      basePath: "projects",
     });
   });
 

@@ -1,5 +1,5 @@
 import type { GitLabContext } from "../gitlab/fetchers.js";
-import { fetchGroup, fetchGroupProjects } from "../gitlab/fetchers.js";
+import { fetchGroupProjects } from "../gitlab/fetchers.js";
 import { scanGeneratePages } from "./scan.js";
 import { writeProjectPages } from "./write.js";
 
@@ -29,11 +29,9 @@ export async function generateAll(
         includeArchived: spec.includeArchived,
         topics: spec.topics,
       });
-      const info = await fetchGroup(ctx, spec.group);
       const written = writeProjectPages(projects, {
         targetDir: hit.targetDir,
         sections: spec.sections,
-        groupLabel: String(info.name ?? spec.group),
       });
       pagesWritten += written.length;
     } catch (err) {

@@ -22,17 +22,19 @@ function ctx() {
 }
 
 describe("generateAll", () => {
-  it("generates a page tree for each directive using the group name as label", async () => {
+  it("generates a child page as a sibling of the declaring page for each directive", async () => {
     const c = ctx();
     const root = mkdtempSync(join(tmpdir(), "glsite-"));
     const docs = join(root, "docs");
-    mkdirSync(docs, { recursive: true });
-    writeFileSync(join(docs, "index.mdx"), `{@generateGitlabPages group=1 sections="readme"}`);
+    mkdirSync(join(docs, "team"), { recursive: true });
+    writeFileSync(join(docs, "team", "index.mdx"), `{@generateGitlabPages group=1 sections="readme"}`);
 
     const result = await generateAll(c, docs, { strict: true });
 
     expect(result.pagesWritten).toBe(1);
-    expect(existsSync(join(docs, "projects", "acme-web.mdx"))).toBe(true);
+    // Child page sits next to the declaring page (docs/team/index.mdx), not in a subfolder.
+    expect(existsSync(join(docs, "team", "acme-web.mdx"))).toBe(true);
+    expect(existsSync(join(docs, "team", "index.mdx"))).toBe(true);
     expect(c.client.getGroupProjects).toHaveBeenCalled();
   });
 
