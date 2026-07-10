@@ -540,12 +540,23 @@ function readRoadmapOrder(value: unknown): "start" | "due" | "title" {
   );
 }
 
-function readGroupBy(value: unknown): "none" | "label" | "parent" {
+function readRoadmapGroupBy(value: unknown): "none" | "label" | "parent" {
   if (value === undefined || value === "none") return "none";
   if (value === "label" || value === "parent") return value;
   throw new Error(
     `@ebuildy/docusaurus-plugin-gitlab: <GitlabRoadmap> "groupBy" must be "none", "label", or "parent"; got ${JSON.stringify(value)}.`,
   );
+}
+
+function readRoadmapDate(value: unknown, attr: string): string | undefined {
+  if (value === undefined) return undefined;
+  const s = String(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <GitlabRoadmap> "${attr}" must be an ISO date (YYYY-MM-DD); got ${JSON.stringify(value)}.`,
+    );
+  }
+  return s;
 }
 
 /** Build a name→LabelRef lookup from group/project labels for color resolution. */
@@ -578,11 +589,11 @@ export async function fetchRoadmap(ctx: GitLabContext, attrs: Attrs): Promise<Ro
   const project = attrs.project as string | number | undefined;
   const scale = readRoadmapScale(attrs.scale);
   const order = readRoadmapOrder(attrs.order);
-  const groupBy = readGroupBy(attrs.groupBy);
+  const groupBy = readRoadmapGroupBy(attrs.groupBy);
   const state = (attrs.state as string) ?? "opened";
   const labels = attrs.labels as string | undefined;
-  const from = attrs.from as string | undefined;
-  const to = attrs.to as string | undefined;
+  const from = readRoadmapDate(attrs.from, "from");
+  const to = readRoadmapDate(attrs.to, "to");
   const limit = typeof attrs.limit === "number" ? attrs.limit : 50;
 
   if (source === "epics" && group === undefined) {
@@ -641,6 +652,8 @@ async function fetchEpicItems(
     color: e.color,
     progress: computeProgress(e.descendant_counts),
     parentId: e.parent_id ?? null,
+    // parentTitle resolves only within the fetched page; a parent outside the
+    // result set (filtered out or beyond the page ceiling) yields null → grouped under "(no parent)".
     parentTitle: e.parent_id != null ? byId.get(e.parent_id)?.title ?? null : null,
     labels: resolveLabels(Array.isArray(e.labels) ? e.labels : [], idx),
   } satisfies RoadmapItemData));

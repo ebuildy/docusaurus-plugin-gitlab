@@ -720,6 +720,12 @@ describe("fetchRoadmap (epics)", () => {
     c.options.strict = true;
     await expect(fetchRoadmap(c, { source: "epics", group: "g" })).rejects.toThrow("403 tier");
   });
+
+  it("rejects a non-ISO from/to date", async () => {
+    const client = { getGroupEpics: vi.fn(async () => []), getGroupLabels: vi.fn(async () => []) };
+    const c = ctx(client);
+    await expect(fetchRoadmap(c, { source: "epics", group: "g", from: "last week" })).rejects.toThrow(/YYYY-MM-DD/);
+  });
 });
 
 describe("fetchRoadmap (milestones)", () => {
