@@ -32,6 +32,7 @@ describe("e2e: docusaurus build", () => {
       recursive: true,
       force: true,
     });
+    rmSync(join(siteDir, "docs", "generate", "projects"), { recursive: true, force: true });
     await runBuild({ ...process.env, GITLAB_HOST: stub.url, GITLAB_TOKEN: "" });
   }, 180_000);
 
@@ -39,6 +40,7 @@ describe("e2e: docusaurus build", () => {
     await stub?.stop();
     rmSync(join(siteDir, "build"), { recursive: true, force: true });
     rmSync(join(siteDir, "static", "gitlab-assets"), { recursive: true, force: true });
+    rmSync(join(siteDir, "docs", "generate", "projects"), { recursive: true, force: true });
   });
 
   it("bakes project info, releases, and issues into the static html", () => {
@@ -92,5 +94,21 @@ describe("e2e: docusaurus build", () => {
     expect(html).toContain("New capability");
     // group label with the group issues link
     expect(html).toContain("/groups/my-group/-/issues?label_name[]=epic");
+  });
+
+  it("generates a page per group project and a card grid on the index page", () => {
+    // The generator wrote the child page into the docs tree during the build.
+    const childSource = join(siteDir, "docs", "generate", "projects", "repo.mdx");
+    expect(readFileSync(childSource, "utf8")).toContain('<GitlabReadme project="group/repo" />');
+
+    // The child page built and baked in the README.
+    const childHtml = readFileSync(join(siteDir, "build", "generate", "projects", "repo", "index.html"), "utf8");
+    expect(childHtml).toContain("Readme body");
+
+    // The index page rendered the card grid linking to the generated child page.
+    const indexHtml = readFileSync(join(siteDir, "build", "generate", "projects", "index.html"), "utf8");
+    expect(indexHtml).toContain("gitlab-project-grid");
+    expect(indexHtml).toContain('href="projects/repo"');
+    expect(indexHtml).toContain("Repo");
   });
 });
