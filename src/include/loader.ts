@@ -1,4 +1,3 @@
-import { basename, dirname } from "node:path";
 import { rewriteGeneratePages } from "../generate/rewrite.js";
 import type { ResolvedOptions } from "../options.js";
 import { getContext } from "./context.js";
@@ -8,19 +7,14 @@ import { transformIncludes } from "./transform.js";
 interface LoaderThis {
   async: () => (err: Error | null, content?: string) => void;
   getOptions: () => { resolved: ResolvedOptions; processorsId?: string };
-  /** Absolute path of the file being compiled (provided by webpack). */
-  resourcePath?: string;
 }
 
 export default function gitlabIncludeLoader(this: LoaderThis, source: string): void {
   const callback = this.async();
   const { resolved, processorsId } = this.getOptions();
-  // The declaring page's folder name; the project grid builds card links relative
-  // to it (`<linkBase>/<slug>`) so they resolve to the generated child pages.
-  const linkBase = this.resourcePath ? basename(dirname(this.resourcePath)) : "";
   // Directive-syntax errors here intentionally fail the build fast (unlike the
   // include path's `strict` degrade): a malformed directive is an authoring bug.
-  const rewritten = rewriteGeneratePages(source, linkBase);
+  const rewritten = rewriteGeneratePages(source);
 
   if (!rewritten.includes("{@includeGitlab")) {
     callback(null, rewritten);

@@ -8,17 +8,16 @@ const projects = [
 ];
 
 describe("GitlabProjectGrid", () => {
-  it("renders a card per project linking to its generated page under linkBase", () => {
-    render(<GitlabProjectGrid data={projects as any} linkBase="team" />);
-    const web = screen.getByRole("link", { name: /Acme Web/ });
-    expect(web).toHaveAttribute("href", "team/acme-web");
-    const mobile = screen.getByRole("link", { name: /Mobile/ });
-    expect(mobile).toHaveAttribute("href", "team/team-x/acme-mobile");
+  it("links each card to the project's slug, relative to the declaring folder-index page", () => {
+    render(<GitlabProjectGrid data={projects as any} />);
+    // Bare slug resolves against the declaring page's trailing-slash directory URL
+    // (e.g. `/team/` + `acme-web` → `/team/acme-web`).
+    expect(screen.getByRole("link", { name: /Acme Web/ })).toHaveAttribute("href", "acme-web");
+    expect(screen.getByRole("link", { name: /Mobile/ })).toHaveAttribute("href", "team-x/acme-mobile");
   });
 
-  it("links relative to the slug when no linkBase is given, and shows description + star count", () => {
+  it("shows description and star count", () => {
     render(<GitlabProjectGrid data={[projects[0]] as any} />);
-    expect(screen.getByRole("link", { name: /Acme Web/ })).toHaveAttribute("href", "acme-web");
     expect(screen.getByText("web app")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
   });

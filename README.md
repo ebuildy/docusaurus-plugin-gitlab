@@ -330,9 +330,10 @@ npx docusaurus gitlab:generate
 
 On the declaring page itself, the directive is replaced with a
 `<GitlabProjectGrid>` card grid — one card per project, linking to its generated
-child page. Card links assume Docusaurus's default (no-trailing-slash) doc URLs;
-if your site is configured with `trailingSlash: true`, adjust routing
-accordingly.
+child page. Because the declaring page is a folder index, it is served at a
+directory URL with a trailing slash (e.g. `/team/`), so each card links to the
+child with a bare relative slug (`<slug>` → `/team/<slug>`). If your site sets
+`trailingSlash: false`, adjust routing accordingly.
 
 ### `::include` directives inside included markdown
 

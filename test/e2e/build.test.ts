@@ -117,10 +117,12 @@ describe("e2e: docusaurus build", () => {
     const childHtml = readFileSync(join(siteDir, "build", "generate", "repo", "index.html"), "utf8");
     expect(childHtml).toContain("Readme body");
 
-    // The declaring page (/generate) rendered the card grid linking to the child.
+    // The declaring page (/generate/) rendered the card grid linking to the child
+    // via a bare slug, which resolves against the page's trailing-slash URL
+    // (`/generate/` + `repo` → `/generate/repo`).
     const indexHtml = readFileSync(join(siteDir, "build", "generate", "index.html"), "utf8");
     expect(indexHtml).toContain("gitlab-project-grid");
-    expect(indexHtml).toContain('href="generate/repo"');
+    expect(indexHtml).toContain('class="gitlab-project-card" href="repo"');
     expect(indexHtml).toContain("Repo");
   });
 });
