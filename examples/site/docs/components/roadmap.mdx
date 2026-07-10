@@ -1,0 +1,52 @@
+---
+title: GitlabRoadmap
+sidebar_position: 9
+---
+
+# `<GitlabRoadmap>`
+
+Renders a build-time timeline of GitLab **epics** (Premium/Ultimate, group-level) or
+**milestones** (free; project or group), as horizontal Gantt bars or a vertical
+timeline spine.
+
+## Usage
+
+```mdx
+<GitlabRoadmap source="milestones" project="group/repo" layout="gantt" showLabels />
+
+<GitlabRoadmap source="milestones" project="group/repo" layout="timeline" />
+
+<GitlabRoadmap source="milestones" group="my-group" layout="gantt" groupBy="label" colorBy="label" />
+
+<GitlabRoadmap source="epics" group="my-group" layout="gantt" showProgress />
+```
+
+## Props
+
+| Prop | Values | Default | Notes |
+|---|---|---|---|
+| `source` | `epics` \| `milestones` | `epics` | Fetch path |
+| `group` | group path/id | — | Required for epics; one of group/project for milestones |
+| `project` | project path/id | — | Milestones only |
+| `layout` | `gantt` \| `timeline` | `gantt` | Horizontal bars vs. vertical spine |
+| `scale` | `quarters` \| `months` \| `weeks` | auto | Auto from span; prop overrides |
+| `state` | `opened` \| `closed` \| `all` | `opened` | |
+| `labels` | comma-separated | — | Label filter |
+| `from` / `to` | `YYYY-MM-DD` | derived | Explicit window |
+| `limit` | number | `50` | Max items (≤ 500) |
+| `order` | `start` \| `due` \| `title` | `start` | Sort key |
+| `groupBy` | `none` \| `label` \| `parent` | `none` | Section headings |
+| `colorBy` | `source` \| `label` \| `state` | `source` | Bar/card tint |
+| `showProgress` | boolean | `true` | Epics only |
+| `showLabels` | boolean | `false` | Inline label chips |
+
+## Notes
+
+- **Epics** require GitLab Premium/Ultimate and are always group-level: pass `group`
+  (a `project` is ignored). A free/anonymous build against a group without epics
+  returns nothing (or a fallback in non-strict mode).
+- **Milestones** are available on the free tier and can be scoped to either a
+  `project` or a `group`.
+- `scale` defaults to a value derived from the total span of the items; set it
+  explicitly to force `quarters`, `months`, or `weeks`.
+- `showProgress` only affects epics (progress is computed from their child issues).

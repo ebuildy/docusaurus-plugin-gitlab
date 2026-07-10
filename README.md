@@ -264,6 +264,34 @@ Both components render [scoped labels/topics](https://docs.gitlab.com/ee/user/pr
 (`scope::value`, e.g. `Abilities::Performance`) as a two-part badge — the scope keeps its
 color and the value gets a dark-gray background. The split is on the last `::`.
 
+### `<GitlabRoadmap>`
+
+Renders a timeline of GitLab **epics** (Premium/Ultimate, group-level) or
+**milestones** (free; project or group). All data is fetched at build time.
+
+```mdx
+<GitlabRoadmap source="milestones" project="group/repo" layout="gantt" showLabels />
+
+<GitlabRoadmap source="milestones" project="group/repo" layout="timeline" />
+```
+
+| Prop | Values | Default | Notes |
+|---|---|---|---|
+| `source` | `epics` \| `milestones` | `epics` | Fetch path |
+| `group` | group path/id | — | Required for epics; one of group/project for milestones |
+| `project` | project path/id | — | Milestones only |
+| `layout` | `gantt` \| `timeline` | `gantt` | Horizontal bars vs. vertical spine |
+| `scale` | `quarters` \| `months` \| `weeks` | auto | Auto from span; prop overrides |
+| `state` | `opened` \| `closed` \| `all` | `opened` | |
+| `labels` | comma-separated | — | Label filter |
+| `from` / `to` | `YYYY-MM-DD` | derived | Explicit window |
+| `limit` | number | `50` | Max items (≤ 500) |
+| `order` | `start` \| `due` \| `title` | `start` | Sort key |
+| `groupBy` | `none` \| `label` \| `parent` | `none` | Section headings |
+| `colorBy` | `source` \| `label` \| `state` | `source` | Bar/card tint |
+| `showProgress` | boolean | `true` | Epics only |
+| `showLabels` | boolean | `false` | Inline label chips |
+
 ## Generating pages from a group
 
 Instead of writing one page per project by hand, drop a single directive on a
