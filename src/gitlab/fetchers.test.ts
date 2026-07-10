@@ -6,7 +6,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects, fetchRoadmap } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -680,5 +680,44 @@ describe("fetchGroupProjects", () => {
     await fetchGroupProjects(c, { group: "mygroup" });
     await fetchGroupProjects(c, { group: "mygroup" });
     expect(c.client.getGroupProjects).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("fetchRoadmap (epics)", () => {
+  const epics = [
+    { id: 10, iid: 1, title: "Auth", state: "opened", start_date: "2026-01-01", due_date: "2026-03-01",
+      web_url: "https://gitlab.com/groups/g/-/epics/1", color: "#1f75cb", parent_id: null, labels: ["backend"] },
+    { id: 11, iid: 2, title: "Billing", state: "closed", start_date: "2026-02-01", due_date: "2026-05-01",
+      web_url: "https://gitlab.com/groups/g/-/epics/2", color: "#6666c4", parent_id: 10, labels: [] },
+  ];
+
+  it("normalizes epics into positioned RoadmapData", async () => {
+    const client = {
+      getGroupEpics: vi.fn(async () => epics),
+      getGroupLabels: vi.fn(async () => [{ name: "backend", color: "#dbeafe", text_color: "#1e40af" }]),
+    };
+    const c = ctx(client);
+    const data = await fetchRoadmap(c, { source: "epics", group: "g" });
+    expect(data.source).toBe("epics");
+    const items = data.groups.flatMap((g) => g.items);
+    expect(items.map((i) => i.title).sort()).toEqual(["Auth", "Billing"]);
+    const auth = items.find((i) => i.title === "Auth")!;
+    expect(auth.startDate).toBe("2026-01-01");
+    expect(auth.color).toBe("#1f75cb");
+    expect(auth.labels).toEqual([{ name: "backend", color: "#dbeafe", textColor: "#1e40af" }]);
+    expect(auth.widthPct).toBeGreaterThan(0);
+    expect(client.getGroupEpics).toHaveBeenCalled();
+  });
+
+  it("throws when source is epics but group is missing", async () => {
+    const c = ctx({});
+    await expect(fetchRoadmap(c, { source: "epics" })).rejects.toThrow(/group/);
+  });
+
+  it("degrades: rethrows in strict mode", async () => {
+    const client = { getGroupEpics: vi.fn(async () => { throw new Error("403 tier"); }) };
+    const c = ctx(client);
+    c.options.strict = true;
+    await expect(fetchRoadmap(c, { source: "epics", group: "g" })).rejects.toThrow("403 tier");
   });
 });

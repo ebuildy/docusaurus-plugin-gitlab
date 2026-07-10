@@ -8,6 +8,7 @@ import type { AssetManager } from "./assets";
 import type { FileCache } from "./cache";
 import type { GitLabClient, PageOptions } from "./client";
 import { renderMarkdown } from "./markdown.js";
+import { buildRoadmap, type BuildRoadmapOptions } from "./roadmap.js";
 import type { TocEntry, TocMode } from "./toc.js";
 import type {
   CommitData,
@@ -15,9 +16,13 @@ import type {
   GroupProjectData,
   IssueData,
   LabelData,
+  LabelRef,
   ProjectInfoData,
   ReadmeData,
   ReleaseData,
+  RoadmapData,
+  RoadmapItemData,
+  RoadmapScale,
   TopicData,
 } from "./types";
 
@@ -509,4 +514,152 @@ export async function fetchFileSource(
     const raw = await ctx.client.getFileRaw(args.project, args.path, ref);
     return { raw, ref } satisfies SourceResult;
   });
+}
+
+function readRoadmapSource(value: unknown): "epics" | "milestones" {
+  if (value === undefined || value === "epics") return "epics";
+  if (value === "milestones") return "milestones";
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabRoadmap> "source" must be "epics" or "milestones"; got ${JSON.stringify(value)}.`,
+  );
+}
+
+function readRoadmapScale(value: unknown): RoadmapScale | undefined {
+  if (value === undefined) return undefined;
+  if (value === "quarters" || value === "months" || value === "weeks") return value;
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabRoadmap> "scale" must be "quarters", "months", or "weeks"; got ${JSON.stringify(value)}.`,
+  );
+}
+
+function readRoadmapOrder(value: unknown): "start" | "due" | "title" {
+  if (value === undefined || value === "start") return "start";
+  if (value === "due" || value === "title") return value;
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabRoadmap> "order" must be "start", "due", or "title"; got ${JSON.stringify(value)}.`,
+  );
+}
+
+function readGroupBy(value: unknown): "none" | "label" | "parent" {
+  if (value === undefined || value === "none") return "none";
+  if (value === "label" || value === "parent") return value;
+  throw new Error(
+    `@ebuildy/docusaurus-plugin-gitlab: <GitlabRoadmap> "groupBy" must be "none", "label", or "parent"; got ${JSON.stringify(value)}.`,
+  );
+}
+
+/** Build a name→LabelRef lookup from group/project labels for color resolution. */
+async function labelIndex(
+  ctx: GitLabContext,
+  scope: { group?: string | number; project?: string | number },
+): Promise<Map<string, LabelRef>> {
+  const raw =
+    scope.project !== undefined
+      ? await ctx.client.getProjectLabels(scope.project).catch(() => [])
+      : scope.group !== undefined
+        ? await ctx.client.getGroupLabels(scope.group).catch(() => [])
+        : [];
+  const idx = new Map<string, LabelRef>();
+  for (const l of raw as any[]) {
+    idx.set(l.name, { name: l.name, color: l.color, textColor: l.text_color });
+  }
+  return idx;
+}
+
+function resolveLabels(names: string[], idx: Map<string, LabelRef>): LabelRef[] {
+  return names.map(
+    (name) => idx.get(name) ?? { name, color: "#e5e7eb", textColor: "#1f2937" },
+  );
+}
+
+export async function fetchRoadmap(ctx: GitLabContext, attrs: Attrs): Promise<RoadmapData> {
+  const source = readRoadmapSource(attrs.source);
+  const group = attrs.group as string | number | undefined;
+  const project = attrs.project as string | number | undefined;
+  const scale = readRoadmapScale(attrs.scale);
+  const order = readRoadmapOrder(attrs.order);
+  const groupBy = readGroupBy(attrs.groupBy);
+  const state = (attrs.state as string) ?? "opened";
+  const labels = attrs.labels as string | undefined;
+  const from = attrs.from as string | undefined;
+  const to = attrs.to as string | undefined;
+  const limit = typeof attrs.limit === "number" ? attrs.limit : 50;
+
+  if (source === "epics" && group === undefined) {
+    throw new Error(`@ebuildy/docusaurus-plugin-gitlab: <GitlabRoadmap source="epics"> requires a "group".`);
+  }
+  if (source === "milestones" && (group === undefined) === (project === undefined)) {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <GitlabRoadmap source="milestones"> requires exactly one of "project" or "group".`,
+    );
+  }
+
+  const scopeKey = project !== undefined ? `p:${String(project)}` : `g:${String(group)}`;
+  const key = `roadmap:${source}:${scopeKey}:${state}:${labels ?? ""}:${from ?? ""}:${to ?? ""}:${scale ?? "auto"}:${order}:${groupBy}:${limit}`;
+
+  // On failure this simply throws; the remark layer (src/remark/index.ts) turns a
+  // thrown fetch into an `error` prop (Fallback) when `strict` is false, and
+  // aborts the build when true — identical to every other fetcher.
+  return memo(ctx, key, async () => {
+    const buildOpts: BuildRoadmapOptions = { source, order, groupBy };
+    if (scale) buildOpts.scale = scale;
+    if (from) buildOpts.from = from;
+    if (to) buildOpts.to = to;
+
+    const items =
+      source === "epics"
+        ? await fetchEpicItems(ctx, group!, { state, labels, order }, limit)
+        : await fetchMilestoneItems(ctx, { group, project }, state, limit);
+
+    return buildRoadmap(items, buildOpts);
+  });
+}
+
+async function fetchEpicItems(
+  ctx: GitLabContext,
+  group: string | number,
+  q: { state: string; labels?: string; order: "start" | "due" | "title" },
+  limit: number,
+): Promise<RoadmapItemData[]> {
+  const orderBy = q.order === "title" ? "title" : q.order === "due" ? "due_date" : "start_date";
+  const raw = await ctx.client.getGroupEpics(group, {
+    state: q.state,
+    ...(q.labels ? { labels: q.labels } : {}),
+    orderBy,
+    sort: "asc",
+  });
+  const idx = await labelIndex(ctx, { group });
+  const byId = new Map<number, any>(raw.map((e: any) => [e.id, e]));
+  return raw.slice(0, limit).map((e: any) => ({
+    id: e.id,
+    iid: e.iid,
+    title: e.title,
+    state: e.state === "closed" ? "closed" : "opened",
+    startDate: e.start_date ?? null,
+    dueDate: e.due_date ?? null,
+    webUrl: e.web_url,
+    color: e.color,
+    progress: computeProgress(e.descendant_counts),
+    parentId: e.parent_id ?? null,
+    parentTitle: e.parent_id != null ? byId.get(e.parent_id)?.title ?? null : null,
+    labels: resolveLabels(Array.isArray(e.labels) ? e.labels : [], idx),
+  } satisfies RoadmapItemData));
+}
+
+async function fetchMilestoneItems(
+  _ctx: GitLabContext,
+  _scope: { group?: string | number; project?: string | number },
+  _state: string,
+  _limit: number,
+): Promise<RoadmapItemData[]> {
+  throw new Error("milestones source not yet implemented");
+}
+
+/** GitLab epic list payloads may include descendant issue counts; derive % from them. */
+function computeProgress(counts: any): number | null {
+  if (!counts) return null;
+  const opened = Number(counts.opened_issues ?? 0);
+  const closed = Number(counts.closed_issues ?? 0);
+  const total = opened + closed;
+  return total > 0 ? Math.round((closed / total) * 100) : null;
 }
