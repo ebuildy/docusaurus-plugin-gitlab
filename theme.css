@@ -412,7 +412,7 @@
 .gitlab-roadmap { font-size: 0.85rem; }
 .gitlab-roadmap-gantt { overflow-x: auto; }
 .gitlab-roadmap-scale {
-  position: relative; height: 1.4rem; margin-left: 12rem;
+  position: relative; height: 1.4rem; margin-left: calc(12rem + 0.5rem);
   border-bottom: 1px solid var(--ifm-color-emphasis-300);
 }
 .gitlab-roadmap-tick { position: absolute; transform: translateX(-50%); color: var(--ifm-color-emphasis-600); }
