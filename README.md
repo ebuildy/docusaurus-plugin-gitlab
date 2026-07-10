@@ -438,6 +438,9 @@ cached on disk so local `docusaurus start` hot-reloads don't hammer the API.
 Because everything happens at build time, your published HTML is self-contained:
 no tokens shipped, no client-side API calls, no CORS.
 
+For a deeper tour of the internals — the three build-time pipelines, the module
+map, and data-flow diagrams — see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+
 ## Styling
 
 The components ship **without any bundled CSS** — they render plain, stable class
