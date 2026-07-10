@@ -24,3 +24,5 @@ node_modules/.cache/
 
 .env
 external/
+# Visual brainstorming companion
+.superpowers/
