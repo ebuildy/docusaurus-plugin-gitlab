@@ -126,4 +126,10 @@ describe("gitlabPlugin", () => {
       strict: expect.any(Boolean),
     });
   });
+
+  it("does not generate when the context provides no siteDir", async () => {
+    (generateAll as unknown as { mockClear: () => void }).mockClear();
+    await gitlabPlugin({} as any, opts);
+    expect(generateAll).not.toHaveBeenCalled();
+  });
 });
