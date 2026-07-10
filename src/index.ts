@@ -19,5 +19,6 @@ export type {
   FileData,
   TopicData,
   LabelData,
+  GroupProjectData,
   FetchError,
 } from "./gitlab/types.js";

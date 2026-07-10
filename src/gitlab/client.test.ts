@@ -224,3 +224,39 @@ describe("GitLabClient", () => {
     expect(await client.getContributorsCount("g/r")).toBeUndefined();
   });
 });
+
+describe("getGroupProjects", () => {
+  it("requests group projects with subgroup recursion and archived filter", async () => {
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    const allProjects = vi.fn(async () => [{ id: 1, path: "a" }]);
+    (client as any).api = { Groups: { allProjects } };
+
+    const res = await client.getGroupProjects(1, { includeSubgroups: true, archived: false });
+
+    expect(res).toEqual([{ id: 1, path: "a" }]);
+    expect(allProjects).toHaveBeenCalledWith(1, {
+      includeSubgroups: true,
+      archived: false,
+      perPage: 100,
+      maxPages: 5,
+      orderBy: "path",
+      sort: "asc",
+    });
+  });
+
+  it("omits archived filter when includeArchived is requested (archived undefined)", async () => {
+    const client = new GitLabClient({ host: "https://gitlab.com" });
+    const allProjects = vi.fn(async () => []);
+    (client as any).api = { Groups: { allProjects } };
+
+    await client.getGroupProjects("grp", { includeSubgroups: false });
+
+    expect(allProjects).toHaveBeenCalledWith("grp", {
+      includeSubgroups: false,
+      perPage: 100,
+      maxPages: 5,
+      orderBy: "path",
+      sort: "asc",
+    });
+  });
+});
