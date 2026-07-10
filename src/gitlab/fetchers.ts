@@ -632,7 +632,10 @@ async function fetchEpicItems(
   q: { state: string; labels?: string; order: "start" | "due" | "title" },
   limit: number,
 ): Promise<RoadmapItemData[]> {
-  const orderBy = q.order === "title" ? "title" : q.order === "due" ? "due_date" : "start_date";
+  // The Epics API's order_by only accepts created_at | updated_at | title — NOT
+  // start_date/due_date. start/due ordering is applied client-side in buildRoadmap;
+  // here we pass a valid API value so GitLab doesn't reject the request.
+  const orderBy = q.order === "title" ? "title" : "created_at";
   const raw = await ctx.client.getGroupEpics(group, {
     state: q.state,
     ...(q.labels ? { labels: q.labels } : {}),

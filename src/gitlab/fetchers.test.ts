@@ -709,6 +709,19 @@ describe("fetchRoadmap (epics)", () => {
     expect(client.getGroupEpics).toHaveBeenCalled();
   });
 
+  it("sends only an Epics-API-valid order_by (never start_date/due_date)", async () => {
+    // The GitLab Epics API rejects order_by=start_date|due_date; start/due ordering
+    // is done client-side. Guard against re-introducing an invalid API value.
+    const valid = new Set(["created_at", "updated_at", "title"]);
+    for (const order of ["start", "due", "title"] as const) {
+      const client = { getGroupEpics: vi.fn(async () => epics), getGroupLabels: vi.fn(async () => []) };
+      const c = ctx(client);
+      await fetchRoadmap(c, { source: "epics", group: "g", order });
+      const passedOrderBy = (client.getGroupEpics.mock.calls[0] as any)[1].orderBy;
+      expect(valid.has(passedOrderBy)).toBe(true);
+    }
+  });
+
   it("throws when source is epics but group is missing", async () => {
     const c = ctx({});
     await expect(fetchRoadmap(c, { source: "epics" })).rejects.toThrow(/group/);
