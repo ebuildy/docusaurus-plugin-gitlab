@@ -2,46 +2,79 @@ import type { ScaleTick } from "./types.js";
 
 export type LayoutFit = "page" | "content";
 
-/**
- * Roughly the number of short scale labels ("Feb", "Q1 26", "2026") that fit
- * across a default docs page column without the tick text overlapping. Used only
- * to decide when a page-fit gantt must coarsen its ticks.
- */
-export const MAX_PAGE_TICKS = 16;
+/** A scale tick plus a flag marking year boundaries, which render a vertical rule. */
+export interface RenderTick extends ScaleTick {
+  major?: boolean;
+}
+
+const MS_PER_DAY = 86_400_000;
+const MS_PER_YEAR = 365.25 * MS_PER_DAY;
+/** Safety cap so a decades-long, year-only axis still can't overlap. */
+const MAX_YEAR_TICKS = 20;
+
+function parseDay(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+function toISODate(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
 
 /**
- * Choose which scale ticks to render.
- *
- * - `content`: the gantt is allowed to grow and scroll, so every tick is shown.
- * - `page`: the gantt is pinned to the page width, so ticks are thinned until
- *   at most `MAX_PAGE_TICKS` labels remain (preventing overlap):
- *     1. if already ≤ max, keep them all;
- *     2. otherwise collapse to one tick per calendar year (relabelled "2026"),
- *        positioned at that year's first tick;
- *     3. if the years still exceed the max (decade-plus roadmaps), keep every
- *        ⌈years/max⌉-th year.
- *   When ticks carry no `date` (older callers), fall back to keeping every
- *   ⌈n/max⌉-th raw tick — still guaranteeing ≤ max labels.
+ * Ticks for the page-fit gantt, chosen by the timeline span so labels never
+ * overlap (they replace the fine weekly/monthly ticks, which would crowd a
+ * fixed-width axis):
+ *   - span > 6 years → one label per year (thinned further past ~20 years);
+ *   - span > 3 years → a year label per year + an unlabelled mid-year mark;
+ *   - span ≤ 3 years → quarter labels, each year boundary shown as the year.
+ * Year boundaries are flagged `major` so the gantt draws a vertical rule there.
  */
-export function visibleTicks(ticks: ScaleTick[], fit: LayoutFit, max = MAX_PAGE_TICKS): ScaleTick[] {
-  if (fit === "content" || ticks.length <= max) return ticks;
+export function pageTicks(rangeStart: string, rangeEnd: string): RenderTick[] {
+  const startMs = parseDay(rangeStart);
+  const endMs = parseDay(rangeEnd);
+  const total = endMs - startMs;
+  if (total <= 0) return [];
 
-  const yearOf = (t: ScaleTick): string | undefined => t.date?.slice(0, 4);
-  if (ticks.every((t) => yearOf(t) !== undefined)) {
-    const years: ScaleTick[] = [];
-    let seen: string | undefined;
-    for (const t of ticks) {
-      const y = yearOf(t)!;
-      if (y !== seen) {
-        years.push({ label: y, offsetPct: t.offsetPct, date: t.date });
-        seen = y;
+  const startYear = new Date(startMs).getUTCFullYear();
+  const endYear = new Date(endMs).getUTCFullYear();
+  const spanYears = total / MS_PER_YEAR;
+  const ticks: RenderTick[] = [];
+  const add = (ms: number, label: string, major: boolean): void => {
+    if (ms >= startMs && ms < endMs) {
+      ticks.push({ label, offsetPct: ((ms - startMs) / total) * 100, date: toISODate(ms), major });
+    }
+  };
+
+  if (spanYears > 6) {
+    const years: number[] = [];
+    for (let y = startYear; y <= endYear; y++) years.push(y);
+    const step = Math.ceil(years.length / MAX_YEAR_TICKS);
+    years.filter((_, i) => i % step === 0).forEach((y) => add(Date.UTC(y, 0, 1), String(y), true));
+  } else if (spanYears > 3) {
+    for (let y = startYear; y <= endYear; y++) {
+      add(Date.UTC(y, 0, 1), String(y), true);
+      add(Date.UTC(y, 6, 1), "", false); // mid-year marker
+    }
+  } else {
+    for (let y = startYear; y <= endYear; y++) {
+      for (let q = 0; q < 4; q++) {
+        const major = q === 0;
+        add(Date.UTC(y, q * 3, 1), major ? String(y) : `Q${q + 1}`, major);
       }
     }
-    if (years.length <= max) return years;
-    const step = Math.ceil(years.length / max);
-    return years.filter((_, i) => i % step === 0);
   }
+  return ticks;
+}
 
-  const step = Math.ceil(ticks.length / max);
-  return ticks.filter((_, i) => i % step === 0);
+/**
+ * Choose which ticks the gantt renders. Content fit keeps the full (fine) tick
+ * set and scrolls; page fit regenerates a span-appropriate, non-overlapping set.
+ */
+export function visibleTicks(
+  ticks: ScaleTick[],
+  fit: LayoutFit,
+  rangeStart: string,
+  rangeEnd: string,
+): RenderTick[] {
+  return fit === "content" ? ticks : pageTicks(rangeStart, rangeEnd);
 }

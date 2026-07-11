@@ -424,6 +424,13 @@
   position: absolute; transform: translateX(-50%); white-space: nowrap;
   color: var(--ifm-color-emphasis-600);
 }
+/* Year boundaries: bolder label + a vertical rule dropping to the scale baseline. */
+.gitlab-roadmap-tick-major { font-weight: 600; color: var(--ifm-color-emphasis-800); }
+.gitlab-roadmap-tick-major::after {
+  content: ""; position: absolute; left: 50%; top: 100%;
+  width: 1px; height: 0.45rem; background: var(--ifm-color-emphasis-500);
+  transform: translateX(-50%);
+}
 .gitlab-roadmap-group-title { font-weight: 600; margin: 0.6rem 0 0.3rem; }
 .gitlab-roadmap-row { display: grid; grid-template-columns: 12rem 1fr; gap: 0.5rem; align-items: center; margin: 0.25rem 0; }
 .gitlab-roadmap-label-col { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

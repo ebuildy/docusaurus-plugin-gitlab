@@ -1,46 +1,49 @@
 import { describe, it, expect } from "vitest";
-import { visibleTicks } from "./roadmapTicks";
+import { visibleTicks, pageTicks } from "./roadmapTicks";
 import type { ScaleTick } from "./types";
 
-function monthlyTicks(months: number): ScaleTick[] {
-  // months evenly spread; date walks forward one month at a time from 2026-01.
-  return Array.from({ length: months }, (_, i) => {
-    const y = 2026 + Math.floor(i / 12);
-    const m = String((i % 12) + 1).padStart(2, "0");
-    return { label: "M", offsetPct: (i / months) * 100, date: `${y}-${m}-01` };
-  });
-}
-
 describe("visibleTicks", () => {
-  it("content fit keeps every tick", () => {
-    const ticks = monthlyTicks(48);
-    expect(visibleTicks(ticks, "content")).toHaveLength(48);
+  it("content fit returns the given ticks unchanged", () => {
+    const ticks: ScaleTick[] = [{ label: "Jan", offsetPct: 0 }, { label: "Feb", offsetPct: 50 }];
+    expect(visibleTicks(ticks, "content", "2026-01-01", "2026-03-01")).toBe(ticks);
   });
 
-  it("page fit keeps all ticks when already within the limit", () => {
-    const ticks = monthlyTicks(6);
-    expect(visibleTicks(ticks, "page")).toHaveLength(6);
+  it("page fit regenerates span-based ticks, ignoring the fine input ticks", () => {
+    const fine: ScaleTick[] = [{ label: "Jan", offsetPct: 0 }];
+    const out = visibleTicks(fine, "page", "2026-01-01", "2028-01-01");
+    expect(out).not.toContain(fine[0]);
+    expect(out.some((t) => t.label === "2026")).toBe(true);
+  });
+});
+
+describe("pageTicks", () => {
+  it("span > 6 years: only year labels, all major", () => {
+    const t = pageTicks("2026-01-01", "2033-06-01"); // ~7.4y
+    expect(t.every((x) => x.major)).toBe(true);
+    expect(t.map((x) => x.label)).toEqual(["2026", "2027", "2028", "2029", "2030", "2031", "2032", "2033"]);
   });
 
-  it("page fit collapses to one tick per year when too dense", () => {
-    const ticks = monthlyTicks(48); // 4 years of months = 48 > 16
-    const result = visibleTicks(ticks, "page");
-    expect(result.map((t) => t.label)).toEqual(["2026", "2027", "2028", "2029"]);
-    // year ticks sit at each year's first tick offset
-    expect(result[0].offsetPct).toBe(0);
+  it("span > 3 and <= 6 years: year majors plus unlabelled mid-year minors", () => {
+    const t = pageTicks("2026-01-01", "2030-06-01"); // ~4.4y
+    expect(t.filter((x) => x.major).map((x) => x.label)).toEqual(["2026", "2027", "2028", "2029", "2030"]);
+    const minors = t.filter((x) => !x.major);
+    expect(minors).toHaveLength(4); // mid-2026..mid-2029 (mid-2030 is past the end)
+    expect(minors.every((x) => x.label === "")).toBe(true);
   });
 
-  it("page fit thins years further for decade-plus roadmaps", () => {
-    const ticks = monthlyTicks(12 * 40); // 40 years of months
-    const result = visibleTicks(ticks, "page");
-    expect(result.length).toBeLessThanOrEqual(16);
-    expect(result.length).toBeGreaterThan(1);
+  it("span <= 3 years: quarter labels with each year boundary shown as the year (major)", () => {
+    const t = pageTicks("2026-01-01", "2028-01-01"); // 2y
+    expect(t.filter((x) => x.major).map((x) => x.label)).toEqual(["2026", "2027"]);
+    expect(t.map((x) => x.label)).toEqual(["2026", "Q2", "Q3", "Q4", "2027", "Q2", "Q3", "Q4"]);
   });
 
-  it("page fit falls back to every-Nth tick when ticks lack dates", () => {
-    const ticks: ScaleTick[] = Array.from({ length: 40 }, (_, i) => ({ label: `W${i}`, offsetPct: i * 2.5 }));
-    const result = visibleTicks(ticks, "page");
-    expect(result.length).toBeLessThanOrEqual(16);
-    expect(result[0].label).toBe("W0");
+  it("caps a decades-long span so year labels can't overflow", () => {
+    const t = pageTicks("2000-01-01", "2050-01-01"); // 50y
+    expect(t.length).toBeLessThanOrEqual(20);
+    expect(t.every((x) => x.major)).toBe(true);
+  });
+
+  it("returns nothing for a non-positive window", () => {
+    expect(pageTicks("2026-01-01", "2026-01-01")).toEqual([]);
   });
 });

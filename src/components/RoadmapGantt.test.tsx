@@ -21,7 +21,8 @@ describe("RoadmapGantt", () => {
   it("renders the scale header, group heading, and a positioned bar", () => {
     const { container } = render(<RoadmapGantt data={data} colorBy="source" showProgress showLabels />);
     expect(screen.getByText("Platform")).toBeInTheDocument();
-    expect(screen.getByText("Jan")).toBeInTheDocument();
+    // page fit (default) regenerates span-based ticks; a <1y span → a year boundary tick.
+    expect(screen.getByText("2026")).toBeInTheDocument();
     const bar = container.querySelector(".gitlab-roadmap-bar") as HTMLElement;
     expect(bar).toHaveStyle({ left: "10%", width: "40%", backgroundColor: "#1f75cb" });
     expect(screen.getByRole("link", { name: /Auth/ })).toHaveAttribute("href", "https://x/1");
@@ -59,15 +60,11 @@ describe("RoadmapGantt", () => {
     expect(inner.style.minWidth).toBe("calc(18.5rem)");
   });
 
-  it("page fit thins a dense monthly scale down to year labels", () => {
-    const months = Array.from({ length: 48 }, (_, i) => {
-      const y = 2026 + Math.floor(i / 12);
-      const m = String((i % 12) + 1).padStart(2, "0");
-      return { label: "M", offsetPct: (i / 48) * 100, date: `${y}-${m}-01` };
-    });
-    const dense: RoadmapData = { ...data, ticks: months };
-    const { container } = render(<RoadmapGantt data={dense} colorBy="source" showProgress showLabels layoutFit="page" />);
+  it("page fit reduces a long multi-year span to year ticks with vertical rules", () => {
+    const longSpan: RoadmapData = { ...data, rangeStart: "2026-01-01", rangeEnd: "2033-06-01", ticks: [] };
+    const { container } = render(<RoadmapGantt data={longSpan} colorBy="source" showProgress showLabels layoutFit="page" />);
     const labels = [...container.querySelectorAll(".gitlab-roadmap-tick")].map((n) => n.textContent);
-    expect(labels).toEqual(["2026", "2027", "2028", "2029"]);
+    expect(labels).toEqual(["2026", "2027", "2028", "2029", "2030", "2031", "2032", "2033"]);
+    expect(container.querySelectorAll(".gitlab-roadmap-tick-major")).toHaveLength(8);
   });
 });

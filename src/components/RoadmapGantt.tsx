@@ -30,7 +30,7 @@ function LabelChips({ item }: { item: RoadmapPositionedItem }) {
 }
 
 export function RoadmapGantt({ data, colorBy, showProgress, showLabels, layoutFit = "page" }: RoadmapViewProps) {
-  const ticks = visibleTicks(data.ticks, layoutFit);
+  const ticks = visibleTicks(data.ticks, layoutFit, data.rangeStart, data.rangeEnd);
   // In content fit the gantt grows past the page and scrolls; size it to the full
   // (un-thinned) tick count so bars keep room. Page fit stays at 100% (no min-width).
   const minWidth =
@@ -43,7 +43,11 @@ export function RoadmapGantt({ data, colorBy, showProgress, showLabels, layoutFi
       <div className="gitlab-roadmap-gantt-inner" style={{ minWidth }}>
         <div className="gitlab-roadmap-scale">
           {ticks.map((t) => (
-            <span key={t.label + t.offsetPct} className="gitlab-roadmap-tick" style={{ left: `${t.offsetPct}%` }}>
+            <span
+              key={t.label + t.offsetPct}
+              className={t.major ? "gitlab-roadmap-tick gitlab-roadmap-tick-major" : "gitlab-roadmap-tick"}
+              style={{ left: `${t.offsetPct}%` }}
+            >
               {t.label}
             </span>
           ))}
