@@ -36,7 +36,7 @@ timeline spine.
 | `from` / `to` | `YYYY-MM-DD` | derived | Explicit window |
 | `limit` | number | `50` | Max items (≤ 500) |
 | `order` | `start` \| `due` \| `title` | `start` | Sort key |
-| `groupBy` | `none` \| `label` \| `parent` | `none` | Section headings |
+| `groupBy` | `none` \| `label` \| `parent` | `none` | Section headings. In the **timeline** layout, `none` groups items by **year → quarter** |
 | `colorBy` | `source` \| `label` \| `state` | `source` | Bar/card tint |
 | `showProgress` | boolean | `true` | Epics only |
 | `showLabels` | boolean | `false` | Inline label chips |
@@ -51,3 +51,5 @@ timeline spine.
 - `scale` defaults to a value derived from the total span of the items; set it
   explicitly to force `quarters`, `months`, or `weeks`.
 - `showProgress` only affects epics (progress is computed from their child issues).
+- The **timeline** layout groups items by **year → quarter** by default; setting
+  `groupBy` to `label` or `parent` switches it to those flat sections instead.

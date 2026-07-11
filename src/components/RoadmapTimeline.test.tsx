@@ -34,4 +34,27 @@ describe("RoadmapTimeline", () => {
     expect(container.querySelector(".gitlab-roadmap-meter")).toBeNull();
     expect(queryByText("backend")).toBeNull();
   });
+
+  it("date-groups ungrouped data by year then quarter (the default)", () => {
+    const item = (id: number, title: string, start: string): RoadmapData["groups"][0]["items"][0] => ({
+      id, iid: id, title, state: "opened", startDate: start, dueDate: null,
+      webUrl: `https://x/${id}`, labels: [], offsetPct: 0, widthPct: 10,
+    });
+    const ungrouped: RoadmapData = {
+      source: "epics", scale: "quarters", rangeStart: "2026-01-01", rangeEnd: "2027-06-01", ticks: [],
+      groups: [{ key: "all", title: null, items: [
+        item(1, "Auth", "2026-01-15"),
+        item(2, "Billing", "2026-05-01"),
+        item(3, "Search", "2027-02-01"),
+      ] }],
+    };
+    const { container } = render(<RoadmapTimeline data={ungrouped} colorBy="source" showProgress showLabels />);
+    // Year headings (group-title) and quarter sub-headings.
+    expect(screen.getByText("2026")).toBeInTheDocument();
+    expect(screen.getByText("2027")).toBeInTheDocument();
+    expect(container.querySelectorAll(".gitlab-roadmap-subgroup-title")).toHaveLength(3); // 2026 Q1, 2026 Q2, 2027 Q1
+    expect(screen.getByText("Q2")).toBeInTheDocument();
+    expect(screen.getAllByText("Q1")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "Auth" })).toBeInTheDocument();
+  });
 });

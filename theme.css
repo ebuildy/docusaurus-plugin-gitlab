@@ -448,6 +448,13 @@
   transform: translateX(-50%);
 }
 .gitlab-roadmap-group-title { font-weight: 600; margin: 0.6rem 0 0.3rem; }
+/* Timeline date grouping: year uses the group title above; quarter is a smaller,
+   indented sub-heading. */
+.gitlab-roadmap-subgroup { margin-left: 0.5rem; }
+.gitlab-roadmap-subgroup-title {
+  font-weight: 600; font-size: 0.8rem; color: var(--ifm-color-emphasis-700);
+  margin: 0.4rem 0 0.2rem;
+}
 .gitlab-roadmap-row { display: grid; grid-template-columns: 12rem 1fr; gap: 0.5rem; align-items: center; margin: 0.25rem 0; }
 .gitlab-roadmap-label-col { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gitlab-roadmap-track { position: relative; height: 1.25rem; background: var(--ifm-color-emphasis-100); border-radius: 4px; }
