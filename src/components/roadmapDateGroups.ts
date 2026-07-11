@@ -34,12 +34,14 @@ export function groupByYearQuarter(items: RoadmapPositionedItem[]): YearGroup[] 
     quarters.set(quarter, bucket);
     byYear.set(year, quarters);
   }
-  return [...byYear.keys()]
-    .sort()
-    .map((year) => ({
+  // Iterate entries so each year's quarter map is destructured directly — no
+  // re-lookup, no non-null assertions, so an undefined map can never be reached.
+  return [...byYear.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([year, quarters]) => ({
       year,
-      quarters: [...byYear.get(year)!.keys()]
-        .sort((a, b) => a - b)
-        .map((q) => ({ key: `${year}-Q${q}`, label: `Q${q}`, items: byYear.get(year)!.get(q)! })),
+      quarters: [...quarters.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([q, items]) => ({ key: `${year}-Q${q}`, label: `Q${q}`, items })),
     }));
 }
