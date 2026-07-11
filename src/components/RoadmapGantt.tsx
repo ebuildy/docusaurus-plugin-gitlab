@@ -1,5 +1,6 @@
 import React from "react";
 import { resolveColor, type ColorBy } from "./roadmapColor.js";
+import { visibleTicks, type LayoutFit } from "./roadmapTicks.js";
 import type { RoadmapData, RoadmapPositionedItem } from "./types.js";
 
 export interface RoadmapViewProps {
@@ -7,7 +8,14 @@ export interface RoadmapViewProps {
   colorBy: ColorBy;
   showProgress: boolean;
   showLabels: boolean;
+  /** Gantt only: pin to page width (thin ticks) or expand + scroll to fit content. */
+  layoutFit?: LayoutFit;
 }
+
+/** Width (rem) each scale unit gets when the gantt expands to fit its content. */
+const CONTENT_UNIT_REM = 3;
+/** Width (rem) of the fixed left label column (matches the CSS grid/margin). */
+const LABEL_COL_REM = 12.5;
 
 function LabelChips({ item }: { item: RoadmapPositionedItem }) {
   return (
@@ -21,11 +29,16 @@ function LabelChips({ item }: { item: RoadmapPositionedItem }) {
   );
 }
 
-export function RoadmapGantt({ data, colorBy, showProgress, showLabels }: RoadmapViewProps) {
+export function RoadmapGantt({ data, colorBy, showProgress, showLabels, layoutFit = "page" }: RoadmapViewProps) {
+  const ticks = visibleTicks(data.ticks, layoutFit);
+  // In content fit the gantt grows past the page and scrolls; size it to the full
+  // (un-thinned) tick count so bars keep room. Page fit stays at 100% (no min-width).
+  const minWidth =
+    layoutFit === "content" ? `calc(${LABEL_COL_REM}rem + ${data.ticks.length * CONTENT_UNIT_REM}rem)` : undefined;
   return (
-    <div className="gitlab-roadmap gitlab-roadmap-gantt">
+    <div className={`gitlab-roadmap gitlab-roadmap-gantt gitlab-roadmap-fit-${layoutFit}`} style={{ minWidth }}>
       <div className="gitlab-roadmap-scale">
-        {data.ticks.map((t) => (
+        {ticks.map((t) => (
           <span key={t.label + t.offsetPct} className="gitlab-roadmap-tick" style={{ left: `${t.offsetPct}%` }}>
             {t.label}
           </span>

@@ -166,6 +166,8 @@ export interface ScaleTick {
   label: string;
   /** Tick position as a percentage of the window (0..100). */
   offsetPct: number;
+  /** ISO `YYYY-MM-DD` of the tick boundary; lets a layout relabel/coarsen ticks. */
+  date?: string;
 }
 
 export interface RoadmapGroup {

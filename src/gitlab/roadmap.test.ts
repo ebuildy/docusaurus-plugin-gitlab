@@ -56,6 +56,10 @@ describe("buildTicks", () => {
     expect(ticks.map((t) => t.label)).toEqual(["Jan", "Feb", "Mar"]);
     expect(ticks[0].offsetPct).toBe(0);
   });
+  it("tags each tick with its ISO boundary date", () => {
+    const ticks = buildTicks("2026-01-01", "2026-04-01", "months");
+    expect(ticks.map((t) => t.date)).toEqual(["2026-01-01", "2026-02-01", "2026-03-01"]);
+  });
 });
 
 describe("groupItems", () => {

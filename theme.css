@@ -410,12 +410,18 @@
 
 /* Roadmap (Gantt / timeline) */
 .gitlab-roadmap { font-size: 0.85rem; }
-.gitlab-roadmap-gantt { overflow-x: auto; }
+/* layoutFit: "page" pins the gantt to the page column (no horizontal scroll);
+   "content" lets it grow to its min-width and scroll sideways. */
+.gitlab-roadmap-fit-page { overflow-x: hidden; }
+.gitlab-roadmap-fit-content { overflow-x: auto; }
 .gitlab-roadmap-scale {
   position: relative; height: 1.4rem; margin-left: calc(12rem + 0.5rem);
   border-bottom: 1px solid var(--ifm-color-emphasis-300);
 }
-.gitlab-roadmap-tick { position: absolute; transform: translateX(-50%); color: var(--ifm-color-emphasis-600); }
+.gitlab-roadmap-tick {
+  position: absolute; transform: translateX(-50%); white-space: nowrap;
+  color: var(--ifm-color-emphasis-600);
+}
 .gitlab-roadmap-group-title { font-weight: 600; margin: 0.6rem 0 0.3rem; }
 .gitlab-roadmap-row { display: grid; grid-template-columns: 12rem 1fr; gap: 0.5rem; align-items: center; margin: 0.25rem 0; }
 .gitlab-roadmap-label-col { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

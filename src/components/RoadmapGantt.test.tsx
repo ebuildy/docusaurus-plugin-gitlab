@@ -40,4 +40,31 @@ describe("RoadmapGantt", () => {
     rerender(<RoadmapGantt data={data} colorBy="source" showProgress={false} showLabels />);
     expect(queryByText("backend")).toBeInTheDocument();
   });
+
+  it("defaults to page fit: fixed width, no content min-width", () => {
+    const { container } = render(<RoadmapGantt data={data} colorBy="source" showProgress showLabels />);
+    const root = container.querySelector(".gitlab-roadmap-gantt") as HTMLElement;
+    expect(root).toHaveClass("gitlab-roadmap-fit-page");
+    expect(root.style.minWidth).toBe("");
+  });
+
+  it("content fit expands with a min-width sized to the tick count", () => {
+    const { container } = render(<RoadmapGantt data={data} colorBy="source" showProgress showLabels layoutFit="content" />);
+    const root = container.querySelector(".gitlab-roadmap-gantt") as HTMLElement;
+    expect(root).toHaveClass("gitlab-roadmap-fit-content");
+    // 12.5rem label column + 2 ticks × 3rem = 18.5rem (jsdom collapses the calc sum).
+    expect(root.style.minWidth).toBe("calc(18.5rem)");
+  });
+
+  it("page fit thins a dense monthly scale down to year labels", () => {
+    const months = Array.from({ length: 48 }, (_, i) => {
+      const y = 2026 + Math.floor(i / 12);
+      const m = String((i % 12) + 1).padStart(2, "0");
+      return { label: "M", offsetPct: (i / 48) * 100, date: `${y}-${m}-01` };
+    });
+    const dense: RoadmapData = { ...data, ticks: months };
+    const { container } = render(<RoadmapGantt data={dense} colorBy="source" showProgress showLabels layoutFit="page" />);
+    const labels = [...container.querySelectorAll(".gitlab-roadmap-tick")].map((n) => n.textContent);
+    expect(labels).toEqual(["2026", "2027", "2028", "2029"]);
+  });
 });

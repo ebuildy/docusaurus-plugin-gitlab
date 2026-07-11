@@ -110,7 +110,11 @@ export function buildTicks(rangeStart: string, rangeEnd: string, scale: RoadmapS
   const total = endMs - startMs;
   const ticks: ScaleTick[] = [];
   for (let cur = startMs; cur < endMs; cur = advance(cur, scale)) {
-    ticks.push({ label: tickLabel(cur, scale), offsetPct: ((cur - startMs) / total) * 100 });
+    ticks.push({
+      label: tickLabel(cur, scale),
+      offsetPct: ((cur - startMs) / total) * 100,
+      date: toISODate(cur),
+    });
   }
   return ticks;
 }

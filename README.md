@@ -281,6 +281,7 @@ Renders a timeline of GitLab **epics** (Premium/Ultimate, group-level) or
 | `group` | group path/id | — | Required for epics; one of group/project for milestones |
 | `project` | project path/id | — | Milestones only |
 | `layout` | `gantt` \| `timeline` | `gantt` | Horizontal bars vs. vertical spine |
+| `layoutFit` | `page` \| `content` | `page` | Gantt only: `page` pins to the page width (ticks thinned to years when dense); `content` expands with a horizontal scrollbar |
 | `scale` | `quarters` \| `months` \| `weeks` | auto | Auto from span; prop overrides |
 | `state` | `opened` \| `closed` \| `all` | `opened` | |
 | `labels` | comma-separated | — | Label filter |

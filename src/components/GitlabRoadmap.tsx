@@ -3,6 +3,7 @@ import { Fallback } from "./Fallback.js";
 import { RoadmapGantt } from "./RoadmapGantt.js";
 import { RoadmapTimeline } from "./RoadmapTimeline.js";
 import type { ColorBy } from "./roadmapColor.js";
+import type { LayoutFit } from "./roadmapTicks.js";
 import type { ComponentPayload, RoadmapData } from "./types.js";
 
 export interface GitlabRoadmapProps extends ComponentPayload<RoadmapData> {
@@ -10,6 +11,8 @@ export interface GitlabRoadmapProps extends ComponentPayload<RoadmapData> {
   colorBy?: ColorBy;
   showProgress?: boolean;
   showLabels?: boolean;
+  /** Gantt only: "page" pins to the page width (thinning ticks), "content" expands + scrolls. */
+  layoutFit?: LayoutFit;
 }
 
 export function GitlabRoadmap({
@@ -19,9 +22,11 @@ export function GitlabRoadmap({
   colorBy = "source",
   showProgress = true,
   showLabels = false,
+  layoutFit = "page",
 }: GitlabRoadmapProps) {
   if (error) return <Fallback error={error} />;
   if (!data) return null;
-  const view = { data, colorBy, showProgress, showLabels };
+  const fit: LayoutFit = layoutFit === "content" ? "content" : "page";
+  const view = { data, colorBy, showProgress, showLabels, layoutFit: fit };
   return layout === "timeline" ? <RoadmapTimeline {...view} /> : <RoadmapGantt {...view} />;
 }
