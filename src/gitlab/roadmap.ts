@@ -139,7 +139,9 @@ export function groupItems(
       map.set(k, g);
     }
   }
-  return [...map.values()];
+  // Array.from (not spread) so a bundler with loose/array-like spread assumptions
+  // can't mis-compile this Map-iterator drain — see roadmapDateGroups.ts.
+  return Array.from(map.values());
 }
 
 function sortItems(items: RoadmapItemData[], order: "start" | "due" | "title"): RoadmapItemData[] {

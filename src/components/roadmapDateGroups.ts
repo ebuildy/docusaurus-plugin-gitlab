@@ -34,13 +34,14 @@ export function groupByYearQuarter(items: RoadmapPositionedItem[]): YearGroup[] 
     quarters.set(quarter, bucket);
     byYear.set(year, quarters);
   }
-  // Iterate entries so each year's quarter map is destructured directly — no
-  // re-lookup, no non-null assertions, so an undefined map can never be reached.
-  return [...byYear.entries()]
+  // Array.from (not spread) so a Babel bundle with loose/array-like spread
+  // assumptions can't mis-compile these Map-iterator drains; entries() also lets
+  // each year's quarter map be destructured directly (no re-lookup, no `!`).
+  return Array.from(byYear.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([year, quarters]) => ({
       year,
-      quarters: [...quarters.entries()]
+      quarters: Array.from(quarters.entries())
         .sort(([a], [b]) => a - b)
         .map(([q, items]) => ({ key: `${year}-Q${q}`, label: `Q${q}`, items })),
     }));
