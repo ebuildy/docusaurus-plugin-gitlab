@@ -13,7 +13,8 @@ const MS_PER_YEAR = 365.25 * MS_PER_DAY;
 const MAX_YEAR_TICKS = 20;
 
 function parseDay(iso: string): number {
-  const [y, m, d] = iso.split("-").map(Number);
+  // Tolerate a full datetime ("2026-03-01T00:00:00Z") by taking the date part only.
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return Date.UTC(y, m - 1, d);
 }
 function toISODate(ms: number): string {

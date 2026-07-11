@@ -13,7 +13,8 @@ const MIN_WIDTH_PCT = 1; // keep zero-length/point items visible
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function parseDay(iso: string): number {
-  const [y, m, d] = iso.split("-").map(Number);
+  // Tolerate a full datetime ("2026-03-01T00:00:00Z") by taking the date part only.
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return Date.UTC(y, m - 1, d);
 }
 function toISODate(ms: number): string {

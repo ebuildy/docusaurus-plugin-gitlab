@@ -98,6 +98,17 @@ describe("buildRoadmap", () => {
     expect(data.ticks.length).toBeGreaterThan(0);
   });
 
+  it("tolerates date values that carry a time component without crashing", () => {
+    const data = buildRoadmap(
+      [item({ id: 1, title: "dt", startDate: "2026-03-01T00:00:00.000Z", dueDate: "2026-06-01T12:00:00Z" })],
+      { source: "epics", order: "start", groupBy: "none" },
+    );
+    // No RangeError, and the ISO date part is parsed cleanly (not NaN).
+    expect(data.rangeStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(data.rangeEnd).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(data.groups[0].items).toHaveLength(1);
+  });
+
   it("honors an explicit scale override and window", () => {
     const data = buildRoadmap(
       [item({ id: 1, title: "a", startDate: "2026-02-01", dueDate: "2026-03-01" })],
