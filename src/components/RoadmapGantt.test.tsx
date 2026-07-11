@@ -41,19 +41,22 @@ describe("RoadmapGantt", () => {
     expect(queryByText("backend")).toBeInTheDocument();
   });
 
-  it("defaults to page fit: fixed width, no content min-width", () => {
+  it("defaults to page fit: scroll container capped, no content min-width", () => {
     const { container } = render(<RoadmapGantt data={data} colorBy="source" showProgress showLabels />);
     const root = container.querySelector(".gitlab-roadmap-gantt") as HTMLElement;
+    const inner = container.querySelector(".gitlab-roadmap-gantt-inner") as HTMLElement;
     expect(root).toHaveClass("gitlab-roadmap-fit-page");
-    expect(root.style.minWidth).toBe("");
+    expect(inner.style.minWidth).toBe("");
   });
 
-  it("content fit expands with a min-width sized to the tick count", () => {
+  it("content fit puts a tick-count min-width on the inner box (root stays the scroll container)", () => {
     const { container } = render(<RoadmapGantt data={data} colorBy="source" showProgress showLabels layoutFit="content" />);
     const root = container.querySelector(".gitlab-roadmap-gantt") as HTMLElement;
+    const inner = container.querySelector(".gitlab-roadmap-gantt-inner") as HTMLElement;
     expect(root).toHaveClass("gitlab-roadmap-fit-content");
+    expect(root.style.minWidth).toBe(""); // min-width must NOT be on the scroll container
     // 12.5rem label column + 2 ticks × 3rem = 18.5rem (jsdom collapses the calc sum).
-    expect(root.style.minWidth).toBe("calc(18.5rem)");
+    expect(inner.style.minWidth).toBe("calc(18.5rem)");
   });
 
   it("page fit thins a dense monthly scale down to year labels", () => {

@@ -26,6 +26,8 @@ export function GitlabRoadmap({
 }: GitlabRoadmapProps) {
   if (error) return <Fallback error={error} />;
   if (!data) return null;
+  // Normalize any arbitrary MDX attribute string to a known value before it
+  // becomes a `gitlab-roadmap-fit-${fit}` class name.
   const fit: LayoutFit = layoutFit === "content" ? "content" : "page";
   const view = { data, colorBy, showProgress, showLabels, layoutFit: fit };
   return layout === "timeline" ? <RoadmapTimeline {...view} /> : <RoadmapGantt {...view} />;

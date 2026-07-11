@@ -36,15 +36,19 @@ export function RoadmapGantt({ data, colorBy, showProgress, showLabels, layoutFi
   const minWidth =
     layoutFit === "content" ? `calc(${LABEL_COL_REM}rem + ${data.ticks.length * CONTENT_UNIT_REM}rem)` : undefined;
   return (
-    <div className={`gitlab-roadmap gitlab-roadmap-gantt gitlab-roadmap-fit-${layoutFit}`} style={{ minWidth }}>
-      <div className="gitlab-roadmap-scale">
-        {ticks.map((t) => (
-          <span key={t.label + t.offsetPct} className="gitlab-roadmap-tick" style={{ left: `${t.offsetPct}%` }}>
-            {t.label}
-          </span>
-        ))}
-      </div>
-      {data.groups.map((group) => (
+    // Outer box is the scroll container (constrained to the page width); the inner
+    // box carries the content min-width so content fit scrolls internally instead of
+    // overflowing the page.
+    <div className={`gitlab-roadmap gitlab-roadmap-gantt gitlab-roadmap-fit-${layoutFit}`}>
+      <div className="gitlab-roadmap-gantt-inner" style={{ minWidth }}>
+        <div className="gitlab-roadmap-scale">
+          {ticks.map((t) => (
+            <span key={t.label + t.offsetPct} className="gitlab-roadmap-tick" style={{ left: `${t.offsetPct}%` }}>
+              {t.label}
+            </span>
+          ))}
+        </div>
+        {data.groups.map((group) => (
         <div key={group.key} className="gitlab-roadmap-group">
           {group.title && <div className="gitlab-roadmap-group-title">{group.title}</div>}
           {group.items.map((item) => {
@@ -69,7 +73,8 @@ export function RoadmapGantt({ data, colorBy, showProgress, showLabels, layoutFi
             );
           })}
         </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

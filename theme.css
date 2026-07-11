@@ -410,8 +410,10 @@
 
 /* Roadmap (Gantt / timeline) */
 .gitlab-roadmap { font-size: 0.85rem; }
-/* layoutFit: "page" pins the gantt to the page column (no horizontal scroll);
-   "content" lets it grow to its min-width and scroll sideways. */
+/* layoutFit: the gantt root is the scroll container, capped at the page width;
+   the inner box carries the content min-width. "page" hides overflow (ticks are
+   thinned to fit); "content" scrolls sideways to the inner min-width. */
+.gitlab-roadmap-gantt { max-width: 100%; }
 .gitlab-roadmap-fit-page { overflow-x: hidden; }
 .gitlab-roadmap-fit-content { overflow-x: auto; }
 .gitlab-roadmap-scale {
