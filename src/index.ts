@@ -20,5 +20,8 @@ export type {
   TopicData,
   LabelData,
   GroupProjectData,
+  RoadmapData,
+  RoadmapItemData,
+  LabelRef,
   FetchError,
 } from "./gitlab/types.js";
