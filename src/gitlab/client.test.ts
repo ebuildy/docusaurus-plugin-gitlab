@@ -11,6 +11,9 @@ const projectLabelsAllMock = vi.fn();
 const groupLabelsAllMock = vi.fn();
 const groupShowMock = vi.fn();
 const contributorsAllMock = vi.fn();
+const epicsAllMock = vi.fn();
+const groupMilestonesAllMock = vi.fn();
+const projectMilestonesAllMock = vi.fn();
 
 vi.mock("@gitbeaker/rest", () => ({
   // Vitest 4 invokes the mock implementation as a real constructor under
@@ -28,6 +31,9 @@ vi.mock("@gitbeaker/rest", () => ({
       GroupLabels: { all: groupLabelsAllMock },
       Groups: { show: groupShowMock },
       Repositories: { allContributors: contributorsAllMock },
+      Epics: { all: epicsAllMock },
+      GroupMilestones: { all: groupMilestonesAllMock },
+      ProjectMilestones: { all: projectMilestonesAllMock },
     };
   }),
 }));
@@ -49,6 +55,9 @@ beforeEach(() => {
   groupLabelsAllMock.mockReset();
   groupShowMock.mockReset();
   contributorsAllMock.mockReset();
+  epicsAllMock.mockReset();
+  groupMilestonesAllMock.mockReset();
+  projectMilestonesAllMock.mockReset();
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -258,5 +267,27 @@ describe("getGroupProjects", () => {
       orderBy: "path",
       sort: "asc",
     });
+  });
+});
+
+describe("roadmap sources", () => {
+  it("getGroupEpics passes filters and bounded pagination", async () => {
+    epicsAllMock.mockResolvedValue([{ id: 1 }]);
+    const client = new GitLabClient({ host: "https://gitlab.com", token: "t" });
+    const res = await client.getGroupEpics("g", { state: "opened", labels: "a", orderBy: "start_date", sort: "asc" });
+    expect(res).toEqual([{ id: 1 }]);
+    expect(epicsAllMock).toHaveBeenCalledWith("g", {
+      state: "opened", labels: "a", orderBy: "start_date", sort: "asc", perPage: 100, maxPages: 5,
+    });
+  });
+
+  it("getGroupMilestones and getProjectMilestones fetch with bounded pagination", async () => {
+    groupMilestonesAllMock.mockResolvedValue([{ id: 2 }]);
+    projectMilestonesAllMock.mockResolvedValue([{ id: 3 }]);
+    const client = new GitLabClient({ host: "https://gitlab.com", token: "t" });
+    expect(await client.getGroupMilestones("g")).toEqual([{ id: 2 }]);
+    expect(await client.getProjectMilestones("p/x")).toEqual([{ id: 3 }]);
+    expect(groupMilestonesAllMock).toHaveBeenCalledWith("g", { perPage: 100, maxPages: 5 });
+    expect(projectMilestonesAllMock).toHaveBeenCalledWith("p/x", { perPage: 100, maxPages: 5 });
   });
 });

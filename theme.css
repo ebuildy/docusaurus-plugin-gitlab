@@ -407,3 +407,67 @@
   content: "★ ";
   color: var(--ifm-color-warning);
 }
+
+/* Roadmap (Gantt / timeline) */
+.gitlab-roadmap { font-size: 0.85rem; }
+/* layoutFit: the gantt root is the scroll container, capped at the page width;
+   the inner box carries the content min-width. "page" clips overflow (ticks are
+   thinned to fit); "content" scrolls sideways to the inner min-width.
+   NB: page fit uses `clip`, not `hidden` — `overflow-x: hidden` would coerce
+   `overflow-y` to `auto`, making the gantt a scroll container and breaking the
+   sticky scale header below; `clip` leaves `overflow-y: visible`. */
+.gitlab-roadmap-gantt { max-width: 100%; }
+.gitlab-roadmap-fit-page { overflow-x: clip; }
+.gitlab-roadmap-fit-content { overflow-x: auto; }
+/* The ticks bar sticks to the top (below the Docusaurus navbar) as rows scroll.
+   Sticks against the page in page fit; in content fit the scroll container
+   scopes it (no page-scroll stickiness there). */
+.gitlab-roadmap-scale {
+  position: sticky; top: var(--ifm-navbar-height, 0); z-index: 2;
+  height: 1.4rem; margin-left: calc(12rem + 0.5rem);
+  background: var(--ifm-background-color);
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+/* Extend the sticky header's background left over the row-label gutter so
+   scrolling rows don't peek above it. */
+.gitlab-roadmap-scale::before {
+  content: ""; position: absolute; top: 0; bottom: -1px;
+  left: calc(-12rem - 0.5rem); width: calc(12rem + 0.5rem);
+  background: var(--ifm-background-color);
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+.gitlab-roadmap-tick {
+  position: absolute; transform: translateX(-50%); white-space: nowrap;
+  color: var(--ifm-color-emphasis-600);
+}
+/* Year boundaries: bolder label + a vertical rule dropping to the scale baseline. */
+.gitlab-roadmap-tick-major { font-weight: 600; color: var(--ifm-color-emphasis-800); }
+.gitlab-roadmap-tick-major::after {
+  content: ""; position: absolute; left: 50%; top: 100%;
+  width: 1px; height: 0.45rem; background: var(--ifm-color-emphasis-500);
+  transform: translateX(-50%);
+}
+.gitlab-roadmap-group-title { font-weight: 600; margin: 0.6rem 0 0.3rem; }
+/* Timeline date grouping: year uses the group title above; quarter is a smaller,
+   indented sub-heading. */
+.gitlab-roadmap-subgroup { margin-left: 0.5rem; }
+.gitlab-roadmap-subgroup-title {
+  font-weight: 600; font-size: 0.8rem; color: var(--ifm-color-emphasis-700);
+  margin: 0.4rem 0 0.2rem;
+}
+.gitlab-roadmap-row { display: grid; grid-template-columns: 12rem 1fr; gap: 0.5rem; align-items: center; margin: 0.25rem 0; }
+.gitlab-roadmap-label-col { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gitlab-roadmap-track { position: relative; height: 1.25rem; background: var(--ifm-color-emphasis-100); border-radius: 4px; }
+.gitlab-roadmap-bar { position: absolute; top: 2px; height: calc(100% - 4px); border-radius: 4px; overflow: hidden; opacity: 0.85; }
+.gitlab-roadmap-progress { height: 100%; background: rgba(0, 0, 0, 0.35); }
+.gitlab-roadmap-label {
+  display: inline-block; margin-left: 0.3rem; padding: 0 0.3rem;
+  border-radius: 3px; font-size: 0.7rem;
+}
+.gitlab-roadmap-spine { border-left: 2px solid var(--ifm-color-emphasis-300); margin-left: 0.5rem; padding-left: 1rem; }
+.gitlab-roadmap-node { position: relative; margin: 0.75rem 0; }
+.gitlab-roadmap-dot { position: absolute; left: -1.4rem; top: 0.25rem; width: 0.6rem; height: 0.6rem; border-radius: 50%; }
+.gitlab-roadmap-card { display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start; }
+.gitlab-roadmap-dates { color: var(--ifm-color-emphasis-600); font-size: 0.75rem; }
+.gitlab-roadmap-meter-track { width: 100%; max-width: 12rem; height: 0.4rem; background: var(--ifm-color-emphasis-200); border-radius: 3px; }
+.gitlab-roadmap-meter { height: 100%; border-radius: 3px; }

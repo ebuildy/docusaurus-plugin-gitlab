@@ -6,7 +6,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects, fetchRoadmap } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -680,5 +680,103 @@ describe("fetchGroupProjects", () => {
     await fetchGroupProjects(c, { group: "mygroup" });
     await fetchGroupProjects(c, { group: "mygroup" });
     expect(c.client.getGroupProjects).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("fetchRoadmap (epics)", () => {
+  const epics = [
+    { id: 10, iid: 1, title: "Auth", state: "opened", start_date: "2026-01-01", due_date: "2026-03-01",
+      web_url: "https://gitlab.com/groups/g/-/epics/1", color: "#1f75cb", parent_id: null, labels: ["backend"] },
+    { id: 11, iid: 2, title: "Billing", state: "closed", start_date: "2026-02-01", due_date: "2026-05-01",
+      web_url: "https://gitlab.com/groups/g/-/epics/2", color: "#6666c4", parent_id: 10, labels: [] },
+  ];
+
+  it("normalizes epics into positioned RoadmapData", async () => {
+    const client = {
+      getGroupEpics: vi.fn(async () => epics),
+      getGroupLabels: vi.fn(async () => [{ name: "backend", color: "#dbeafe", text_color: "#1e40af" }]),
+    };
+    const c = ctx(client);
+    const data = await fetchRoadmap(c, { source: "epics", group: "g" });
+    expect(data.source).toBe("epics");
+    const items = data.groups.flatMap((g) => g.items);
+    expect(items.map((i) => i.title).sort()).toEqual(["Auth", "Billing"]);
+    const auth = items.find((i) => i.title === "Auth")!;
+    expect(auth.startDate).toBe("2026-01-01");
+    expect(auth.color).toBe("#1f75cb");
+    expect(auth.labels).toEqual([{ name: "backend", color: "#dbeafe", textColor: "#1e40af" }]);
+    expect(auth.widthPct).toBeGreaterThan(0);
+    expect(client.getGroupEpics).toHaveBeenCalled();
+  });
+
+  it("sends only an Epics-API-valid order_by (never start_date/due_date)", async () => {
+    // The GitLab Epics API rejects order_by=start_date|due_date; start/due ordering
+    // is done client-side. Guard against re-introducing an invalid API value.
+    const valid = new Set(["created_at", "updated_at", "title"]);
+    for (const order of ["start", "due", "title"] as const) {
+      const client = { getGroupEpics: vi.fn(async () => epics), getGroupLabels: vi.fn(async () => []) };
+      const c = ctx(client);
+      await fetchRoadmap(c, { source: "epics", group: "g", order });
+      const passedOrderBy = (client.getGroupEpics.mock.calls[0] as any)[1].orderBy;
+      expect(valid.has(passedOrderBy)).toBe(true);
+    }
+  });
+
+  it("throws when source is epics but group is missing", async () => {
+    const c = ctx({});
+    await expect(fetchRoadmap(c, { source: "epics" })).rejects.toThrow(/group/);
+  });
+
+  it("degrades: rethrows in strict mode", async () => {
+    const client = { getGroupEpics: vi.fn(async () => { throw new Error("403 tier"); }) };
+    const c = ctx(client);
+    c.options.strict = true;
+    await expect(fetchRoadmap(c, { source: "epics", group: "g" })).rejects.toThrow("403 tier");
+  });
+
+  it("rejects a non-ISO from/to date", async () => {
+    const client = { getGroupEpics: vi.fn(async () => []), getGroupLabels: vi.fn(async () => []) };
+    const c = ctx(client);
+    await expect(fetchRoadmap(c, { source: "epics", group: "g", from: "last week" })).rejects.toThrow(/YYYY-MM-DD/);
+  });
+});
+
+describe("fetchRoadmap (milestones)", () => {
+  const milestones = [
+    { id: 1, iid: 5, title: "v1.0", state: "active", start_date: "2026-01-01", due_date: "2026-02-01",
+      web_url: "https://gitlab.com/g/r/-/milestones/5" },
+    { id: 2, iid: 6, title: "v1.1", state: "closed", start_date: "2026-02-01", due_date: "2026-03-01",
+      web_url: "https://gitlab.com/g/r/-/milestones/6" },
+  ];
+
+  it("normalizes project milestones and maps active→opened (state=all shows both)", async () => {
+    const client = {
+      getProjectMilestones: vi.fn(async () => milestones),
+      getProjectLabels: vi.fn(async () => []),
+    };
+    const c = ctx(client);
+    const data = await fetchRoadmap(c, { source: "milestones", project: "g/r", state: "all" });
+    expect(data.source).toBe("milestones");
+    const items = data.groups.flatMap((g) => g.items);
+    expect(items.find((i) => i.title === "v1.0")!.state).toBe("opened");
+    expect(items.find((i) => i.title === "v1.1")!.state).toBe("closed");
+    expect(items.every((i) => i.color === undefined)).toBe(true);
+    expect(client.getProjectMilestones).toHaveBeenCalledWith("g/r");
+  });
+
+  it("fetches group milestones when group is given", async () => {
+    const client = { getGroupMilestones: vi.fn(async () => milestones), getGroupLabels: vi.fn(async () => []) };
+    const c = ctx(client);
+    const data = await fetchRoadmap(c, { source: "milestones", group: "g", state: "all" });
+    expect(data.groups.flatMap((g) => g.items)).toHaveLength(2);
+    expect(client.getGroupMilestones).toHaveBeenCalledWith("g");
+  });
+
+  it("filters to active milestones by default (state defaults to opened)", async () => {
+    const client = { getProjectMilestones: vi.fn(async () => milestones), getProjectLabels: vi.fn(async () => []) };
+    const c = ctx(client);
+    const data = await fetchRoadmap(c, { source: "milestones", project: "g/r" });
+    const items = data.groups.flatMap((g) => g.items);
+    expect(items.map((i) => i.title)).toEqual(["v1.0"]);
   });
 });
