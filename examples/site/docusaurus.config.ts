@@ -1,6 +1,5 @@
 import type { Config } from "@docusaurus/types";
 import gitlabPlugin, { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
-import remarkGemoji from "remark-gemoji";
 
 const gitlabOptions = {
   host: process.env.GITLAB_HOST ?? "https://gitlab.com",
@@ -24,7 +23,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/",
           sidebarPath: "./sidebars.ts",
-          remarkPlugins: [remarkGemoji, [remarkGitlab, gitlabOptions]],
+          remarkPlugins: [[remarkGitlab, gitlabOptions]],
         },
         blog: false,
         theme: {

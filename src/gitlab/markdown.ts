@@ -2,7 +2,7 @@ import type { Root, Element } from "hast";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
-import remarkGemoji from "remark-gemoji";
+import remarkEmoji from "remark-emoji";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -20,7 +20,7 @@ import { rehypeGitlabToc, TOC_PLACEHOLDER, type TocMode, type TocEntry } from ".
  */
 export const defaultMarkdownRenderChain: PluggableList = [
   remarkParse,
-  remarkGemoji,
+  remarkEmoji,
   remarkGfm,
   [remarkRehype, { allowDangerousHtml: true }],
   rehypeRaw,
