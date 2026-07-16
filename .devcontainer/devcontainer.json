@@ -8,8 +8,8 @@
   // Install the full CI matrix (20 / 22 / 24) and keep 20 (the minimum) as default.
   "onCreateCommand": "bash -c 'export NVM_DIR=/usr/local/share/nvm && . \"$NVM_DIR/nvm.sh\" && nvm install 20 && nvm install 22 && nvm install 24 && nvm alias default 20'",
 
-  // Install dependencies once the container is up.
-  "postCreateCommand": "npm ci",
+  // Activate the pinned pnpm (via corepack) and install the workspace.
+  "postCreateCommand": "corepack enable && pnpm install --frozen-lockfile",
 
   // Docusaurus dev server (used by the example sites) listens here.
   "forwardPorts": [3000],

@@ -11,4 +11,4 @@ if [ "$(git config --get commit.gpgsign)" != "true" ] || [ -z "$(git config --ge
   exit 1
 fi
 
-npx lint-staged
+pnpm exec lint-staged

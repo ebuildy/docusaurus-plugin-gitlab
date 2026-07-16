@@ -34,7 +34,7 @@ static HTML. The browser never holds a token or calls the GitLab API.
 
 ## Commands
 
-- `npm run build` — compile with `tsc -p tsconfig.build.json` (ESM `.js` + `.d.ts`)
+- `pnpm run build` — compile with `tsc -p tsconfig.build.json` (ESM `.js` + `.d.ts`)
   into `dist/`. The base `tsconfig.json` sets `noEmit: true` so a stray `tsc` can't
   pollute `src/`; the build config flips `noEmit` off with `outDir: ./dist`.
   The package is **ESM-only** (`module: ESNext`): every remark/rehype/unified
@@ -42,11 +42,11 @@ static HTML. The browser never holds a token or calls the GitLab API.
   under Node's `require(ESM)` interop (`unified().use()` receives `{ default: fn }`
   → "empty preset", failing the Docusaurus build). Do not add a CJS build or a
   `require` export condition; `test/packaging.test.ts` guards this.
-- `npm run test` — run all tests (Vitest). Use `npx vitest run <file>` for one file.
-- `npm run typecheck` — `tsc --noEmit`.
+- `pnpm test` — run all tests (Vitest). Use `pnpm exec vitest run <file>` for one file.
+- `pnpm run typecheck` — `tsc --noEmit`.
 
-There is no lint step and no dev server. After code edits, run
-`npx vitest run` and `npm run typecheck`. The e2e test
+There is no dev server. After code edits, run
+`pnpm exec vitest run` and `pnpm run typecheck`. The e2e test
 (`test/e2e/build.test.ts`) builds a real Docusaurus site and is slow (~1 min);
 run it explicitly when touching the pipeline.
 

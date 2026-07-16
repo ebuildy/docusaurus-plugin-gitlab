@@ -4,7 +4,7 @@ A minimal **Docusaurus 3** site that demonstrates `@ebuildy/docusaurus-plugin-gi
 serves as the fixture for the package's end-to-end test.
 
 It consumes the package from the repo root via `file:../..`, so it always builds
-against your local `dist/` (run `npm run build` at the root first).
+against your local `dist/` (run `pnpm run build` at the root first).
 
 > The doc pages reference a placeholder project, `group/repo`, which only resolves
 > under the e2e stub server. To run this as a **real** demo, point the components
@@ -71,8 +71,8 @@ You normally don't run this site directly — the e2e test drives it against a
 mocked GitLab API. From the repo root:
 
 ```bash
-npm run build                       # build the plugin into dist/
-npx vitest run test/e2e/build.test.ts
+pnpm run build                      # build the plugin into dist/
+pnpm exec vitest run test/e2e/build.test.ts
 ```
 
 See [`test/README.md`](../../test/README.md) for how that test works.
@@ -83,18 +83,18 @@ To build or preview the site yourself, first make sure the plugin is built and
 the components point at **real** projects:
 
 ```bash
-# from the repo root
-npm run build
+# from the repo root (pnpm install covers the whole workspace, examples included)
+pnpm install       # first time only
+pnpm run build
 
 # from examples/site
-npm install                         # first time only
 export GITLAB_HOST=https://gitlab.com
 export GITLAB_TOKEN=glpat-xxxxxxxx  # required for private projects
 
-npm run build      # production build  → ./build
-npm run serve      # serve the production build locally
+pnpm run build     # production build  → ./build
+pnpm run serve     # serve the production build locally
 # or
-npm start          # dev server with hot reload (http://localhost:3000)
+pnpm start         # dev server with hot reload (http://localhost:3000)
 ```
 
 Available scripts: `build`, `start`, `serve`, `clear`.

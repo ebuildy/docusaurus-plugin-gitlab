@@ -1,0 +1,7 @@
+# Run `mise install` to get the toolchain.
+# pnpm is pinned to 10.x on purpose: pnpm 11 requires Node >= 22.13, and this
+# repo still supports Node 20 (engines + CI matrix). Keep the version in sync
+# with the "packageManager" field in package.json.
+[tools]
+node = "20"
+pnpm = "10.34.5"

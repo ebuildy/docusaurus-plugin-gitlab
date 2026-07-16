@@ -518,10 +518,10 @@ into your `src/css/custom.css` and edit freely. The class names you can target:
 ## Development
 
 ```bash
-npm install
-npm run build       # compile with tsc (ESM-only + types)
-npm run test        # unit tests (Vitest)
-npm run typecheck   # tsc --noEmit
+pnpm install         # whole workspace (package + example sites)
+pnpm run build       # compile with tsc (ESM-only + types)
+pnpm test            # unit tests (Vitest)
+pnpm run typecheck   # tsc --noEmit
 ```
 
 The `examples/site/` directory contains a minimal Docusaurus 3 site used by the

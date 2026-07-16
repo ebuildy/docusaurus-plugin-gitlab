@@ -5,7 +5,10 @@ you from clone to a green build.
 
 ## Prerequisites
 
-- **Node 20, 22, or 24** and **npm** (Docusaurus 3 requires Node 20+)
+- **Node 20, 22, or 24** (Docusaurus 3 requires Node 20+) and **pnpm 10**.
+  With [mise](https://mise.jdx.dev), `mise install` sets up both (from
+  `mise.toml`); otherwise `corepack enable` activates the pnpm version pinned
+  in `package.json`'s `packageManager`, or `npm install -g pnpm@10`.
 - A GitLab token is **not** required for development (the tests mock the API).
 - Optionally, a **Dev Container** (`.devcontainer/`) — open the repo in a container
   with nvm preloaded with Node 20/22/24; switch with `nvm use 22`.
@@ -15,21 +18,21 @@ you from clone to a green build.
 ```bash
 git clone <repo-url>
 cd mdx-gitlab-set
-npm install        # also installs the git pre-commit hook (via husky)
-npm run build      # bundle the package into dist/
+pnpm install       # installs the workspace (package + example sites) and the git pre-commit hook (via husky)
+pnpm run build     # bundle the package into dist/
 ```
 
 ## Everyday commands
 
 | Command | What it does |
 |---|---|
-| `npm test` | Run all tests (unit + e2e) with Vitest |
-| `npx vitest run --exclude '**/test/e2e/**'` | Unit tests only (fast) |
-| `npx vitest run test/e2e/build.test.ts` | End-to-end only (builds a real Docusaurus site; ~1 min) |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run lint` | ESLint + markdownlint |
-| `npm run lint:fix` | Auto-fix lint issues |
-| `npm run build` | Compile with tsc (ESM-only + types) |
+| `pnpm test` | Run all tests (unit + e2e) with Vitest |
+| `pnpm exec vitest run --exclude '**/test/e2e/**'` | Unit tests only (fast) |
+| `pnpm exec vitest run test/e2e/build.test.ts` | End-to-end only (builds a real Docusaurus site; ~1 min) |
+| `pnpm run typecheck` | `tsc --noEmit` |
+| `pnpm run lint` | ESLint + markdownlint |
+| `pnpm run lint:fix` | Auto-fix lint issues |
+| `pnpm run build` | Compile with tsc (ESM-only + types) |
 
 The example sites have their own READMEs:
 [`examples/site`](./examples/site/README.md) (mocked, drives the e2e) and
@@ -49,16 +52,16 @@ The example sites have their own READMEs:
 
 ## Pre-commit hook
 
-`npm install` sets up a husky pre-commit hook that runs **lint-staged**:
+`pnpm install` sets up a husky pre-commit hook that runs **lint-staged**:
 ESLint `--fix` on staged TS/JS and markdownlint on the root docs. If the hook
-blocks your commit, run `npm run lint:fix` and re-stage.
+blocks your commit, run `pnpm run lint:fix` and re-stage.
 
 ## Pull requests
 
 Before opening a PR, make sure these pass:
 
 ```bash
-npm run lint && npm run typecheck && npm test
+pnpm run lint && pnpm run typecheck && pnpm test
 ```
 
 Keep changes focused, and add/adjust tests for any behavior you change.
@@ -84,8 +87,8 @@ and published to npm with provenance via OIDC trusted publishing.
   `@ebuildy/docusaurus-plugin-gitlab`.
 - **First publish only:** because the package name does not yet exist on npm, the
   very first publish may need to be bootstrapped manually from a clean checkout:
-  `npm ci && npm run build && npm publish --access public` (without
-  `--provenance`, which requires CI/OIDC). Subsequent releases publish
+  `pnpm install --frozen-lockfile && pnpm run build && npm publish --access public`
+  (without `--provenance`, which requires CI/OIDC). Subsequent releases publish
   automatically.
 
 ## Working with AI (Claude Code)
