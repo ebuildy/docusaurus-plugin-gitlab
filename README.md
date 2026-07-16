@@ -4,8 +4,8 @@
 
 ![NPM Version](https://img.shields.io/npm/v/%40ebuildy%2Fdocusaurus-plugin-gitlab)
 
-Embed **GitLab** resources — project info, README, releases, issues, and any
-file or code snippet — directly in your **Docusaurus 3** documentation using MDX
+Embed **GitLab** resources â project info, README, releases, issues, and any
+file or code snippet â directly in your **Docusaurus 3** documentation using MDX
 components.
 
 ![Screenshot](./docs/screenshot1.png)
@@ -13,11 +13,11 @@ components.
 All data is fetched **at build time** and baked into your static site. No API
 tokens or network calls ever reach the browser, and pages stay fast.
 
-- ✅ Works with **gitlab.com** and self-hosted GitLab (configurable host)
-- ✅ Authenticated (private projects) or public, via a build-time token
-- ✅ Five ready-to-use JSX components
-- ✅ README images **and badges are downloaded and localized** (offline-safe, frozen at build time)
-- ✅ On-disk caching, theme-aware (Infima) styling, graceful error fallbacks
+- â Works with **gitlab.com** and self-hosted GitLab (configurable host)
+- â Authenticated (private projects) or public, via a build-time token
+- â Five ready-to-use JSX components
+- â README images **and badges are downloaded and localized** (offline-safe, frozen at build time)
+- â On-disk caching, theme-aware (Infima) styling, graceful error fallbacks
 
 > Requires Docusaurus **3.x** and Node **22.13+ or 24**.
 
@@ -79,7 +79,7 @@ import * as Gitlab from "@ebuildy/docusaurus-plugin-gitlab/components";
 export default { ...MDXComponents, ...Gitlab };
 ```
 
-Now write the components in any `.mdx` page — no per-page imports needed.
+Now write the components in any `.mdx` page â no per-page imports needed.
 
 ## Components
 
@@ -89,7 +89,7 @@ namespace path (`project="group/subgroup/repo"`).
 ### `<GitlabProjectInfo>`
 
 A card with name, description, topics, stars/forks, and last activity. It can
-also embed compact **releases**, **commits**, and **issues** sections — each is
+also embed compact **releases**, **commits**, and **issues** sections â each is
 opt-in and only fetched when its count prop is a positive number.
 
 ```mdx
@@ -103,24 +103,24 @@ opt-in and only fetched when its count prop is a positive number.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `project` | string \| number | — | **Required.** Project path or ID |
+| `project` | string \| number | â | **Required.** Project path or ID |
 | `showStats` | boolean | `true` | Show the stars / forks / created / last-activity row |
 | `showLinks` | boolean | `true` | Link the release / commit / issue items. Set `false` to render them as plain text (the card title stays a link) |
 | `link` | string | project's `web_url` | Override the card title's link target |
-| `releases` | number | — | Embed the latest N releases. Absent or `≤ 0` — not fetched, not rendered |
-| `commits` | number | — | Embed the latest N commits. Absent or `≤ 0` — not fetched, not rendered |
-| `issues` | number | — | Embed the latest N issues. Absent or `≤ 0` — not fetched, not rendered |
+| `releases` | number | â | Embed the latest N releases. Absent or `â¤ 0` â not fetched, not rendered |
+| `commits` | number | â | Embed the latest N commits. Absent or `â¤ 0` â not fetched, not rendered |
+| `issues` | number | â | Embed the latest N issues. Absent or `â¤ 0` â not fetched, not rendered |
 | `releasesLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the releases section. An invalid value fails the build |
 | `commitsLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the commits section. An invalid value fails the build |
 | `issuesLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the issues section. An invalid value fails the build |
 
-> Each section's `list` layout renders one compact line per item — release:
+> Each section's `list` layout renders one compact line per item â release:
 > tag and name; commit: linked short SHA, title, and author; issue: linked
 > `#iid` and title. Every item shows its date (absolute, e.g. `May 1, 2020`)
 > pinned to the right. `cards` renders a richer variant of the same data.
 >
-> The `showStats` row can also show extra pills — total commit count,
-> contributor count, open issue count, repository size — automatically,
+> The `showStats` row can also show extra pills â total commit count,
+> contributor count, open issue count, repository size â automatically,
 > whenever that data is available; there's no attribute to request them. Set
 > `showStats={false}` to hide the whole row (pills included). Commit count and
 > repository size come from the project's `statistics`, which GitLab only
@@ -140,13 +140,13 @@ localized; links resolve back to GitLab.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `project` | string \| number | — | **Required.** |
+| `project` | string \| number | â | **Required.** |
 | `ref` | string | default branch | Branch, tag, or commit SHA |
 | `toc` | `"hidden" \| "inline" \| "sidebar"` | _auto_ | Where to render the table of contents |
 
 > **Table of contents:** if the README contains a GitLab `[[_TOC_]]` marker on its
 > own line, it is replaced at build time with a generated table of contents linking
-> to the document's `h2`–`h5` headings (which receive slug `id`s). This also works
+> to the document's `h2`â`h5` headings (which receive slug `id`s). This also works
 > for markdown embedded via `<GitlabFile>` and for release notes. The `toc` prop
 > overrides this default: `toc="inline"` always renders the inline TOC (even without
 > a marker); `toc="sidebar"` renders the README's headings in the page's native
@@ -159,7 +159,7 @@ localized; links resolve back to GitLab.
 > ```
 >
 > Note: in `sidebar` mode the README is injected as pre-rendered HTML, so
-> Docusaurus' broken-anchor checker can't see its heading anchors — harmless at the
+> Docusaurus' broken-anchor checker can't see its heading anchors â harmless at the
 > default `onBrokenAnchors: "warn"` (build succeeds, links work), but would fail a
 > build configured with `onBrokenAnchors: "throw"`.
 
@@ -183,7 +183,7 @@ A list of releases with notes, dates, and asset links.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `project` | string \| number | — | **Required.** |
+| `project` | string \| number | â | **Required.** |
 | `limit` | number | `10` | Max releases to show |
 | `includePrereleases` | boolean | `false` | Include upcoming/pre-releases |
 
@@ -197,10 +197,10 @@ A filtered list of issues.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `project` | string \| number | — | **Required.** |
+| `project` | string \| number | â | **Required.** |
 | `state` | string | `opened` | `opened`, `closed`, or `all` |
-| `labels` | string | — | Comma-separated label filter |
-| `milestone` | string | — | Milestone title filter |
+| `labels` | string | â | Comma-separated label filter |
+| `milestone` | string | â | Milestone title filter |
 | `limit` | number | `20` | Max issues to show |
 
 ### `<GitlabFile>`
@@ -217,8 +217,8 @@ syntax-highlighted code block (via `prism-react-renderer`).
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `project` | string \| number | — | **Required.** |
-| `path` | string | — | **Required.** File path within the repo |
+| `project` | string \| number | â | **Required.** |
+| `path` | string | â | **Required.** File path within the repo |
 | `ref` | string | default branch | Branch, tag, or commit SHA |
 | `lines` | string | whole file | Line range for code files, e.g. `"10-25"` (1-based, inclusive) |
 
@@ -232,7 +232,7 @@ The instance topic catalog as links, each with a project-count bubble.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `filter` | string | — | Case-insensitive regex on the topic title |
+| `filter` | string | â | Case-insensitive regex on the topic title |
 | `order` | string | `name` | `name`, `name:asc`, or `name:desc` |
 | `limit` | number | all | Max topics to show |
 
@@ -246,10 +246,10 @@ A project's or group's labels as links to the filtered issues list. `list` or `c
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `project` | string \| number | — | Provide either `project` or `group` |
-| `group` | string \| number | — | Provide either `project` or `group` |
+| `project` | string \| number | â | Provide either `project` or `group` |
+| `group` | string \| number | â | Provide either `project` or `group` |
 | `layout` | string | `list` | `list` or `cards` |
-| `filter` | string | — | Case-insensitive regex on the label name |
+| `filter` | string | â | Case-insensitive regex on the label name |
 | `order` | string | `name` | `name`, `name:asc`, or `name:desc` |
 | `limit` | number | all | Max labels to show |
 
@@ -258,7 +258,7 @@ The `cards` layout accepts grid props: `cardColumns` (fixed column count), `card
 `align` (`start`/`center`).
 
 Both components render [scoped labels/topics](https://docs.gitlab.com/ee/user/project/labels.html#scoped-labels)
-(`scope::value`, e.g. `Abilities::Performance`) as a two-part badge — the scope keeps its
+(`scope::value`, e.g. `Abilities::Performance`) as a two-part badge â the scope keeps its
 color and the value gets a dark-gray background. The split is on the last `::`.
 
 ### `<GitlabRoadmap>`
@@ -297,7 +297,7 @@ Instead of writing one page per project by hand, drop a single directive on a
 a GitLab group at build time. The generated pages become **children of the
 declaring page** in the sidebar.
 
-Put the directive on the folder's index doc — `index.mdx`, `README.mdx`, or a
+Put the directive on the folder's index doc â `index.mdx`, `README.mdx`, or a
 doc named after its folder (Docusaurus's [category index
 convention](https://docusaurus.io/docs/sidebar/autogenerated#category-index-convention)):
 
@@ -314,9 +314,9 @@ title: Group projects
 
 | Attribute | Type | Default | Description |
 |---|---|---|---|
-| `group` | string \| number | — | **Required.** Group path or ID |
-| `sections` | string | `"readme"` | Comma-separated list of `info`, `readme`, `releases`, `issues` — becomes the components rendered on each generated project page |
-| `topics` | string | — | Comma-separated topic filter; only projects with **all** listed topics are included |
+| `group` | string \| number | â | **Required.** Group path or ID |
+| `sections` | string | `"readme"` | Comma-separated list of `info`, `readme`, `releases`, `issues` â becomes the components rendered on each generated project page |
+| `topics` | string | â | Comma-separated topic filter; only projects with **all** listed topics are included |
 | `includeSubgroups` | boolean | `false` | Include projects from subgroups |
 | `includeArchived` | boolean | `false` | Include archived projects |
 
@@ -336,7 +336,7 @@ docs/team/
 ```
 
 Generated files are **git-ignored** (the plugin writes a scoped `.gitignore` in
-the folder that ignores only what it generated — never your index page) and are
+the folder that ignores only what it generated â never your index page) and are
 regenerated on every build, tracked via a `.gitlab-generated` manifest so stale
 pages are removed on regeneration. Never hand-edit or commit them. Generation
 runs once at plugin init, before the docs plugin scans the filesystem, so the
@@ -350,15 +350,15 @@ npx docusaurus gitlab:generate
 ```
 
 > During `docusaurus start`, generation runs once per process at startup.
-> Editing the `{@generateGitlabPages …}` attributes (group, sections, topics,
-> …) requires restarting `docusaurus start` to regenerate — it is not
+> Editing the `{@generateGitlabPages â¦}` attributes (group, sections, topics,
+> â¦) requires restarting `docusaurus start` to regenerate â it is not
 > re-evaluated on hot reload.
 
 On the declaring page itself, the directive is replaced with a
-`<GitlabProjectGrid>` card grid — one card per project, linking to its generated
+`<GitlabProjectGrid>` card grid â one card per project, linking to its generated
 child page. Because the declaring page is a folder index, it is served at a
 directory URL with a trailing slash (e.g. `/team/`), so each card links to the
-child with a bare relative slug (`<slug>` → `/team/<slug>`). If your site sets
+child with a bare relative slug (`<slug>` â `/team/<slug>`). If your site sets
 `trailingSlash: false`, adjust routing accordingly.
 
 ### `::include` directives inside included markdown
@@ -374,7 +374,7 @@ markdown:
 
 - Relative paths resolve to a file in the **same GitLab project and ref** as the
   enclosing include, fetched through the same cached client.
-- Remote URLs (`::include{file=https://…}`) are fetched only when their host is
+- Remote URLs (`::include{file=https://â¦}`) are fetched only when their host is
   listed in the `includeAllowedHosts` plugin option (empty by default, so remote
   includes are off until you opt in).
 - Markdown targets (`.md`/`.mdx`/`.markdown`) are spliced inline and expanded
@@ -389,7 +389,7 @@ markdown:
   ```
   ````
 
-  The directive is replaced by the file content in place — no extra fence, no
+  The directive is replaced by the file content in place â no extra fence, no
   markdown processing.
 - A failed include aborts the build in `strict` mode, or renders an inline
   warning otherwise.
@@ -398,24 +398,24 @@ markdown:
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `host` | string | — | **Required.** GitLab base URL (e.g. `https://gitlab.com`) |
-| `token` | string | — | Personal/Project Access Token. Optional for public reads. Build-time only |
+| `host` | string | â | **Required.** GitLab base URL (e.g. `https://gitlab.com`) |
+| `token` | string | â | Personal/Project Access Token. Optional for public reads. Build-time only |
 | `strict` | boolean | `true` in prod, `false` in dev | On a failed fetch: `true` aborts the build; `false` renders a fallback |
 | `cache` | `{ ttl: number }` \| `false` | `{ ttl: 3600 }` | On-disk cache TTL (seconds), or `false` to disable |
 | `assetDir` | string | `static/gitlab-assets` | Where README images/badges are downloaded |
 | `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from |
 | `fixAutolinks` | boolean | `true` | Rewrite CommonMark autolinks in included markdown to MDX-safe links (include placeholders only) |
-| `fixVoidTags` | boolean | `true` | Self-close HTML void elements (`<br>` → `<br/>`) in included markdown (include placeholders only) |
-| `fixInlineStyles` | boolean | `true` | Convert HTML string `style="…"` attributes to JSX style objects in included markdown |
+| `fixVoidTags` | boolean | `true` | Self-close HTML void elements (`<br>` â `<br/>`) in included markdown (include placeholders only) |
+| `fixInlineStyles` | boolean | `true` | Convert HTML string `style="â¦"` attributes to JSX style objects in included markdown |
 | `convertAlerts` | boolean | `true` | Translate GitLab alert blockquotes (`> [!note]`) to Docusaurus admonitions (`:::note`) in included markdown |
 | `stripToc` | boolean | `false` | Remove a redundant "Table of Contents" section (and `[[_TOC_]]` marker) from included markdown |
 | `outProcessors` | `Array<(md: string) => string \| Promise<string>>` | `[]` | Extra post-processors for included markdown, run after the built-in fixes |
-| `includeAllowedHosts` | `string[]` | `[]` | Hostnames allowed as remote `::include{file=https://…}` targets |
+| `includeAllowedHosts` | `string[]` | `[]` | Hostnames allowed as remote `::include{file=https://â¦}` targets |
 | `debug` | boolean | `false` | Emit build-time debug traces for the include pipeline (resolved placeholders and `::include` directives) via `@docusaurus/logger` |
-| `markdownRenderChain` | `PluggableList` | _default chain_ | Override the markdown→sanitized-HTML plugin chain (see below) |
+| `markdownRenderChain` | `PluggableList` | _default chain_ | Override the markdownâsanitized-HTML plugin chain (see below) |
 
 The token is read at build time only. Provide it via an environment variable
-(`GITLAB_TOKEN`) — never commit it.
+(`GITLAB_TOKEN`) â never commit it.
 
 ### Customizing the markdown render chain
 
@@ -435,7 +435,7 @@ default to add plugins:
 import { defaultMarkdownRenderChain } from "@ebuildy/docusaurus-plugin-gitlab";
 import rehypeHighlight from "rehype-highlight";
 
-// docusaurus.config.ts — plugin options
+// docusaurus.config.ts â plugin options
 {
   host: "https://gitlab.com",
   markdownRenderChain: [...defaultMarkdownRenderChain, rehypeHighlight],
@@ -464,12 +464,12 @@ cached on disk so local `docusaurus start` hot-reloads don't hammer the API.
 Because everything happens at build time, your published HTML is self-contained:
 no tokens shipped, no client-side API calls, no CORS.
 
-For a deeper tour of the internals — the three build-time pipelines, the module
-map, and data-flow diagrams — see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+For a deeper tour of the internals â the three build-time pipelines, the module
+map, and data-flow diagrams â see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ## Styling
 
-The components ship **without any bundled CSS** — they render plain, stable class
+The components ship **without any bundled CSS** â they render plain, stable class
 names so you stay in full control of the look. The package includes an optional,
 light/dark-aware theme (`theme.css`) you can apply as-is or use as a starting
 point. It's built on [Infima](https://infima.dev/) variables, so it tracks your
