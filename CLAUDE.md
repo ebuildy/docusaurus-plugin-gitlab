@@ -21,8 +21,9 @@ static HTML. The browser never holds a token or calls the GitLab API.
   `commit.gpgsign=true`, so this happens automatically; if signing is ever
   stripped, pass `git commit -S` and verify with `git log --format="%G?"`
   (expect `G`).
-- **Docusaurus 3 only** (MDX v3, unified ESM, native `fetch`). **Node 20, 22, 24**
-  (Docusaurus 3 requires Node 20+; the e2e build will not run on Node 18).
+- **Docusaurus 3 only** (MDX v3, unified ESM, native `fetch`). **Node 22 or 24**
+  (engines: `^22.13.0 || >=24.0.0` — pnpm 11 requires ≥22.13; Node 20 is no
+  longer supported).
 - Prefer the latest versions of libraries.
 - ESM-first. Intra-package imports use explicit `.js` extensions
   (e.g. `import { Fallback } from "./Fallback.js"`) — required by the

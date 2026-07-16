@@ -5,13 +5,13 @@ you from clone to a green build.
 
 ## Prerequisites
 
-- **Node 20, 22, or 24** (Docusaurus 3 requires Node 20+) and **pnpm 10**.
+- **Node 22 or 24** (≥22.13 — required by pnpm 11) and **pnpm 11**.
   With [mise](https://mise.jdx.dev), `mise install` sets up both (from
   `mise.toml`); otherwise `corepack enable` activates the pnpm version pinned
-  in `package.json`'s `packageManager`, or `npm install -g pnpm@10`.
+  in `package.json`'s `packageManager`, or `npm install -g pnpm@11`.
 - A GitLab token is **not** required for development (the tests mock the API).
 - Optionally, a **Dev Container** (`.devcontainer/`) — open the repo in a container
-  with nvm preloaded with Node 20/22/24; switch with `nvm use 22`.
+  with nvm preloaded with Node 22/24; switch with `nvm use 24`.
 
 ## Setup
 
