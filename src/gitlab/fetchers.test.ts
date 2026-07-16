@@ -6,7 +6,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects, fetchRoadmap } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects, fetchRoadmap, fetchUser } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -778,5 +778,57 @@ describe("fetchRoadmap (milestones)", () => {
     const data = await fetchRoadmap(c, { source: "milestones", project: "g/r" });
     const items = data.groups.flatMap((g) => g.items);
     expect(items.map((i) => i.title)).toEqual(["v1.0"]);
+  });
+});
+
+describe("fetchUser", () => {
+  const profile = {
+    id: 101, username: "jdoe", name: "Jane Doe", web_url: "https://x/jdoe", avatar_url: "https://x/a.png",
+    job_title: "Senior Developer", organization: "ACME", location: "Paris", bio: "Docs enthusiast",
+    followers: 12, following: 34, created_at: "2020-01-15T00:00:00Z",
+  };
+
+  it("resolves the username and normalizes the full profile", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 101, username: "jdoe" }]),
+      getUser: vi.fn(async () => profile),
+    };
+    const c = ctx(client);
+    const data = await fetchUser(c, { name: "jdoe" });
+    expect(client.getUserByUsername).toHaveBeenCalledWith("jdoe");
+    expect(client.getUser).toHaveBeenCalledWith(101);
+    expect(data).toMatchObject({
+      id: 101, username: "jdoe", name: "Jane Doe", webUrl: "https://x/jdoe",
+      jobTitle: "Senior Developer", organization: "ACME", location: "Paris",
+      bio: "Docs enthusiast", followers: 12, following: 34, createdAt: "2020-01-15T00:00:00Z",
+    });
+    expect(c.assets.localize).toHaveBeenCalledWith("https://x/a.png", "", "user/jdoe");
+    expect(data.avatarUrl).toMatch(/^\/gitlab-assets\//);
+  });
+
+  it("throws a clear error when the username does not exist", async () => {
+    const client = { getUserByUsername: vi.fn(async () => []), getUser: vi.fn() };
+    await expect(fetchUser(ctx(client), { name: "nope" })).rejects.toThrow(/user "nope" not found/);
+    expect(client.getUser).not.toHaveBeenCalled();
+  });
+
+  it("requires a name and rejects invalid show tokens", async () => {
+    await expect(fetchUser(ctx({}), {})).rejects.toThrow(/requires a "name"/);
+    await expect(fetchUser(ctx({}), { name: "jdoe", show: "role" })).rejects.toThrow(/does not support "role"/);
+  });
+
+  it("nulls absent profile fields and skips avatar localization when absent", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 7, username: "bob" }]),
+      getUser: vi.fn(async () => ({ id: 7, username: "bob", name: "Bob", web_url: "https://x/bob", avatar_url: null })),
+    };
+    const c = ctx(client);
+    const data = await fetchUser(c, { name: "bob" });
+    expect(data).toMatchObject({
+      jobTitle: null, organization: null, location: null, bio: null,
+      followers: null, following: null, createdAt: null,
+    });
+    expect(data.avatarUrl).toBeNull();
+    expect(c.assets.localize).not.toHaveBeenCalled();
   });
 });

@@ -24,7 +24,9 @@ import type {
   RoadmapItemData,
   RoadmapScale,
   TopicData,
+  UserData,
 } from "./types";
+import { parseShow } from "./users.js";
 
 export interface GitLabContext {
   client: GitLabClient;
@@ -409,6 +411,55 @@ export async function fetchLabels(ctx: GitLabContext, attrs: Attrs): Promise<Lab
     if (limit !== undefined) items = items.slice(0, limit);
     return items;
   });
+}
+
+/**
+ * Normalize a snake_case user/member payload to `UserData`. Fields the payload
+ * lacks (members payloads have no profile fields) become null.
+ */
+async function normalizeUser(ctx: GitLabContext, u: any, role?: string): Promise<UserData> {
+  // Avatar URLs are absolute; the "user/<username>" scope only namespaces the local asset.
+  const avatarUrl = u.avatar_url ? await ctx.assets.localize(u.avatar_url, "", `user/${u.username}`) : null;
+  return {
+    id: u.id,
+    username: u.username,
+    name: u.name ?? u.username,
+    webUrl: u.web_url,
+    avatarUrl,
+    ...(role === undefined ? {} : { role }),
+    jobTitle: u.job_title ?? null,
+    organization: u.organization ?? null,
+    location: u.location ?? null,
+    bio: u.bio ?? null,
+    followers: typeof u.followers === "number" ? u.followers : null,
+    following: typeof u.following === "number" ? u.following : null,
+    createdAt: u.created_at ?? null,
+  };
+}
+
+/**
+ * Resolve a username to its full profile. Memoized per username so members
+ * shared across pages/components cost one lookup per build; `show` never
+ * affects this data.
+ */
+async function fetchUserProfile(ctx: GitLabContext, username: string): Promise<UserData> {
+  return memo(ctx, `user:${username}`, async () => {
+    const matches = await ctx.client.getUserByUsername(username);
+    const found = matches.find((u: any) => u.username === username);
+    if (!found) {
+      throw new Error(`@ebuildy/docusaurus-plugin-gitlab: GitLab user "${username}" not found.`);
+    }
+    return normalizeUser(ctx, await ctx.client.getUser(found.id));
+  });
+}
+
+export async function fetchUser(ctx: GitLabContext, attrs: Attrs): Promise<UserData> {
+  const name = typeof attrs.name === "string" ? attrs.name.trim() : "";
+  if (!name) {
+    throw new Error(`@ebuildy/docusaurus-plugin-gitlab: <GitlabUser> requires a "name" (GitLab username).`);
+  }
+  parseShow(attrs.show, "GitlabUser"); // validate only; `show` is presentational (read by the component)
+  return fetchUserProfile(ctx, name);
 }
 
 /** Parse a topic list attribute: `["a","b"]`, `"a,b"`, or undefined → string[]. */
