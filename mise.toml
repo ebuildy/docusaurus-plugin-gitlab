@@ -1,0 +1,6 @@
+# Run `mise install` to get the toolchain.
+# Keep the pnpm version in sync with the "packageManager" field in package.json
+# (pnpm 11 requires Node >= 22.13, matching the engines field).
+[tools]
+node = "22"
+pnpm = "11.13.1"

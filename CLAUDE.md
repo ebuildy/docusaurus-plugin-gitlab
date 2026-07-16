@@ -21,8 +21,9 @@ static HTML. The browser never holds a token or calls the GitLab API.
   `commit.gpgsign=true`, so this happens automatically; if signing is ever
   stripped, pass `git commit -S` and verify with `git log --format="%G?"`
   (expect `G`).
-- **Docusaurus 3 only** (MDX v3, unified ESM, native `fetch`). **Node 20, 22, 24**
-  (Docusaurus 3 requires Node 20+; the e2e build will not run on Node 18).
+- **Docusaurus 3 only** (MDX v3, unified ESM, native `fetch`). **Node 22 or 24**
+  (engines: `^22.13.0 || >=24.0.0` — pnpm 11 requires ≥22.13; Node 20 is no
+  longer supported).
 - Prefer the latest versions of libraries.
 - ESM-first. Intra-package imports use explicit `.js` extensions
   (e.g. `import { Fallback } from "./Fallback.js"`) — required by the
@@ -34,7 +35,7 @@ static HTML. The browser never holds a token or calls the GitLab API.
 
 ## Commands
 
-- `npm run build` — compile with `tsc -p tsconfig.build.json` (ESM `.js` + `.d.ts`)
+- `pnpm run build` — compile with `tsc -p tsconfig.build.json` (ESM `.js` + `.d.ts`)
   into `dist/`. The base `tsconfig.json` sets `noEmit: true` so a stray `tsc` can't
   pollute `src/`; the build config flips `noEmit` off with `outDir: ./dist`.
   The package is **ESM-only** (`module: ESNext`): every remark/rehype/unified
@@ -42,11 +43,11 @@ static HTML. The browser never holds a token or calls the GitLab API.
   under Node's `require(ESM)` interop (`unified().use()` receives `{ default: fn }`
   → "empty preset", failing the Docusaurus build). Do not add a CJS build or a
   `require` export condition; `test/packaging.test.ts` guards this.
-- `npm run test` — run all tests (Vitest). Use `npx vitest run <file>` for one file.
-- `npm run typecheck` — `tsc --noEmit`.
+- `pnpm test` — run all tests (Vitest). Use `pnpm exec vitest run <file>` for one file.
+- `pnpm run typecheck` — `tsc --noEmit`.
 
-There is no lint step and no dev server. After code edits, run
-`npx vitest run` and `npm run typecheck`. The e2e test
+There is no dev server. After code edits, run
+`pnpm exec vitest run` and `pnpm run typecheck`. The e2e test
 (`test/e2e/build.test.ts`) builds a real Docusaurus site and is slow (~1 min);
 run it explicitly when touching the pipeline.
 
