@@ -925,7 +925,11 @@ describe("fetchUsers", () => {
 
   it("rejects an unknown role and a non-positive limit", async () => {
     await expect(fetchUsers(ctx({}), { group: "g", role: "boss" })).rejects.toThrow(/"role" must be one of/);
-    await expect(fetchUsers(ctx({}), { group: "g", limit: 0 })).rejects.toThrow(/"limit" must be a positive number/);
+    await expect(fetchUsers(ctx({}), { group: "g", limit: 0 })).rejects.toThrow(/"limit" must be a positive integer/);
+  });
+
+  it("rejects a fractional limit", async () => {
+    await expect(fetchUsers(ctx({}), { group: "g", limit: 1.5 })).rejects.toThrow(/"limit" must be a positive integer/);
   });
 
   it("enriches each member exactly once when show needs profile fields", async () => {
@@ -936,5 +940,48 @@ describe("fetchUsers", () => {
     expect(data.map((u) => u.bio)).toEqual(["hi", "hi"]);
     // role comes from the members payload, not the profile
     expect(data.map((u) => u.role)).toEqual(["developer", "owner"]);
+  });
+
+  it("dedupes to the highest access level when a member appears at multiple levels", async () => {
+    const client = {
+      getGroupMembers: vi.fn(async () => [
+        // Inherited (lower) row first, direct (higher) row second — effective
+        // membership is the max, regardless of row order.
+        { id: 2, username: "bob", name: "Bob Martin", web_url: "https://x/bob", avatar_url: null, access_level: 30 },
+        { id: 2, username: "bob", name: "Bob Martin", web_url: "https://x/bob", avatar_url: null, access_level: 50 },
+      ]),
+    };
+    const data = await fetchUsers(ctx(client), { group: "my-group" });
+    expect(data).toHaveLength(1);
+    expect(data[0]).toMatchObject({ username: "bob", role: "owner" });
+  });
+
+  it("degrades to identity data when one member's profile cannot be resolved, without failing the roster", async () => {
+    const client = {
+      getGroupMembers: vi.fn(async () => members),
+      // "bob" is a bot/service account that doesn't resolve; "jdoe" does.
+      getUserByUsername: vi.fn(async (u: string) => (u === "bob" ? [] : [{ id: 1, username: "jdoe" }])),
+      getUser: vi.fn(async (id: number) => ({
+        id,
+        username: "jdoe",
+        name: "Jane Doe",
+        web_url: "https://x/jdoe",
+        avatar_url: null,
+        bio: "hi",
+        followers: 1,
+        following: 2,
+      })),
+    };
+    const data = await fetchUsers(ctx(client), { group: "my-group", show: "role,bio" });
+    expect(data.map((u) => u.username)).toEqual(["bob", "jdoe"]);
+    expect(data[0]).toMatchObject({ username: "bob", role: "developer", bio: null, followers: null, createdAt: null });
+    expect(data[1]).toMatchObject({ username: "jdoe", role: "owner", bio: "hi" });
+  });
+
+  it("applies limit before enrichment so only surviving members are resolved", async () => {
+    const client = membersClient();
+    const data = await fetchUsers(ctx(client), { group: "my-group", show: "role,bio", limit: 1 });
+    expect(data.map((u) => u.username)).toEqual(["bob"]);
+    expect(client.getUser).toHaveBeenCalledTimes(1);
   });
 });
