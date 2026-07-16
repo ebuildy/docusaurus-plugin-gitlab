@@ -10,4 +10,13 @@ export type {
   GroupProjectData,
   FetchError,
   ComponentPayload,
+  LabelRef,
+  RoadmapSource,
+  RoadmapState,
+  RoadmapScale,
+  RoadmapItemData,
+  RoadmapPositionedItem,
+  ScaleTick,
+  RoadmapGroup,
+  RoadmapData,
 } from "../gitlab/types.js";

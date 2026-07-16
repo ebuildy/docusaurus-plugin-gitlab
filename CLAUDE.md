@@ -90,6 +90,14 @@ docusaurus build
   `dangerouslySetInnerHTML`. There is an XSS regression test in
   `src/gitlab/markdown.test.ts` — keep it green.
 - **CSS modules** are typed via `src/css.d.ts`.
+- **In `src/components/*` (browser-bundled), never spread a `Map`/`Set` iterator**
+  — use `Array.from(map.values())`, not `[...map.values()]` (same for `.keys()` /
+  `.entries()`). Docusaurus bundles these files with Babel, whose loose /
+  `iterableIsArray` spread assumption mis-compiles `[...nonArrayIterable]` (a Map
+  iterator has no `.length`/indices), yielding a wrong result and runtime errors
+  like `Cannot read properties of undefined (reading 'keys')`. `tsc`-only code
+  (plugin/remark/`src/gitlab/*`) runs in Node and isn't affected, but prefer
+  `Array.from` there too for consistency.
 - **Code highlighting** uses `prism-react-renderer` (a normal, SSR-safe npm
   dependency), NOT `@theme/CodeBlock`. Importing Docusaurus theme aliases
   (`@theme/*`) from this pre-bundled package breaks the Docusaurus SSR build with

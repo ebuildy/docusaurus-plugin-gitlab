@@ -7,6 +7,7 @@ import {
   fetchTopics,
   fetchLabels,
   fetchGroupProjects,
+  fetchRoadmap,
   type GitLabContext,
 } from "../gitlab/fetchers.js";
 
@@ -21,4 +22,5 @@ export const COMPONENT_REGISTRY: Record<string, Fetcher> = {
   GitlabTopics: fetchTopics,
   GitlabLabels: fetchLabels,
   GitlabProjectGrid: fetchGroupProjects,
+  GitlabRoadmap: fetchRoadmap,
 };
