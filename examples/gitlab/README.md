@@ -39,18 +39,19 @@ examples/gitlab/
 ## Running
 
 ```bash
-# from the repo root: build the plugin the site consumes via file:../..
-npm run build
+# from the repo root: install the workspace and build the plugin the site
+# consumes via its workspace link
+pnpm install                # first time only
+pnpm run build
 
 # from examples/gitlab
-npm install                 # first time only
-npm run build               # production build → ./build  (hits gitlab.com)
-npm run serve               # preview the production build
+pnpm run build              # production build → ./build  (hits gitlab.com)
+pnpm run serve              # preview the production build
 # or
-npm start                   # dev server with hot reload (http://localhost:3000)
+pnpm start                  # dev server with hot reload (http://localhost:3000)
 
 # optional: authenticate to raise the rate limit
-GITLAB_TOKEN=glpat-xxxxxxxx npm run build
+GITLAB_TOKEN=glpat-xxxxxxxx pnpm run build
 ```
 
 Because this build performs live network requests, it is slower than the mocked

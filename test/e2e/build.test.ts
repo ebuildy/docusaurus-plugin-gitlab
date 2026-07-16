@@ -17,14 +17,14 @@ function cleanGeneratedPages() {
 }
 
 /**
- * Runs `npm run build` ASYNCHRONOUSLY and awaits it. We must NOT use
+ * Runs `pnpm run build` ASYNCHRONOUSLY and awaits it. We must NOT use
  * execFileSync here: the GitLab stub server runs in this same (vitest) process,
  * and a synchronous child process would block the event loop so the stub could
  * never answer the build's API requests (gitbeaker would retry until timeout).
  */
 function runBuild(env: NodeJS.ProcessEnv): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn("npm", ["run", "build"], { cwd: siteDir, stdio: "inherit", env });
+    const child = spawn("pnpm", ["run", "build"], { cwd: siteDir, stdio: "inherit", env });
     child.on("error", reject);
     child.on("close", (code) =>
       code === 0 ? resolve() : reject(new Error(`docusaurus build exited with code ${code}`)),

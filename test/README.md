@@ -33,7 +33,7 @@ GitLab API. It runs entirely on `localhost`:
 │                                                                       │
 │  beforeAll: startGitlabStub()  ──►  http://127.0.0.1:<random-port>    │
 │                                          ▲                            │
-│  runBuild()  ── spawn ──►  child: `npm run build` (examples/site)     │
+│  runBuild()  ── spawn ──►  child: `pnpm run build` (examples/site)    │
 │   (async!)                     │                                      │
 │                                ├─ remark-gitlab (gitbeaker) ──────────┤  GET /api/v4/projects/...
 │                                │                              fetch   │  (project, releases, issues, README raw)
@@ -102,15 +102,14 @@ From the repository root:
 
 ```bash
 # Prerequisites (first time only)
-npm install                      # root deps
-(cd examples/site && npm install)  # example site deps (Docusaurus 3)
-npm run build                    # build dist/ — the example site consumes it via file:../..
+pnpm install                     # whole workspace: root deps + example sites (Docusaurus 3)
+pnpm run build                   # build dist/ — the example site consumes it via its workspace link
 
 # All tests (unit + e2e)
-npm test
+pnpm test
 
 # Unit tests only (fast)
-npx vitest run --exclude '**/test/e2e/**'
+pnpm exec vitest run --exclude '**/test/e2e/**'
 
 # End-to-end only
 npx vitest run test/e2e/build.test.ts

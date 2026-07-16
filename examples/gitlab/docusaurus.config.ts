@@ -1,7 +1,6 @@
 import { createRequire } from "node:module";
 import type { Config } from "@docusaurus/types";
 import gitlabPlugin, { remarkGitlab } from "@ebuildy/docusaurus-plugin-gitlab";
-import remarkGemoji from "remark-gemoji";
 import remarkGfm from "remark-gfm";
 
 const require = createRequire(import.meta.url);
@@ -37,7 +36,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/",
           sidebarPath: "./sidebars.ts",
-          remarkPlugins: [remarkGfm, remarkGemoji, [remarkGitlab, gitlabOptions]],
+          remarkPlugins: [remarkGfm, [remarkGitlab, gitlabOptions]],
         },
         blog: false,
         theme: {

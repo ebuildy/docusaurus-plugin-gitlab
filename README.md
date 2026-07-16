@@ -19,8 +19,7 @@ tokens or network calls ever reach the browser, and pages stay fast.
 - â README images **and badges are downloaded and localized** (offline-safe, frozen at build time)
 - â On-disk caching, theme-aware (Infima) styling, graceful error fallbacks
 
-> Requires Docusaurus **3.x** and Node **20, 22, or 24** (Docusaurus 3 itself
-> needs Node 20+).
+> Requires Docusaurus **3.x** and Node **22.13+ or 24**.
 
 ## Installation
 
@@ -29,12 +28,10 @@ npm install @ebuildy/docusaurus-plugin-gitlab
 ```
 
 > **ESM-only.** This package ships as ES modules (all of its remark/rehype
-> dependencies are ESM). Load it from an ESM config â `docusaurus.config.ts` or
-> `docusaurus.config.mjs` (the examples below use `import`). If your site still
-> uses a CommonJS `docusaurus.config.js` on **Node < 20.19**, either switch the
-> config to ESM or load the plugin with `await import(...)`. On **Node 20.19+**
-> (and 22+) CommonJS configs work too, since Node can `require()` ES modules
-> natively.
+> dependencies are ESM). Load it from an ESM config — `docusaurus.config.ts` or
+> `docusaurus.config.mjs` (the examples below use `import`). CommonJS configs
+> work too on the supported Node versions (22.13+), since Node can `require()`
+> ES modules natively.
 
 ## Setup
 
@@ -278,15 +275,15 @@ Renders a timeline of GitLab **epics** (Premium/Ultimate, group-level) or
 | Prop | Values | Default | Notes |
 |---|---|---|---|
 | `source` | `epics` \| `milestones` | `epics` | Fetch path |
-| `group` | group path/id | â | Required for epics; one of group/project for milestones |
-| `project` | project path/id | â | Milestones only |
+| `group` | group path/id | — | Required for epics; one of group/project for milestones |
+| `project` | project path/id | — | Milestones only |
 | `layout` | `gantt` \| `timeline` | `gantt` | Horizontal bars vs. vertical spine |
 | `layoutFit` | `page` \| `content` | `page` | Gantt only: `page` pins to the page width (ticks reduced to quarters/years by span, year rules bolded); `content` expands with a horizontal scrollbar |
 | `scale` | `quarters` \| `months` \| `weeks` | auto | Auto from span; prop overrides |
 | `state` | `opened` \| `closed` \| `all` | `opened` | |
-| `labels` | comma-separated | â | Label filter |
+| `labels` | comma-separated | — | Label filter |
 | `from` / `to` | `YYYY-MM-DD` | derived | Explicit window |
-| `limit` | number | `50` | Max items (â¤ 500) |
+| `limit` | number | `50` | Max items (≤ 500) |
 | `order` | `start` \| `due` \| `title` | `start` | Sort key |
 | `groupBy` | `none` \| `label` \| `parent` | `none` | Section headings. In the **timeline** layout, `none` groups by **year → quarter** |
 | `colorBy` | `source` \| `label` \| `state` | `source` | Bar/card tint |
@@ -427,8 +424,8 @@ markdown files) is rendered at build time by a `unified` plugin chain. By defaul
 it is:
 
 ```text
-remarkParse â remarkGemoji â remarkGfm â remarkRehype({ allowDangerousHtml })
-  â rehypeRaw â rehypeSanitize
+remarkParse → remarkEmoji → remarkGfm → remarkRehype({ allowDangerousHtml })
+  → rehypeRaw → rehypeSanitize
 ```
 
 Override or extend it with the `markdownRenderChain` option. Spread the exported
@@ -518,10 +515,10 @@ into your `src/css/custom.css` and edit freely. The class names you can target:
 ## Development
 
 ```bash
-npm install
-npm run build       # compile with tsc (ESM-only + types)
-npm run test        # unit tests (Vitest)
-npm run typecheck   # tsc --noEmit
+pnpm install         # whole workspace (package + example sites)
+pnpm run build       # compile with tsc (ESM-only + types)
+pnpm test            # unit tests (Vitest)
+pnpm run typecheck   # tsc --noEmit
 ```
 
 The `examples/site/` directory contains a minimal Docusaurus 3 site used by the

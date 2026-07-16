@@ -11,4 +11,13 @@ if [ "$(git config --get commit.gpgsign)" != "true" ] || [ -z "$(git config --ge
   exit 1
 fi
 
-npx lint-staged
+# pnpm isn't always on the hook's PATH (GUI git clients, shells without mise
+# activated) — prefer the mise toolchain (mise.toml pins node + pnpm), then a
+# PATH pnpm, then npx (ships with node; runs the locally installed lint-staged).
+if command -v mise >/dev/null 2>&1; then
+  mise exec -- pnpm exec lint-staged
+elif command -v pnpm >/dev/null 2>&1; then
+  pnpm exec lint-staged
+else
+  npx lint-staged
+fi
