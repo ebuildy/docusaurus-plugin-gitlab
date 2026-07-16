@@ -25,7 +25,7 @@ export interface EpicsQuery {
   sort?: string;
 }
 
-/** Pagination for the topic/label list endpoints. Defaults cap the fetch at 500 items. */
+/** Pagination for the topic/label/member list endpoints. Defaults cap the fetch at 500 items. */
 export interface PageOptions {
   perPage?: number;
   maxPages?: number;
