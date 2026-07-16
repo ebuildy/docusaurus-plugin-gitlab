@@ -26,7 +26,7 @@ import type {
   TopicData,
   UserData,
 } from "./types";
-import { parseShow } from "./users.js";
+import { needsProfile, parseRole, parseShow, roleName } from "./users.js";
 
 export interface GitLabContext {
   client: GitLabClient;
@@ -460,6 +460,55 @@ export async function fetchUser(ctx: GitLabContext, attrs: Attrs): Promise<UserD
   }
   parseShow(attrs.show, "GitlabUser"); // validate only; `show` is presentational (read by the component)
   return fetchUserProfile(ctx, name);
+}
+
+export async function fetchUsers(ctx: GitLabContext, attrs: Attrs): Promise<UserData[]> {
+  const project = attrs.project as string | number | undefined;
+  const group = attrs.group as string | number | undefined;
+  if ((project === undefined) === (group === undefined)) {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <GitlabUsers> requires exactly one of "project" or "group".`,
+    );
+  }
+  const show = parseShow(attrs.show, "GitlabUsers");
+  const enrich = needsProfile(show);
+  const role = parseRole(attrs.role);
+  const limit = attrs.limit === undefined ? undefined : Number(attrs.limit);
+  if (limit !== undefined && !(Number.isFinite(limit) && limit > 0)) {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <GitlabUsers> "limit" must be a positive number; ` +
+        `got ${JSON.stringify(attrs.limit)}.`,
+    );
+  }
+  const scopeKey = project !== undefined ? `p:${String(project)}` : `g:${String(group)}`;
+  const key = `users:${scopeKey}:role=${role ?? "all"}:limit=${limit ?? "all"}:enrich=${enrich ? 1 : 0}`;
+  return memo(ctx, key, async () => {
+    const raw =
+      project !== undefined
+        ? await ctx.client.getProjectMembers(project)
+        : await ctx.client.getGroupMembers(group as string | number);
+    // /members/all can list a user under several ancestors — keep the first occurrence.
+    const seen = new Set<number>();
+    let members = raw.filter((m: any) => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+    if (role !== undefined) members = members.filter((m: any) => roleName(m.access_level) === role);
+    members = sortByName(members, (m: any) => String(m.name ?? m.username), "asc");
+    if (limit !== undefined) members = members.slice(0, limit);
+    if (!enrich) {
+      return Promise.all(members.map((m: any) => normalizeUser(ctx, m, roleName(m.access_level))));
+    }
+    // Sequential on purpose: keeps the request pattern gentle; each profile is
+    // individually memoized so repeat builds and shared members are free.
+    const users: UserData[] = [];
+    for (const m of members) {
+      const full = await fetchUserProfile(ctx, m.username);
+      users.push({ ...full, role: roleName(m.access_level) });
+    }
+    return users;
+  });
 }
 
 /** Parse a topic list attribute: `["a","b"]`, `"a,b"`, or undefined → string[]. */

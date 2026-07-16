@@ -6,7 +6,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects, fetchRoadmap, fetchUser } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects, fetchRoadmap, fetchUser, fetchUsers } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -870,5 +870,71 @@ describe("fetchUser", () => {
     };
     await fetchUser(ctx(client), { name: "  jdoe  " });
     expect(client.getUserByUsername).toHaveBeenCalledWith("jdoe");
+  });
+});
+
+describe("fetchUsers", () => {
+  // Unsorted + one duplicate (a user can be direct AND inherited member).
+  const members = [
+    { id: 1, username: "jdoe", name: "Jane Doe", web_url: "https://x/jdoe", avatar_url: null, access_level: 50 },
+    { id: 2, username: "bob", name: "Bob Martin", web_url: "https://x/bob", avatar_url: null, access_level: 30 },
+    { id: 2, username: "bob", name: "Bob Martin", web_url: "https://x/bob", avatar_url: null, access_level: 30 },
+  ];
+
+  function membersClient() {
+    return {
+      getGroupMembers: vi.fn(async () => members),
+      getProjectMembers: vi.fn(async () => members),
+      getUserByUsername: vi.fn(async (u: string) => [{ id: u === "jdoe" ? 1 : 2, username: u }]),
+      getUser: vi.fn(async (id: number) => ({
+        id,
+        username: id === 1 ? "jdoe" : "bob",
+        name: id === 1 ? "Jane Doe" : "Bob Martin",
+        web_url: "https://x/u",
+        avatar_url: null,
+        bio: "hi",
+        followers: 1,
+        following: 2,
+      })),
+    };
+  }
+
+  it("requires exactly one of project/group", async () => {
+    await expect(fetchUsers(ctx({}), {})).rejects.toThrow(/exactly one of "project" or "group"/);
+    await expect(fetchUsers(ctx({}), { project: "g/r", group: "g" })).rejects.toThrow(/exactly one/);
+  });
+
+  it("lists members with role names, deduped and sorted by display name", async () => {
+    const client = membersClient();
+    const data = await fetchUsers(ctx(client), { group: "my-group" });
+    expect(client.getGroupMembers).toHaveBeenCalledWith("my-group");
+    expect(data.map((u) => u.username)).toEqual(["bob", "jdoe"]);
+    expect(data.map((u) => u.role)).toEqual(["developer", "owner"]);
+    // default show="role" is identity-only → zero per-user profile calls
+    expect(client.getUserByUsername).not.toHaveBeenCalled();
+    expect(client.getUser).not.toHaveBeenCalled();
+    expect(data[0]).toMatchObject({ bio: null, followers: null, createdAt: null });
+  });
+
+  it("filters by role (exact, case-insensitive) and applies limit", async () => {
+    const devs = await fetchUsers(ctx(membersClient()), { group: "my-group", role: "Developer" });
+    expect(devs.map((u) => u.username)).toEqual(["bob"]);
+    const limited = await fetchUsers(ctx(membersClient()), { group: "my-group", limit: 1 });
+    expect(limited.map((u) => u.username)).toEqual(["bob"]);
+  });
+
+  it("rejects an unknown role and a non-positive limit", async () => {
+    await expect(fetchUsers(ctx({}), { group: "g", role: "boss" })).rejects.toThrow(/"role" must be one of/);
+    await expect(fetchUsers(ctx({}), { group: "g", limit: 0 })).rejects.toThrow(/"limit" must be a positive number/);
+  });
+
+  it("enriches each member exactly once when show needs profile fields", async () => {
+    const client = membersClient();
+    const data = await fetchUsers(ctx(client), { project: "g/r", show: "role,bio,counts" });
+    expect(client.getProjectMembers).toHaveBeenCalledWith("g/r");
+    expect(client.getUser).toHaveBeenCalledTimes(2);
+    expect(data.map((u) => u.bio)).toEqual(["hi", "hi"]);
+    // role comes from the members payload, not the profile
+    expect(data.map((u) => u.role)).toEqual(["developer", "owner"]);
   });
 });
