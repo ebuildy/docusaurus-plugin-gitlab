@@ -443,9 +443,9 @@ async function normalizeUser(ctx: GitLabContext, u: any, role?: string): Promise
  * affects this data.
  */
 async function fetchUserProfile(ctx: GitLabContext, username: string): Promise<UserData> {
-  return memo(ctx, `user:${username}`, async () => {
+  return memo(ctx, `userByName:${username.toLowerCase()}`, async () => {
     const matches = await ctx.client.getUserByUsername(username);
-    const found = matches.find((u: any) => u.username === username);
+    const found = matches.find((u: any) => String(u.username).toLowerCase() === username.toLowerCase());
     if (!found) {
       throw new Error(`@ebuildy/docusaurus-plugin-gitlab: GitLab user "${username}" not found.`);
     }

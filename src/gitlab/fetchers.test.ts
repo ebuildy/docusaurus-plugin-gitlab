@@ -831,4 +831,44 @@ describe("fetchUser", () => {
     expect(data.avatarUrl).toBeNull();
     expect(c.assets.localize).not.toHaveBeenCalled();
   });
+
+  it("resolves the username case-insensitively", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 5, username: "tdecaux" }]),
+      getUser: vi.fn(async () => ({ id: 5, username: "tdecaux", name: "T Decaux", web_url: "https://x/tdecaux" })),
+    };
+    const c = ctx(client);
+    await expect(fetchUser(c, { name: "TDecaux" })).resolves.toMatchObject({ id: 5, username: "tdecaux" });
+    expect(client.getUser).toHaveBeenCalledWith(5);
+  });
+
+  it("memoizes so a repeated lookup hits the network once", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 101, username: "jdoe" }]),
+      getUser: vi.fn(async () => profile),
+    };
+    const c = ctx(client);
+    await fetchUser(c, { name: "jdoe" });
+    await fetchUser(c, { name: "jdoe" });
+    expect(client.getUserByUsername).toHaveBeenCalledTimes(1);
+    expect(client.getUser).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the username when the profile has no name", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 9, username: "noname" }]),
+      getUser: vi.fn(async () => ({ id: 9, username: "noname", name: null, web_url: "https://x/noname" })),
+    };
+    const data = await fetchUser(ctx(client), { name: "noname" });
+    expect(data.name).toBe("noname");
+  });
+
+  it("trims the name attribute before resolving", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 101, username: "jdoe" }]),
+      getUser: vi.fn(async () => profile),
+    };
+    await fetchUser(ctx(client), { name: "  jdoe  " });
+    expect(client.getUserByUsername).toHaveBeenCalledWith("jdoe");
+  });
 });
