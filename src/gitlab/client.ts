@@ -142,6 +142,32 @@ export class GitLabClient {
     return this.api.ProjectMilestones.all(project, { perPage: DEFAULT_PER_PAGE, maxPages: DEFAULT_MAX_PAGES });
   }
 
+  /** Exact-username lookup (GET /users?username=...); returns 0 or 1 matches. */
+  async getUserByUsername(username: string): Promise<any[]> {
+    return this.api.Users.all({ username, maxPages: 1 });
+  }
+
+  /** Single-user GET — the only endpoint that carries the full public profile. */
+  async getUser(id: number): Promise<any> {
+    return this.api.Users.show(id);
+  }
+
+  async getGroupMembers(group: ProjectRef, opts: PageOptions = {}): Promise<any[]> {
+    return this.api.GroupMembers.all(group, {
+      includeInherited: true,
+      perPage: opts.perPage ?? DEFAULT_PER_PAGE,
+      maxPages: opts.maxPages ?? DEFAULT_MAX_PAGES,
+    });
+  }
+
+  async getProjectMembers(project: ProjectRef, opts: PageOptions = {}): Promise<any[]> {
+    return this.api.ProjectMembers.all(project, {
+      includeInherited: true,
+      perPage: opts.perPage ?? DEFAULT_PER_PAGE,
+      maxPages: opts.maxPages ?? DEFAULT_MAX_PAGES,
+    });
+  }
+
   private headers(): Record<string, string> {
     const h: Record<string, string> = { Accept: "application/json" };
     if (this.config.token) h["PRIVATE-TOKEN"] = this.config.token;
