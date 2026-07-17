@@ -15,7 +15,7 @@ export function UserCard({ user, show }: { user: UserData; show: readonly UserSh
     .join(" · ");
   return (
     <div className="gitlab-card gitlab-user-card">
-      <div className="gitlab-user-card-header">
+      <div className="gitlab-card-header gitlab-user-card-header">
         {user.avatarUrl && (
           <img className="gitlab-avatar" src={user.avatarUrl} alt={user.name} width={48} height={48} />
         )}
