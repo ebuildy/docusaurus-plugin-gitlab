@@ -43,11 +43,14 @@ The grid shares the standard card-grid props:
 ## Build cost
 
 The default `show="role"` needs a **single** members API call. Any profile token
-(`org`, `location`, `bio`, `counts`, `since`) triggers one extra user lookup per
-member at build time (cached on disk, deduplicated across pages and components).
+(`org`, `location`, `bio`, `counts`, `since`) triggers one extra profile lookup per
+member at build time (two API requests per member on a cold build; cached on disk
+and deduplicated across pages and components).
 
 ## Notes
 
 - Exactly one of `group` / `project` is required; both or neither fails the build.
 - Members are fetched **including inherited** ones, like GitLab's members page.
 - Cards are sorted by display name; an unknown `role` value fails the build.
+- Bot/service accounts (and deleted users) that have no public profile degrade to
+  identity-only cards instead of failing the build.

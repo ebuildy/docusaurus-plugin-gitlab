@@ -73,6 +73,7 @@ export async function startGitlabStub(): Promise<{ url: string; stop: () => Prom
     if (url.startsWith("/api/v4/projects/group%2Frepo/members/all")) {
       return send(STUB_MEMBERS);
     }
+    // Bare /users/:id only — a /users/:id/<subresource> path yields NaN and 404s.
     if (url.startsWith("/api/v4/users/")) {
       const id = Number(url.slice("/api/v4/users/".length).split("?")[0]);
       const user = Object.values(STUB_USERS).find((u) => u.id === id);

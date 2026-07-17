@@ -297,8 +297,9 @@ The members of a group **or** project (inherited included) as a grid of user car
 
 The grid accepts the shared card-grid props: `cardColumns`, `cardMinWidth`
 (default `260px`), `gap`, `maxWidth`, `align`. The default `show="role"` costs a
-single members call; profile tokens add one cached user lookup per member at
-build time.
+single members call; profile tokens add one cached profile lookup per member at
+build time (two API requests per member on a cold build, deduplicated across
+pages and builds).
 
 ### `<GitlabRoadmap>`
 

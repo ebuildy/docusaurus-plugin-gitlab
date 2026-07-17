@@ -117,7 +117,8 @@ describe("e2e: docusaurus build", () => {
     // members grid: both members, role badges, enriched org line
     expect(html).toContain("gitlab-user-cards");
     expect(html).toContain("Bob Martin");
-    expect(html).toContain("owner");
+    // role rendered as a badge, not just the word appearing anywhere on the page
+    expect(html).toContain('gitlab-user-role">owner');
     expect(html).toContain("Senior Developer · ACME");
   });
 
