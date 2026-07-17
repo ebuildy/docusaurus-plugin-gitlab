@@ -1,0 +1,53 @@
+---
+title: GitlabUsers
+sidebar_position: 12
+---
+
+# `<GitlabUsers>`
+
+Renders the members of a **group** or a **project** (including inherited members)
+as a grid of user cards, optionally filtered by role.
+
+## Usage
+
+```mdx
+<GitlabUsers group="my-group" />
+
+<GitlabUsers project="group/repo" role="developer" />
+
+<GitlabUsers group="my-group" show="role,org,counts" cardColumns={3} gap="1rem" maxWidth="900px" align="center" />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `group` | `string \| number` | — | Group path or numeric ID. Provide **either** this or `project`. |
+| `project` | `string \| number` | — | Project path or numeric ID. Provide **either** this or `group`. |
+| `role` | `string` | — | Exact-match filter (case-insensitive): `minimal`, `guest`, `planner`, `reporter`, `developer`, `maintainer`, `owner`. |
+| `show` | `string` | `role` | Same tokens as `<GitlabUser>`, plus `role` (a role badge on each card). |
+| `limit` | `number` | all | Maximum members to show (applied after the role filter; the fetch itself is capped at 500). |
+
+## Grid layout
+
+The grid shares the standard card-grid props:
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `cardColumns` | `number` | — | Fixed number of columns. Takes precedence over `cardMinWidth`. |
+| `cardMinWidth` | `string` | `260px` | Minimum card width for a responsive (auto-fill) grid. |
+| `gap` | `string` | — | Spacing between cards, e.g. `"1.5rem"`. |
+| `maxWidth` | `string` | — | Constrain the grid width, e.g. `"900px"`. |
+| `align` | `string` | `start` | `start` or `center` — placement of a width-constrained grid. |
+
+## Build cost
+
+The default `show="role"` needs a **single** members API call. Any profile token
+(`org`, `location`, `bio`, `counts`, `since`) triggers one extra user lookup per
+member at build time (cached on disk, deduplicated across pages and components).
+
+## Notes
+
+- Exactly one of `group` / `project` is required; both or neither fails the build.
+- Members are fetched **including inherited** ones, like GitLab's members page.
+- Cards are sorted by display name; an unknown `role` value fails the build.

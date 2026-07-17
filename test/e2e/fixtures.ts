@@ -6,6 +6,24 @@ const ONE_PX_PNG = Buffer.from(
   "base64",
 );
 
+/** Stub users: jdoe is a group owner with a full profile, bob a developer with a sparse one. */
+const STUB_USERS: Record<string, any> = {
+  jdoe: {
+    id: 101, username: "jdoe", name: "Jane Doe", avatar_url: null, web_url: "https://x/jdoe",
+    job_title: "Senior Developer", organization: "ACME", location: "Paris", bio: "Docs enthusiast",
+    followers: 12, following: 34, created_at: "2020-01-15T00:00:00Z",
+  },
+  bob: {
+    id: 102, username: "bob", name: "Bob Martin", avatar_url: null, web_url: "https://x/bob",
+    followers: 2, following: 3, created_at: "2021-06-01T00:00:00Z",
+  },
+};
+
+const STUB_MEMBERS = [
+  { id: 101, username: "jdoe", name: "Jane Doe", avatar_url: null, web_url: "https://x/jdoe", access_level: 50 },
+  { id: 102, username: "bob", name: "Bob Martin", avatar_url: null, web_url: "https://x/bob", access_level: 30 },
+];
+
 /** Minimal GitLab REST v4 stub. Returns a base URL and a stop() fn. */
 export async function startGitlabStub(): Promise<{ url: string; stop: () => Promise<void> }> {
   const server: Server = createServer((req, res) => {
@@ -48,6 +66,23 @@ export async function startGitlabStub(): Promise<{ url: string; stop: () => Prom
         { name: "docs", title: "Docs", total_projects_count: 4 },
         { name: "api", title: "API", total_projects_count: 9 },
       ]);
+    }
+    if (url.startsWith("/api/v4/groups/my-group/members/all")) {
+      return send(STUB_MEMBERS);
+    }
+    if (url.startsWith("/api/v4/projects/group%2Frepo/members/all")) {
+      return send(STUB_MEMBERS);
+    }
+    if (url.startsWith("/api/v4/users/")) {
+      const id = Number(url.slice("/api/v4/users/".length).split("?")[0]);
+      const user = Object.values(STUB_USERS).find((u) => u.id === id);
+      if (user) return send(user);
+      res.writeHead(404);
+      return res.end("not found");
+    }
+    if (url.startsWith("/api/v4/users")) {
+      const username = new URL(url, "http://stub").searchParams.get("username") ?? "";
+      return send(STUB_USERS[username] ? [STUB_USERS[username]] : []);
     }
     if (url.startsWith("/api/v4/groups/my-group/projects")) {
       return send([

@@ -1,0 +1,46 @@
+---
+title: GitlabUser
+sidebar_position: 11
+---
+
+# `<GitlabUser>`
+
+Renders a GitLab user profile as a small card: photo, display name, linked
+`@username`, and a configurable set of profile sections. All data comes from the
+public user API at build time — nothing is fetched in the browser.
+
+## Usage
+
+```mdx
+<GitlabUser name="jdoe" />
+
+<GitlabUser name="jdoe" show="org,bio,counts" />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `name` | `string` | **required** | GitLab username (login). |
+| `show` | `string` | `org,location,bio,counts,since` | Comma-separated card sections (see below). |
+
+## `show` tokens
+
+The avatar, display name, and linked `@username` always render. Tokens add sections:
+
+| Token | Section |
+|---|---|
+| `org` | Job title · organization |
+| `location` | Location line |
+| `bio` | Bio paragraph (plain text) |
+| `counts` | Followers · following |
+| `since` | "Member since `<date>`" |
+
+An empty `show=""` renders an identity-only card. Sections whose profile field is
+empty are skipped automatically.
+
+## Notes
+
+- The username must exist; an unknown user fails the build in strict mode (renders
+  the fallback otherwise).
+- The avatar is downloaded at build time and served from your site's static assets.
