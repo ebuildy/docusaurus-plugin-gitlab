@@ -129,6 +129,8 @@
 /* Users — user profile cards, standalone or in a responsive grid. */
 .gitlab-user-cards {
   display: grid;
+  /* Fallback; the component's inline style (cardMinWidth/cardColumns) overrides. */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 0.75rem;
   margin: 1rem 0;
 }
