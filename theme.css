@@ -137,6 +137,26 @@
 .gitlab-user-cards .gitlab-user-card {
   margin: 0;
 }
+/* Identity (avatar + name) on the left, emoji-prefixed info lines on the right. */
+.gitlab-user-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.gitlab-user-card-header {
+  flex: none;
+}
+.gitlab-user-info {
+  margin-left: auto;
+  min-width: 0;
+  text-align: right;
+}
+.gitlab-user-info > p:first-child {
+  margin-top: 0;
+}
+.gitlab-user-emoji {
+  margin-right: 0.25rem;
+}
 .gitlab-user-card .gitlab-avatar {
   width: 48px;
   height: 48px;

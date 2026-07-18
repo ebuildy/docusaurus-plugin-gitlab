@@ -22,13 +22,13 @@ describe("GitlabUsers", () => {
     expect(screen.getByText("owner")).toBeInTheDocument();
     expect(screen.getByText("developer")).toBeInTheDocument();
     // default list card is identity + role only
-    expect(screen.queryByText("Dev · ACME")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Dev · ACME/)).not.toBeInTheDocument();
   });
 
   it("adds profile sections to every card via show", () => {
     render(<GitlabUsers data={users as any} show="role,org,counts" />);
-    expect(screen.getByText("Dev · ACME")).toBeInTheDocument();
-    expect(screen.getByText("2 followers · 3 following")).toBeInTheDocument();
+    expect(screen.getByText(/Dev · ACME/)).toBeInTheDocument();
+    expect(screen.getByText(/2 followers · 3 following/)).toBeInTheDocument();
     expect(screen.getByText("owner")).toBeInTheDocument();
   });
 
