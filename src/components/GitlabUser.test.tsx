@@ -62,6 +62,18 @@ describe("GitlabUser", () => {
     expect(screen.getByText(/12 followers/)).toBeInTheDocument();
   });
 
+  it("hides a zero followers or following count", () => {
+    render(<GitlabUser data={{ ...user, followers: 0 } as any} show="counts" />);
+    expect(screen.getByText(/34 following/)).toBeInTheDocument();
+    expect(screen.queryByText(/followers/)).not.toBeInTheDocument();
+  });
+
+  it("drops the counts line entirely when both counts are zero", () => {
+    render(<GitlabUser data={{ ...user, followers: 0, following: 0 } as any} show="counts" />);
+    expect(screen.queryByText(/followers|following/)).not.toBeInTheDocument();
+    expect(screen.queryByText("👥")).not.toBeInTheDocument();
+  });
+
   it("renders nothing without data", () => {
     const { container } = render(<GitlabUser />);
     expect(container).toBeEmptyDOMElement();

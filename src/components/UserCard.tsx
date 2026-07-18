@@ -19,9 +19,10 @@ function InfoLine({ className, emoji, children }: { className: string; emoji: st
 export function UserCard({ user, show }: { user: UserData; show: readonly UserShowToken[] }) {
   const has = (t: UserShowToken) => show.includes(t);
   const orgLine = [user.jobTitle, user.organization].filter(Boolean).join(" · ");
+  // A zero count carries no information — hide that side (and the whole line when both are zero).
   const counts = [
-    user.followers !== null ? `${user.followers} followers` : null,
-    user.following !== null ? `${user.following} following` : null,
+    user.followers !== null && user.followers > 0 ? `${user.followers} followers` : null,
+    user.following !== null && user.following > 0 ? `${user.following} following` : null,
   ]
     .filter(Boolean)
     .join(" · ");
