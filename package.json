@@ -1,6 +1,6 @@
 {
   "name": "@ebuildy/docusaurus-plugin-gitlab",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "MDX extensions to embed GitLab resources in Docusaurus 3 docs",
   "license": "MIT",
   "publishConfig": {
