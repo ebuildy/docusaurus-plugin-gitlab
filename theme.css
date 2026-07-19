@@ -154,13 +154,11 @@
 .gitlab-user-info {
   margin-left: auto;
   min-width: 0;
-  text-align: right;
 }
 @container (max-width: 300px) {
   .gitlab-user-info {
     flex-basis: 100%;
     margin-left: 0;
-    text-align: left;
   }
 }
 
