@@ -124,6 +124,25 @@ export interface GroupProjectData {
   topics: string[];
 }
 
+export interface UserData {
+  id: number;
+  username: string;
+  name: string;
+  webUrl: string;
+  /** Localized via AssetManager; null when the user has no avatar. */
+  avatarUrl: string | null;
+  /** Role name (e.g. "developer"); set only for members lists. */
+  role?: string;
+  // Profile fields — null when not enriched or absent on the profile.
+  jobTitle: string | null;
+  organization: string | null;
+  location: string | null;
+  bio: string | null;
+  followers: number | null;
+  following: number | null;
+  createdAt: string | null;
+}
+
 /** A GitLab label reduced to what the roadmap renders. */
 export interface LabelRef {
   name: string;

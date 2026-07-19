@@ -20,6 +20,7 @@ export type {
   TopicData,
   LabelData,
   GroupProjectData,
+  UserData,
   RoadmapData,
   RoadmapItemData,
   LabelRef,

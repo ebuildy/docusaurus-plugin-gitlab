@@ -126,6 +126,83 @@
   color: var(--ifm-color-emphasis-700);
 }
 
+/* Users — user profile cards, standalone or in a responsive grid. */
+.gitlab-user-cards {
+  display: grid;
+  /* Fallback; the component's inline style (cardMinWidth/cardColumns) overrides. */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.gitlab-user-cards .gitlab-user-card {
+  margin: 0;
+}
+/* Identity (avatar + name + bio) on the left, emoji-prefixed info lines on the
+   right. On narrow cards (≤ 300px) the info block wraps below the identity. */
+.gitlab-user-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.75rem;
+  /* Make the card a query container so the info block tracks the card's own
+     width (grid column, sidebar, …), not the viewport's. */
+  container-type: inline-size;
+}
+.gitlab-user-card-header {
+  flex: none;
+}
+.gitlab-user-info {
+  margin-left: auto;
+  min-width: 0;
+}
+@container (max-width: 300px) {
+  .gitlab-user-info {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+
+.gitlab-user-info > p:first-child {
+  margin-top: 0;
+}
+.gitlab-user-emoji {
+  margin-right: 0.25rem;
+}
+.gitlab-user-card .gitlab-avatar {
+  width: 48px;
+  height: 48px;
+}
+.gitlab-user-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.gitlab-user-name {
+  line-height: 1.2;
+}
+.gitlab-user-username {
+  font-size: 0.85em;
+}
+.gitlab-user-role {
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  text-transform: capitalize;
+}
+.gitlab-user-org,
+.gitlab-user-location,
+.gitlab-user-bio,
+.gitlab-user-counts,
+.gitlab-user-since {
+  margin: 0.35rem 0 0;
+  font-size: 0.85em;
+}
+.gitlab-user-org,
+.gitlab-user-location,
+.gitlab-user-counts,
+.gitlab-user-since {
+  color: var(--ifm-color-emphasis-700);
+}
+
 .gitlab-description {
   margin-bottom: 0.1rem;
 }

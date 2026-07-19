@@ -34,9 +34,20 @@ pnpm run build     # bundle the package into dist/
 | `pnpm run lint:fix` | Auto-fix lint issues |
 | `pnpm run build` | Compile with tsc (ESM-only + types) |
 
+All of these are also exposed as **mise tasks** (`mise tasks` to list):
+`mise run setup | lint | lint:fix | typecheck | test | build | release`.
+
 The example sites have their own READMEs:
 [`examples/site`](./examples/site/README.md) (mocked, drives the e2e) and
 [`examples/gitlab`](./examples/gitlab/README.md) (live gitlab.com data).
+They have mise tasks too — each rebuilds the plugin's `dist/` first:
+
+| Task | What it does |
+|---|---|
+| `mise run gitlab:build` / `gitlab:start` | Build / serve the showcase site (`examples/gitlab`, live gitlab.com data) |
+| `mise run site:build` / `site:start` | Build / serve the e2e fixture site (`examples/site`) — its stub projects 404 against real gitlab.com, so `site:build` needs `GITLAB_HOST` pointing at an instance that has them (the e2e test provides a stub); `site:start` works in dev (failed fetches render the Fallback) |
+
+Both sites read `GITLAB_TOKEN` / `GITLAB_HOST` from the environment.
 
 ## Conventions
 
@@ -79,6 +90,9 @@ and published to npm with provenance via OIDC trusted publishing.
 3. Merge the release PR. The `Release` workflow tags the release and the
    `publish` job runs `npm publish --provenance --access public`. No npm token is
    stored — publishing authenticates via GitHub OIDC.
+
+`mise run release` runs the full gate locally (frozen install, lint, typecheck,
+test, build) and then shows the pending release PR — it never publishes.
 
 ### One-time setup
 

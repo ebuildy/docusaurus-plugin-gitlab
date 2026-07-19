@@ -24,7 +24,9 @@ import type {
   RoadmapItemData,
   RoadmapScale,
   TopicData,
+  UserData,
 } from "./types";
+import { needsProfile, parseRole, parseShow, roleName } from "./users.js";
 
 export interface GitLabContext {
   client: GitLabClient;
@@ -408,6 +410,115 @@ export async function fetchLabels(ctx: GitLabContext, attrs: Attrs): Promise<Lab
     items = sortByName(items, (l) => l.name, order.dir);
     if (limit !== undefined) items = items.slice(0, limit);
     return items;
+  });
+}
+
+/**
+ * Normalize a snake_case user/member payload to `UserData`. Fields the payload
+ * lacks (members payloads have no profile fields) become null.
+ */
+async function normalizeUser(ctx: GitLabContext, u: any, role?: string): Promise<UserData> {
+  // Avatar URLs are absolute; the "user/<username>" scope only namespaces the local asset.
+  const avatarUrl = u.avatar_url ? await ctx.assets.localize(u.avatar_url, "", `user/${u.username}`) : null;
+  return {
+    id: u.id,
+    username: u.username,
+    name: u.name ?? u.username,
+    webUrl: u.web_url,
+    avatarUrl,
+    ...(role === undefined ? {} : { role }),
+    jobTitle: u.job_title ?? null,
+    organization: u.organization ?? null,
+    location: u.location ?? null,
+    bio: u.bio ?? null,
+    followers: typeof u.followers === "number" ? u.followers : null,
+    following: typeof u.following === "number" ? u.following : null,
+    createdAt: u.created_at ?? null,
+  };
+}
+
+/**
+ * Resolve a username to its full profile. Memoized per username so members
+ * shared across pages/components cost one lookup per build; `show` never
+ * affects this data.
+ */
+async function fetchUserProfile(ctx: GitLabContext, username: string): Promise<UserData> {
+  return memo(ctx, `userByName:${username.toLowerCase()}`, async () => {
+    const matches = await ctx.client.getUserByUsername(username);
+    const found = matches.find((u: any) => String(u.username).toLowerCase() === username.toLowerCase());
+    if (!found) {
+      throw new Error(`@ebuildy/docusaurus-plugin-gitlab: GitLab user "${username}" not found.`);
+    }
+    return normalizeUser(ctx, await ctx.client.getUser(found.id));
+  });
+}
+
+export async function fetchUser(ctx: GitLabContext, attrs: Attrs): Promise<UserData> {
+  const name = typeof attrs.name === "string" ? attrs.name.trim() : "";
+  if (!name) {
+    throw new Error(`@ebuildy/docusaurus-plugin-gitlab: <GitlabUser> requires a "name" (GitLab username).`);
+  }
+  parseShow(attrs.show, "GitlabUser"); // validate only; `show` is presentational (read by the component)
+  return fetchUserProfile(ctx, name);
+}
+
+export async function fetchUsers(ctx: GitLabContext, attrs: Attrs): Promise<UserData[]> {
+  const project = attrs.project as string | number | undefined;
+  const group = attrs.group as string | number | undefined;
+  if ((project === undefined) === (group === undefined)) {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <GitlabUsers> requires exactly one of "project" or "group".`,
+    );
+  }
+  const show = parseShow(attrs.show, "GitlabUsers");
+  const enrich = needsProfile(show);
+  const role = parseRole(attrs.role);
+  const limit = attrs.limit === undefined ? undefined : Number(attrs.limit);
+  if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <GitlabUsers> "limit" must be a positive integer; ` +
+        `got ${JSON.stringify(attrs.limit)}.`,
+    );
+  }
+  const scopeKey = project !== undefined ? `p:${String(project)}` : `g:${String(group)}`;
+  const key = `users:${scopeKey}:role=${role ?? "all"}:limit=${limit ?? "all"}:enrich=${enrich ? 1 : 0}`;
+  return memo(ctx, key, async () => {
+    const raw =
+      project !== undefined
+        ? await ctx.client.getProjectMembers(project)
+        : await ctx.client.getGroupMembers(group as string | number);
+    // /members/all can list a user under several ancestors; the effective
+    // membership is the highest access level, so keep the max per user.
+    const byId = new Map<number, any>();
+    for (const m of raw) {
+      const prev = byId.get(m.id);
+      if (!prev || (m.access_level ?? 0) > (prev.access_level ?? 0)) byId.set(m.id, m);
+    }
+    let members = Array.from(byId.values());
+    if (role !== undefined) members = members.filter((m: any) => roleName(m.access_level) === role);
+    members = sortByName(members, (m: any) => String(m.name ?? m.username), "asc");
+    if (limit !== undefined) members = members.slice(0, limit);
+    if (!enrich) {
+      return Promise.all(members.map((m: any) => normalizeUser(ctx, m, roleName(m.access_level))));
+    }
+    // Sequential on purpose: keeps the request pattern gentle; each profile is
+    // individually memoized so repeat builds and shared members are free.
+    // Resolving via username (rather than calling getUser(m.id) directly) costs
+    // one extra lookup here, but shares the per-username memo with <GitlabUser>.
+    const users: UserData[] = [];
+    for (const m of members) {
+      const memberRole = roleName(m.access_level);
+      try {
+        const full = await fetchUserProfile(ctx, m.username);
+        users.push({ ...full, role: memberRole });
+      } catch {
+        // Bot/service accounts and deleted users don't resolve to a profile;
+        // degrade to the identity data from the members payload rather than
+        // failing the whole roster.
+        users.push(await normalizeUser(ctx, m, memberRole));
+      }
+    }
+    return users;
   });
 }
 

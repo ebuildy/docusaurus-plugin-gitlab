@@ -7,6 +7,8 @@ export { GitlabTopics } from "./GitlabTopics.js";
 export { GitlabLabels } from "./GitlabLabels.js";
 export { GitlabProjectGrid } from "./GitlabProjectGrid.js";
 export { GitlabRoadmap } from "./GitlabRoadmap.js";
+export { GitlabUser } from "./GitlabUser.js";
+export { GitlabUsers } from "./GitlabUsers.js";
 export type { ComponentLayout } from "./layout.js";
 export type {
   ProjectInfoData,
@@ -18,6 +20,7 @@ export type {
   TopicData,
   LabelData,
   GroupProjectData,
+  UserData,
   RoadmapData,
   RoadmapItemData,
   LabelRef,

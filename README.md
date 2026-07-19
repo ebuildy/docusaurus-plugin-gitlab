@@ -261,6 +261,46 @@ Both components render [scoped labels/topics](https://docs.gitlab.com/ee/user/pr
 (`scope::value`, e.g. `Abilities::Performance`) as a two-part badge â the scope keeps its
 color and the value gets a dark-gray background. The split is on the last `::`.
 
+### `<GitlabUser>`
+
+A user profile as a small card: photo, display name, linked `@username`, and
+configurable profile sections from the public user API.
+
+```mdx
+<GitlabUser name="jdoe" />
+
+<GitlabUser name="jdoe" show="org,bio,counts" />
+```
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `name` | string | required | GitLab username |
+| `show` | string | `org,location,bio,counts,since` | Card sections: `org`, `location`, `bio`, `counts` (followers/following), `since` (member since) |
+
+### `<GitlabUsers>`
+
+The members of a group **or** project (inherited included) as a grid of user cards.
+
+```mdx
+<GitlabUsers group="my-group" role="developer" />
+
+<GitlabUsers project="group/repo" show="role,org,counts" cardColumns={3} gap="1rem" />
+```
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `group` | string \| number | — | Provide either `group` or `project` |
+| `project` | string \| number | — | Provide either `group` or `project` |
+| `role` | string | — | Exact-match filter: `guest`, `reporter`, `developer`, `maintainer`, `owner`, … |
+| `show` | string | `role` | `<GitlabUser>` tokens plus `role` (role badge) |
+| `limit` | number | all | Max members to show (fetch capped at 500) |
+
+The grid accepts the shared card-grid props: `cardColumns`, `cardMinWidth`
+(default `260px`), `gap`, `maxWidth`, `align`. The default `show="role"` costs a
+single members call; profile tokens add one cached profile lookup per member at
+build time (two API requests per member on a cold build, deduplicated across
+pages and builds).
+
 ### `<GitlabRoadmap>`
 
 Renders a timeline of GitLab **epics** (Premium/Ultimate, group-level) or
