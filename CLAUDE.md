@@ -45,8 +45,17 @@ static HTML. The browser never holds a token or calls the GitLab API.
   `require` export condition; `test/packaging.test.ts` guards this.
 - `pnpm test` — run all tests (Vitest). Use `pnpm exec vitest run <file>` for one file.
 - `pnpm run typecheck` — `tsc --noEmit`.
+- **mise tasks** (`mise.toml`) mirror the pnpm scripts:
+  `mise run setup | lint | lint:fix | typecheck | test | build`, plus
+  `mise run release` (runs the full gate locally and shows the pending
+  release-please PR — never publishes) and example-site tasks that rebuild
+  `dist/` first: `gitlab:build`/`gitlab:start` (showcase site, live gitlab.com
+  data) and `site:build`/`site:start` (`examples/site` is the e2e fixture —
+  its stub projects 404 against real gitlab.com, so `site:build` only works
+  with `GITLAB_HOST` pointing at a stub; `site:start` renders Fallbacks in dev).
 
-There is no dev server. After code edits, run
+There is no dev server for the package itself (`mise run gitlab:start` serves
+the showcase site to see components live). After code edits, run
 `pnpm exec vitest run` and `pnpm run typecheck`. The e2e test
 (`test/e2e/build.test.ts`) builds a real Docusaurus site and is slow (~1 min);
 run it explicitly when touching the pipeline.

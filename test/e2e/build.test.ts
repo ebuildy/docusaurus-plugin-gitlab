@@ -105,6 +105,23 @@ describe("e2e: docusaurus build", () => {
     expect(html).toContain("/groups/my-group/-/issues?label_name[]=epic");
   });
 
+  it("bakes user cards into the static html", () => {
+    const html = readFileSync(join(siteDir, "build", "index.html"), "utf8");
+    // single card: identity + default profile sections
+    expect(html).toContain("Jane Doe");
+    // React SSR splits adjacent text/expression children ("@" and {username}) with an
+    // <!-- --> comment marker, so assert on the link rather than the contiguous string.
+    expect(html).toContain('class="gitlab-user-username" href="https://x/jdoe"');
+    expect(html).toContain("12 followers");
+    expect(html).toContain("Member since");
+    // members grid: both members, role badges, enriched org line
+    expect(html).toContain("gitlab-user-cards");
+    expect(html).toContain("Bob Martin");
+    // role rendered as a badge, not just the word appearing anywhere on the page
+    expect(html).toContain('gitlab-user-role">owner');
+    expect(html).toContain("Senior Developer · ACME");
+  });
+
   it("generates a child page nested under the declaring index page, with a card grid", () => {
     // The generator wrote the child page as a SIBLING of the declaring index page
     // (docs/generate/index.mdx), so Docusaurus nests it under that page.

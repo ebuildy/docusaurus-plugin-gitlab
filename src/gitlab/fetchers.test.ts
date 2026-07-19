@@ -6,7 +6,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { describe, it, expect, vi } from "vitest";
 import { FileCache } from "./cache";
-import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects, fetchRoadmap } from "./fetchers";
+import { fetchProjectInfo, fetchReleases, fetchIssues, fetchCommits, fetchReadme, fetchFile, fetchTopics, fetchLabels, fetchGroupProjects, fetchRoadmap, fetchUser, fetchUsers } from "./fetchers";
 
 function ctx(client: any) {
   const dir = mkdtempSync(join(tmpdir(), "glfetch-"));
@@ -778,5 +778,210 @@ describe("fetchRoadmap (milestones)", () => {
     const data = await fetchRoadmap(c, { source: "milestones", project: "g/r" });
     const items = data.groups.flatMap((g) => g.items);
     expect(items.map((i) => i.title)).toEqual(["v1.0"]);
+  });
+});
+
+describe("fetchUser", () => {
+  const profile = {
+    id: 101, username: "jdoe", name: "Jane Doe", web_url: "https://x/jdoe", avatar_url: "https://x/a.png",
+    job_title: "Senior Developer", organization: "ACME", location: "Paris", bio: "Docs enthusiast",
+    followers: 12, following: 34, created_at: "2020-01-15T00:00:00Z",
+  };
+
+  it("resolves the username and normalizes the full profile", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 101, username: "jdoe" }]),
+      getUser: vi.fn(async () => profile),
+    };
+    const c = ctx(client);
+    const data = await fetchUser(c, { name: "jdoe" });
+    expect(client.getUserByUsername).toHaveBeenCalledWith("jdoe");
+    expect(client.getUser).toHaveBeenCalledWith(101);
+    expect(data).toMatchObject({
+      id: 101, username: "jdoe", name: "Jane Doe", webUrl: "https://x/jdoe",
+      jobTitle: "Senior Developer", organization: "ACME", location: "Paris",
+      bio: "Docs enthusiast", followers: 12, following: 34, createdAt: "2020-01-15T00:00:00Z",
+    });
+    expect(c.assets.localize).toHaveBeenCalledWith("https://x/a.png", "", "user/jdoe");
+    expect(data.avatarUrl).toMatch(/^\/gitlab-assets\//);
+  });
+
+  it("throws a clear error when the username does not exist", async () => {
+    const client = { getUserByUsername: vi.fn(async () => []), getUser: vi.fn() };
+    await expect(fetchUser(ctx(client), { name: "nope" })).rejects.toThrow(/user "nope" not found/);
+    expect(client.getUser).not.toHaveBeenCalled();
+  });
+
+  it("requires a name and rejects invalid show tokens", async () => {
+    await expect(fetchUser(ctx({}), {})).rejects.toThrow(/requires a "name"/);
+    await expect(fetchUser(ctx({}), { name: "jdoe", show: "role" })).rejects.toThrow(/does not support "role"/);
+  });
+
+  it("nulls absent profile fields and skips avatar localization when absent", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 7, username: "bob" }]),
+      getUser: vi.fn(async () => ({ id: 7, username: "bob", name: "Bob", web_url: "https://x/bob", avatar_url: null })),
+    };
+    const c = ctx(client);
+    const data = await fetchUser(c, { name: "bob" });
+    expect(data).toMatchObject({
+      jobTitle: null, organization: null, location: null, bio: null,
+      followers: null, following: null, createdAt: null,
+    });
+    expect(data.avatarUrl).toBeNull();
+    expect(c.assets.localize).not.toHaveBeenCalled();
+  });
+
+  it("resolves the username case-insensitively", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 5, username: "tdecaux" }]),
+      getUser: vi.fn(async () => ({ id: 5, username: "tdecaux", name: "T Decaux", web_url: "https://x/tdecaux" })),
+    };
+    const c = ctx(client);
+    await expect(fetchUser(c, { name: "TDecaux" })).resolves.toMatchObject({ id: 5, username: "tdecaux" });
+    expect(client.getUser).toHaveBeenCalledWith(5);
+  });
+
+  it("memoizes so a repeated lookup hits the network once", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 101, username: "jdoe" }]),
+      getUser: vi.fn(async () => profile),
+    };
+    const c = ctx(client);
+    await fetchUser(c, { name: "jdoe" });
+    await fetchUser(c, { name: "jdoe" });
+    expect(client.getUserByUsername).toHaveBeenCalledTimes(1);
+    expect(client.getUser).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the username when the profile has no name", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 9, username: "noname" }]),
+      getUser: vi.fn(async () => ({ id: 9, username: "noname", name: null, web_url: "https://x/noname" })),
+    };
+    const data = await fetchUser(ctx(client), { name: "noname" });
+    expect(data.name).toBe("noname");
+  });
+
+  it("trims the name attribute before resolving", async () => {
+    const client = {
+      getUserByUsername: vi.fn(async () => [{ id: 101, username: "jdoe" }]),
+      getUser: vi.fn(async () => profile),
+    };
+    await fetchUser(ctx(client), { name: "  jdoe  " });
+    expect(client.getUserByUsername).toHaveBeenCalledWith("jdoe");
+  });
+});
+
+describe("fetchUsers", () => {
+  // Unsorted + one duplicate (a user can be direct AND inherited member).
+  const members = [
+    { id: 1, username: "jdoe", name: "Jane Doe", web_url: "https://x/jdoe", avatar_url: null, access_level: 50 },
+    { id: 2, username: "bob", name: "Bob Martin", web_url: "https://x/bob", avatar_url: null, access_level: 30 },
+    { id: 2, username: "bob", name: "Bob Martin", web_url: "https://x/bob", avatar_url: null, access_level: 30 },
+  ];
+
+  function membersClient() {
+    return {
+      getGroupMembers: vi.fn(async () => members),
+      getProjectMembers: vi.fn(async () => members),
+      getUserByUsername: vi.fn(async (u: string) => [{ id: u === "jdoe" ? 1 : 2, username: u }]),
+      getUser: vi.fn(async (id: number) => ({
+        id,
+        username: id === 1 ? "jdoe" : "bob",
+        name: id === 1 ? "Jane Doe" : "Bob Martin",
+        web_url: "https://x/u",
+        avatar_url: null,
+        bio: "hi",
+        followers: 1,
+        following: 2,
+      })),
+    };
+  }
+
+  it("requires exactly one of project/group", async () => {
+    await expect(fetchUsers(ctx({}), {})).rejects.toThrow(/exactly one of "project" or "group"/);
+    await expect(fetchUsers(ctx({}), { project: "g/r", group: "g" })).rejects.toThrow(/exactly one/);
+  });
+
+  it("lists members with role names, deduped and sorted by display name", async () => {
+    const client = membersClient();
+    const data = await fetchUsers(ctx(client), { group: "my-group" });
+    expect(client.getGroupMembers).toHaveBeenCalledWith("my-group");
+    expect(data.map((u) => u.username)).toEqual(["bob", "jdoe"]);
+    expect(data.map((u) => u.role)).toEqual(["developer", "owner"]);
+    // default show="role" is identity-only → zero per-user profile calls
+    expect(client.getUserByUsername).not.toHaveBeenCalled();
+    expect(client.getUser).not.toHaveBeenCalled();
+    expect(data[0]).toMatchObject({ bio: null, followers: null, createdAt: null });
+  });
+
+  it("filters by role (exact, case-insensitive) and applies limit", async () => {
+    const devs = await fetchUsers(ctx(membersClient()), { group: "my-group", role: "Developer" });
+    expect(devs.map((u) => u.username)).toEqual(["bob"]);
+    const limited = await fetchUsers(ctx(membersClient()), { group: "my-group", limit: 1 });
+    expect(limited.map((u) => u.username)).toEqual(["bob"]);
+  });
+
+  it("rejects an unknown role and a non-positive limit", async () => {
+    await expect(fetchUsers(ctx({}), { group: "g", role: "boss" })).rejects.toThrow(/"role" must be one of/);
+    await expect(fetchUsers(ctx({}), { group: "g", limit: 0 })).rejects.toThrow(/"limit" must be a positive integer/);
+  });
+
+  it("rejects a fractional limit", async () => {
+    await expect(fetchUsers(ctx({}), { group: "g", limit: 1.5 })).rejects.toThrow(/"limit" must be a positive integer/);
+  });
+
+  it("enriches each member exactly once when show needs profile fields", async () => {
+    const client = membersClient();
+    const data = await fetchUsers(ctx(client), { project: "g/r", show: "role,bio,counts" });
+    expect(client.getProjectMembers).toHaveBeenCalledWith("g/r");
+    expect(client.getUser).toHaveBeenCalledTimes(2);
+    expect(data.map((u) => u.bio)).toEqual(["hi", "hi"]);
+    // role comes from the members payload, not the profile
+    expect(data.map((u) => u.role)).toEqual(["developer", "owner"]);
+  });
+
+  it("dedupes to the highest access level when a member appears at multiple levels", async () => {
+    const client = {
+      getGroupMembers: vi.fn(async () => [
+        // Inherited (lower) row first, direct (higher) row second — effective
+        // membership is the max, regardless of row order.
+        { id: 2, username: "bob", name: "Bob Martin", web_url: "https://x/bob", avatar_url: null, access_level: 30 },
+        { id: 2, username: "bob", name: "Bob Martin", web_url: "https://x/bob", avatar_url: null, access_level: 50 },
+      ]),
+    };
+    const data = await fetchUsers(ctx(client), { group: "my-group" });
+    expect(data).toHaveLength(1);
+    expect(data[0]).toMatchObject({ username: "bob", role: "owner" });
+  });
+
+  it("degrades to identity data when one member's profile cannot be resolved, without failing the roster", async () => {
+    const client = {
+      getGroupMembers: vi.fn(async () => members),
+      // "bob" is a bot/service account that doesn't resolve; "jdoe" does.
+      getUserByUsername: vi.fn(async (u: string) => (u === "bob" ? [] : [{ id: 1, username: "jdoe" }])),
+      getUser: vi.fn(async (id: number) => ({
+        id,
+        username: "jdoe",
+        name: "Jane Doe",
+        web_url: "https://x/jdoe",
+        avatar_url: null,
+        bio: "hi",
+        followers: 1,
+        following: 2,
+      })),
+    };
+    const data = await fetchUsers(ctx(client), { group: "my-group", show: "role,bio" });
+    expect(data.map((u) => u.username)).toEqual(["bob", "jdoe"]);
+    expect(data[0]).toMatchObject({ username: "bob", role: "developer", bio: null, followers: null, createdAt: null });
+    expect(data[1]).toMatchObject({ username: "jdoe", role: "owner", bio: "hi" });
+  });
+
+  it("applies limit before enrichment so only surviving members are resolved", async () => {
+    const client = membersClient();
+    const data = await fetchUsers(ctx(client), { group: "my-group", show: "role,bio", limit: 1 });
+    expect(data.map((u) => u.username)).toEqual(["bob"]);
+    expect(client.getUser).toHaveBeenCalledTimes(1);
   });
 });

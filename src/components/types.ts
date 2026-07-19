@@ -8,6 +8,7 @@ export type {
   TopicData,
   LabelData,
   GroupProjectData,
+  UserData,
   FetchError,
   ComponentPayload,
   LabelRef,

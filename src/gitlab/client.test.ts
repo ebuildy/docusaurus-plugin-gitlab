@@ -14,6 +14,10 @@ const contributorsAllMock = vi.fn();
 const epicsAllMock = vi.fn();
 const groupMilestonesAllMock = vi.fn();
 const projectMilestonesAllMock = vi.fn();
+const usersAllMock = vi.fn();
+const usersShowMock = vi.fn();
+const groupMembersAllMock = vi.fn();
+const projectMembersAllMock = vi.fn();
 
 vi.mock("@gitbeaker/rest", () => ({
   // Vitest 4 invokes the mock implementation as a real constructor under
@@ -34,6 +38,9 @@ vi.mock("@gitbeaker/rest", () => ({
       Epics: { all: epicsAllMock },
       GroupMilestones: { all: groupMilestonesAllMock },
       ProjectMilestones: { all: projectMilestonesAllMock },
+      Users: { all: usersAllMock, show: usersShowMock },
+      GroupMembers: { all: groupMembersAllMock },
+      ProjectMembers: { all: projectMembersAllMock },
     };
   }),
 }));
@@ -58,6 +65,10 @@ beforeEach(() => {
   epicsAllMock.mockReset();
   groupMilestonesAllMock.mockReset();
   projectMilestonesAllMock.mockReset();
+  usersAllMock.mockReset();
+  usersShowMock.mockReset();
+  groupMembersAllMock.mockReset();
+  projectMembersAllMock.mockReset();
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -289,5 +300,39 @@ describe("roadmap sources", () => {
     expect(await client.getProjectMilestones("p/x")).toEqual([{ id: 3 }]);
     expect(groupMilestonesAllMock).toHaveBeenCalledWith("g", { perPage: 100, maxPages: 5 });
     expect(projectMilestonesAllMock).toHaveBeenCalledWith("p/x", { perPage: 100, maxPages: 5 });
+  });
+});
+
+describe("users and members", () => {
+  it("getUserByUsername queries the users endpoint with an exact username", async () => {
+    usersAllMock.mockResolvedValue([{ id: 101, username: "jdoe" }]);
+    const c = new GitLabClient({ host: "https://gitlab.example.com" });
+    await expect(c.getUserByUsername("jdoe")).resolves.toEqual([{ id: 101, username: "jdoe" }]);
+    expect(usersAllMock).toHaveBeenCalledWith({ username: "jdoe", maxPages: 1 });
+  });
+
+  it("getUser fetches the full single-user profile", async () => {
+    usersShowMock.mockResolvedValue({ id: 101, bio: "hi" });
+    const c = new GitLabClient({ host: "https://gitlab.example.com" });
+    await expect(c.getUser(101)).resolves.toEqual({ id: 101, bio: "hi" });
+    expect(usersShowMock).toHaveBeenCalledWith(101);
+  });
+
+  it("member fetches include inherited members with the 500-item ceiling", async () => {
+    groupMembersAllMock.mockResolvedValue([]);
+    projectMembersAllMock.mockResolvedValue([]);
+    const c = new GitLabClient({ host: "https://gitlab.example.com" });
+    await c.getGroupMembers("my-group");
+    expect(groupMembersAllMock).toHaveBeenCalledWith("my-group", {
+      includeInherited: true,
+      perPage: 100,
+      maxPages: 5,
+    });
+    await c.getProjectMembers("group/repo");
+    expect(projectMembersAllMock).toHaveBeenCalledWith("group/repo", {
+      includeInherited: true,
+      perPage: 100,
+      maxPages: 5,
+    });
   });
 });

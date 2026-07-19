@@ -4,3 +4,65 @@
 [tools]
 node = "22"
 pnpm = "11.13.1"
+
+[tasks.setup]
+description = "Install dependencies"
+run = "pnpm install"
+
+[tasks.lint]
+description = "Lint JS/TS (eslint) and markdown (markdownlint-cli2)"
+run = "pnpm run lint"
+
+[tasks."lint:fix"]
+description = "Lint with auto-fix"
+run = "pnpm run lint:fix"
+
+[tasks.typecheck]
+description = "Type-check without emitting (tsc --noEmit)"
+run = "pnpm run typecheck"
+
+[tasks.test]
+description = "Run all tests with Vitest (includes the slow e2e Docusaurus build)"
+run = "pnpm test"
+
+[tasks.build]
+description = "Compile ESM .js + .d.ts into dist/"
+run = "pnpm run build"
+
+# Example sites (pnpm workspace packages). They consume the plugin's dist/ via
+# workspace:*, so they depend on the plugin build. GITLAB_TOKEN / GITLAB_HOST
+# are read from the environment (optional for the public demo projects).
+[tasks."site:build"]
+description = "Build the e2e fixture site (examples/site) — references stub projects, so set GITLAB_HOST to a stub/instance that has them (the e2e test does this; against gitlab.com it 404s)"
+depends = ["build"]
+run = "pnpm --filter example-site run build"
+
+[tasks."site:start"]
+description = "Run the e2e fixture site dev server (examples/site) — stub projects render the Fallback in dev unless GITLAB_HOST provides them"
+depends = ["build"]
+run = "pnpm --filter example-site run start"
+
+[tasks."gitlab:build"]
+description = "Build the full GitLab showcase site (examples/gitlab)"
+depends = ["build"]
+run = "pnpm --filter example-gitlab run build"
+
+[tasks."gitlab:start"]
+description = "Run the GitLab showcase site dev server (examples/gitlab)"
+depends = ["build"]
+run = "pnpm --filter example-gitlab run start"
+
+[tasks.release]
+description = "Run the full release gate locally, then show the pending release-please PR (merging it triggers the automated npm publish — no local publish)"
+run = """
+set -e
+pnpm install --frozen-lockfile
+pnpm run lint
+pnpm run typecheck
+pnpm test
+pnpm run build
+echo ""
+echo "Release gate passed. Releases are automated with release-please:"
+gh pr list --state open --label "autorelease: pending" || true
+echo "Merge the release PR above (if any); CI tags the release and publishes to npm via OIDC."
+"""
