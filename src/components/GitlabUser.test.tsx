@@ -34,11 +34,18 @@ describe("GitlabUser", () => {
 
   it("prefixes every info line with a decorative emoji", () => {
     render(<GitlabUser data={user as any} />);
-    for (const emoji of ["💼", "📍", "📝", "👥", "📅"]) {
+    for (const emoji of ["💼", "📍", "👥", "📅"]) {
       const marker = screen.getByText(emoji);
       expect(marker).toHaveClass("gitlab-user-emoji");
       expect(marker).toHaveAttribute("aria-hidden", "true");
     }
+  });
+
+  it("renders the bio inside the identity block, without an emoji marker", () => {
+    const { container } = render(<GitlabUser data={user as any} />);
+    const bio = container.querySelector(".gitlab-user-identity .gitlab-user-bio");
+    expect(bio).toHaveTextContent("Docs enthusiast");
+    expect(screen.queryByText("📝")).not.toBeInTheDocument();
   });
 
   it("show narrows the sections", () => {

@@ -137,11 +137,16 @@
 .gitlab-user-cards .gitlab-user-card {
   margin: 0;
 }
-/* Identity (avatar + name) on the left, emoji-prefixed info lines on the right. */
+/* Identity (avatar + name + bio) on the left, emoji-prefixed info lines on the
+   right. On narrow cards (≤ 300px) the info block wraps below the identity. */
 .gitlab-user-card {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 0.75rem;
+  /* Make the card a query container so the info block tracks the card's own
+     width (grid column, sidebar, …), not the viewport's. */
+  container-type: inline-size;
 }
 .gitlab-user-card-header {
   flex: none;
@@ -151,6 +156,14 @@
   min-width: 0;
   text-align: right;
 }
+@container (max-width: 300px) {
+  .gitlab-user-info {
+    flex-basis: 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+}
+
 .gitlab-user-info > p:first-child {
   margin-top: 0;
 }

@@ -37,11 +37,6 @@ export function UserCard({ user, show }: { user: UserData; show: readonly UserSh
         {user.location}
       </InfoLine>
     ),
-    has("bio") && user.bio && (
-      <InfoLine key="bio" className="gitlab-user-bio" emoji="📝">
-        {user.bio}
-      </InfoLine>
-    ),
     has("counts") && counts && (
       <InfoLine key="counts" className="gitlab-user-counts" emoji="👥">
         {counts}
@@ -65,6 +60,7 @@ export function UserCard({ user, show }: { user: UserData; show: readonly UserSh
             @{user.username}
           </a>
           {has("role") && user.role && <span className="gitlab-badge gitlab-user-role">{user.role}</span>}
+          {has("bio") && user.bio && <p className="gitlab-user-bio">{user.bio}</p>}
         </div>
       </div>
       {info.length > 0 && <div className="gitlab-user-info">{info}</div>}
