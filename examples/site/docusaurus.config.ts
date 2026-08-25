@@ -14,7 +14,7 @@ const config: Config = {
   baseUrl: "/",
   favicon: undefined,
   onBrokenLinks: "ignore",
-  onBrokenMarkdownLinks: "ignore",
+  markdown: { hooks: { onBrokenMarkdownLinks: "ignore" } },
   plugins: [[gitlabPlugin, gitlabOptions]],
   presets: [
     [
