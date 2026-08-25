@@ -80,8 +80,8 @@ export function resolveRepoLink(href: string, ctx: RepoLinkContext): string {
   // under /-/blob/ — that route needs a file. Deliberate, narrow exception to
   // "always /-/blob/, never /-/tree/": GitLab redirects a blob URL pointing at
   // a directory to the tree view, which does not help when there is no path
-  // at all, so we emit the repo tree URL for that ref directly. Site mode's
-  // empty-path handling is out of scope here (owned by a later task).
+  // at all, so we emit the repo tree URL for that ref directly. (Site mode
+  // handles its own empty path above, before publicUrl is ever read.)
   if (path === "" && ctx.mode === "gitlab") {
     return `${publicUrl}/${ctx.project}/-/tree/${ctx.ref}`;
   }
