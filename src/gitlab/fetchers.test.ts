@@ -208,6 +208,32 @@ describe("fetchProjectInfo", () => {
     expect(second.releases).toHaveLength(2);
     expect(client.getReleases).toHaveBeenCalledTimes(2);
   });
+
+  it("rewrites relative links in the description at the default branch", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "see [docs](docs/x.md)",
+        web_url: "https://gitlab.com/g/r", star_count: 0, forks_count: 0, topics: [],
+        last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null, default_branch: "main",
+      })),
+      getContributorsCount: vi.fn(async () => undefined),
+    };
+    const data = await fetchProjectInfo(ctx(client), { project: "g/r" });
+    expect(data.descriptionHtml).toContain('href="https://gitlab.com/g/r/-/blob/main/docs/x.md"');
+  });
+
+  it("falls back to HEAD when the project has no default branch", async () => {
+    const client = {
+      getProject: vi.fn(async () => ({
+        id: 7, path_with_namespace: "g/r", name: "r", description: "see [docs](docs/x.md)",
+        web_url: "https://gitlab.com/g/r", star_count: 0, forks_count: 0, topics: [],
+        last_activity_at: "2026-01-01T00:00:00Z", avatar_url: null, default_branch: null,
+      })),
+      getContributorsCount: vi.fn(async () => undefined),
+    };
+    const data = await fetchProjectInfo(ctx(client), { project: "g/r" });
+    expect(data.descriptionHtml).toContain('href="https://gitlab.com/g/r/-/blob/HEAD/docs/x.md"');
+  });
 });
 
 describe("fetchReleases", () => {
@@ -250,6 +276,20 @@ describe("fetchReleases", () => {
     c.options.markdownRenderChain = [remarkParse, [remarkRehype, { allowDangerousHtml: true }], rehypeRaw];
     const data = await fetchReleases(c, { project: "g/r", includePrereleases: true });
     expect(data[0].descriptionHtml).toContain("onclick");
+  });
+
+  it("rewrites relative links in release notes at the release tag", async () => {
+    const client: any = {
+      getReleases: vi.fn(async () => [
+        {
+          name: "v1", tag_name: "v1.0", released_at: "2026-01-01T00:00:00Z",
+          description: "see [changelog](CHANGELOG.md)", assets: { links: [] },
+          _links: { self: "https://gitlab.com/g/r/-/releases/v1.0" },
+        },
+      ]),
+    };
+    const [release] = await fetchReleases(ctx(client), { project: "g/r" });
+    expect(release.descriptionHtml).toContain('href="https://gitlab.com/g/r/-/blob/v1.0/CHANGELOG.md"');
   });
 });
 

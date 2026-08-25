@@ -107,6 +107,7 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
   const cN = typeof attrs.commits === "number" ? attrs.commits : 0;
   const iN = typeof attrs.issues === "number" ? attrs.issues : 0;
   const strict = ctx.options.strict ?? true;
+  const link = readLinkOpts(ctx, attrs, "GitlabProjectInfo");
 
   async function section<T>(count: number, fn: () => Promise<T[]>): Promise<T[] | undefined> {
     if (!(count > 0)) return undefined;
@@ -118,14 +119,21 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
     }
   }
 
-  return memo(ctx, `projectInfo:${project}:r${rN}:c${cN}:i${iN}`, async () => {
+  return memo(ctx, `projectInfo:${project}:r${rN}:c${cN}:i${iN}:${link.mode}:${link.linkBase}`, async () => {
     const p = await ctx.client.getProject(attrs.project as string | number, { statistics: true });
     const avatarUrl = p.avatar_url ? await ctx.assets.localize(p.avatar_url, "", project) : null;
     const contributorsCount = await ctx.client
       .getContributorsCount(attrs.project as string | number)
       .catch(() => undefined);
     const [releases, commits, issues] = await Promise.all([
-      section(rN, () => fetchReleases(ctx, { project, limit: rN })),
+      section(rN, () =>
+        fetchReleases(ctx, {
+          project,
+          limit: rN,
+          relativeLinks: attrs.relativeLinks,
+          linkBase: attrs.linkBase,
+        }),
+      ),
       section(cN, () => fetchCommits(ctx, { project, limit: cN })),
       section(iN, () => fetchIssues(ctx, { project, limit: iN })),
     ]);
@@ -133,7 +141,10 @@ export async function fetchProjectInfo(ctx: GitLabContext, attrs: Attrs): Promis
       id: p.id,
       path: p.path_with_namespace,
       name: p.name,
-      descriptionHtml: await renderMarkdown(p.description ?? "", { renderChain: ctx.options.markdownRenderChain }),
+      descriptionHtml: await renderMarkdown(p.description ?? "", {
+        transformLinkHref: linkHook(ctx, link, project, p.default_branch ?? "HEAD"),
+        renderChain: ctx.options.markdownRenderChain,
+      }),
       webUrl: p.web_url,
       starCount: p.star_count,
       forksCount: p.forks_count,
@@ -157,7 +168,8 @@ export async function fetchReleases(ctx: GitLabContext, attrs: Attrs): Promise<R
   const project = String(attrs.project);
   const limit = typeof attrs.limit === "number" ? attrs.limit : 10;
   const includePre = attrs.includePrereleases === true;
-  return memo(ctx, `releases:${project}:${limit}:${includePre}`, async () => {
+  const link = readLinkOpts(ctx, attrs, "GitlabReleases");
+  return memo(ctx, `releases:${project}:${limit}:${includePre}:${link.mode}:${link.linkBase}`, async () => {
     const raw = await ctx.client.getReleases(attrs.project as string | number, limit);
     const filtered = includePre ? raw : raw.filter((r: any) => !r.upcoming_release);
     return Promise.all(
@@ -165,7 +177,10 @@ export async function fetchReleases(ctx: GitLabContext, attrs: Attrs): Promise<R
         name: r.name,
         tagName: r.tag_name,
         releasedAt: r.released_at,
-        descriptionHtml: await renderMarkdown(r.description ?? "", { renderChain: ctx.options.markdownRenderChain }),
+        descriptionHtml: await renderMarkdown(r.description ?? "", {
+          transformLinkHref: linkHook(ctx, link, project, r.tag_name),
+          renderChain: ctx.options.markdownRenderChain,
+        }),
         upcomingRelease: Boolean(r.upcoming_release),
         assets: (r.assets?.links ?? []).map((l: any) => ({ name: l.name, url: l.url })),
         webUrl: r._links?.self,
