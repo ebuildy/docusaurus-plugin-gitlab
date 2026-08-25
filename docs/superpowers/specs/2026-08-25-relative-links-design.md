@@ -3,27 +3,52 @@
 **Date:** 2026-08-25
 **Status:** Approved (brainstorming)
 
-## Summary
+## Problem
 
 Relative links inside fetched GitLab markdown (`[CONTRIBUTING](CONTRIBUTING.md)`,
-`[guide](./docs/guide.md)`) are currently emitted verbatim into the static HTML.
-The browser then resolves them against the **Docusaurus page URL**, not the
-GitLab repository, so they 404.
+`[guide](./docs/guide.md)`) are emitted verbatim into the static HTML. Docusaurus
+then reads them as **internal** links relative to the page they landed on,
+resolves them against a route that does not exist, and **fails the build**:
 
-This change rewrites those relative links at build time into absolute GitLab
-URLs pointing at the source repository:
+```text
+[ERROR] Docusaurus found broken links!
+Broken link on source page path = /projects/my-proj:
+   -> linkTo = /projects/CONTRIBUTING.md
+```
+
+Today the only way to build a site using `<GitlabReadme>` is
+`onBrokenLinks: "ignore"` — which is what both example sites in this repo do
+([examples/site/docusaurus.config.ts:16](../../../examples/site/docusaurus.config.ts),
+[examples/gitlab/docusaurus.config.ts:27](../../../examples/gitlab/docusaurus.config.ts)),
+suppressing every genuine broken link in the site along with these.
+
+## Summary
+
+Rewrite relative links at build time into absolute GitLab URLs pointing at the
+source repository:
 
 ```text
 CONTRIBUTING.md  →  https://gitlab.com/group/proj/-/blob/main/CONTRIBUTING.md
 ```
 
+Docusaurus only checks *internal* links, so an absolute URL with a host is
+skipped by the checker entirely — the build passes and the link goes somewhere
+real. Fixing the build error, not merely the reader experience, is the point of
+this change; it is what sets the scope below.
+
 A new plugin option `publicUrl` makes the URL prefix configurable, defaulting to
 `host`, for deployments where the build-time API host differs from the
 user-facing GitLab URL.
 
-Scope: `<GitlabReadme>` and the markdown branch of `<GitlabFile>`. Project
-descriptions and release notes are **out of scope** — they have no natural
-`ref`/`path` base to resolve against.
+**Scope: all four `renderMarkdown` call sites**, since a relative link breaks the
+build identically wherever it is rendered:
+
+| call site | `ref` | `basePath` |
+|---|---|---|
+| `fetchReadme` (`fetchers.ts:262`) | resolved `ref` | `"README.md"` |
+| `fetchFile`, markdown branch (`:590`) | resolved `ref` | the file's own `path` |
+| `fetchProjectInfo` description (`:129`) | `p.default_branch ?? "HEAD"` | — (repo root) |
+| `fetchReleases` notes (`:161`) | `r.tag_name` | — (repo root) |
 
 ## Background
 
@@ -36,7 +61,7 @@ The rendering pipeline already has both halves of the mechanism:
   equivalent transform for images, building
   `${host}/${project}/-/raw/${ref}/${path}` before downloading the bytes.
 
-So the missing piece is a resolver, plus wiring it into two fetchers.
+So the missing piece is a resolver, plus wiring it into the four call sites.
 
 ## Architecture
 
@@ -117,7 +142,14 @@ nothing but latency and cache surface.
 the *instance* root. We deliberately diverge: `AssetManager.absolute()` already
 strips `^\.?\/` and treats image paths as repo-relative, and the intent of the
 feature is to point at repository files. One mental model for images and links
-beats matching GitLab's edge case.
+beats matching GitLab's edge case. It also matters for the build error —
+`/docs/x.md` is just as internal to Docusaurus as `docs/x.md`, so leaving
+`/`-rooted links alone would leave the build broken.
+
+**In-page anchors stay untouched.** A README's `#installation` points at a
+heading rendered into the very same page, so it resolves correctly. Docusaurus
+checks these under `onBrokenAnchors` (default `warn`), and the heading ids are
+present in the emitted HTML, so they pass.
 
 **No re-encoding.** The href is passed through as authored and only prefixed, so
 an already-encoded `%20` is not double-encoded.
@@ -131,6 +163,20 @@ an already-encoded `%20` is not double-encoded.
   alongside the existing `transformImageSrc`.
 - `fetchFile`'s markdown branch passes the file's own `path` as `basePath`, so a
   relative link inside `docs/guide.md` resolves against `docs/`.
+- `fetchProjectInfo`'s `descriptionHtml` uses `ref: p.default_branch ?? "HEAD"`
+  (the project object is already in hand; `default_branch` is null for an empty
+  repository, and GitLab accepts `HEAD` in a blob URL) and no `basePath` — a
+  description is not a file, so its links resolve from the repository root.
+- `fetchReleases`' `descriptionHtml` uses `ref: r.tag_name`, so a release note
+  links to the tree as it was at that tag. No `basePath`, same reasoning.
+
+A small helper in `fetchers.ts` keeps the four call sites from repeating the
+context object:
+
+```ts
+const linkResolver = (ctx: GitLabContext, project: string, ref: string, basePath?: string) =>
+  async (href: string) => resolveRepoLink(href, { publicUrl: ctx.options.publicUrl, project, ref, basePath });
+```
 
 `ctx.options` (the `GitLabContext` options bag built in `src/gitlab/context.ts`)
 gains `publicUrl: string`, so fetchers read it without threading `ResolvedOptions`
@@ -186,24 +232,41 @@ TDD, in this order:
    carrying a trailing slash.
 2. **`src/options.test.ts`** — `publicUrl` defaults to `host`, strips trailing
    slashes, and is rejected when not a URI.
-3. **`src/gitlab/fetchers.test.ts`** — a README whose relative link comes out
-   absolute, and a nested `<GitlabFile>` markdown file whose relative link
-   resolves against its own directory.
+3. **`src/gitlab/fetchers.test.ts`** — one case per call site: a README whose
+   relative link comes out absolute; a nested `<GitlabFile>` markdown file whose
+   relative link resolves against its own directory; a project description
+   resolved at the default branch; and a release note resolved at its tag, not
+   at the default branch.
 
 `src/gitlab/markdown.test.ts` already covers the `transformLinkHref` hook; no
-change needed there. No component changes: `GitlabReadme` and `GitlabFile` render
-the HTML they are given.
+change needed there. No component changes: the components render the HTML they
+are given.
+
+### Build-level guard
+
+`examples/gitlab/docusaurus.config.ts` flips `onBrokenLinks` from `"ignore"` to
+`"throw"`. That site renders live gitlab.com READMEs, so its build becomes a real
+regression test: reintroduce a relative link and the build fails the way a user's
+build does today.
+
+`examples/site` (the stub e2e fixture) stays on `"ignore"` — it is hand-written
+and may hold unrelated placeholder links that would fail CI for reasons unrelated
+to this feature.
+
+`onBrokenMarkdownLinks` is left alone in both: it governs Docusaurus's own
+`.md`-to-`.md` resolution in authored docs, not the HTML this plugin injects.
 
 ## Documentation
 
 - README: a `publicUrl` row in the plugin options table, plus a short subsection
-  explaining relative-link rewriting and the `/-/blob/` target.
+  explaining relative-link rewriting, the `/-/blob/` target, and — since this is
+  the reason the feature exists — that sites no longer need
+  `onBrokenLinks: "ignore"` to render fetched GitLab markdown.
 - `examples/site/docs/components/` — note the behaviour on the `GitlabReadme`
   page.
 
 ## Out of scope
 
-- Rewriting relative links in project descriptions and release notes.
 - Mapping links to `.md` files onto the Docusaurus site's own routes instead of
   GitLab (a much larger feature: it needs a repo-path → doc-route mapping).
 - Fixing relative **image** resolution for nested `<GitlabFile>` markdown —
