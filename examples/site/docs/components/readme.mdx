@@ -54,3 +54,13 @@ built-in anchor checker can't see the README's heading anchors. With the default
 sets `onBrokenAnchors: "throw"`, use `inline` or `hidden` mode instead, or relax the
 setting.
 :::
+
+## Link resolution
+
+Relative links in the README are rewritten to absolute GitLab URLs, so they
+don't break the Docusaurus build. Point them at this site instead with
+`relativeLinks="site"`:
+
+```mdx
+<GitlabReadme project="group/repo" relativeLinks="site" linkBase="/docs/mirror" />
+```

@@ -113,6 +113,8 @@ opt-in and only fetched when its count prop is a positive number.
 | `releasesLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the releases section. An invalid value fails the build |
 | `commitsLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the commits section. An invalid value fails the build |
 | `issuesLayout` | `"list"` \| `"cards"` | `"list"` | Layout for the issues section. An invalid value fails the build |
+| `relativeLinks` | `"gitlab" \| "site" \| "keep"` | plugin option, else `"gitlab"` | Where relative links in the description and embedded release notes point — see [Link resolution](#link-resolution) |
+| `linkBase` | string | plugin option, else `""` | Site path prefix used by `relativeLinks="site"` |
 
 > Each section's `list` layout renders one compact line per item — release:
 > tag and name; commit: linked short SHA, title, and author; issue: linked
@@ -131,7 +133,8 @@ opt-in and only fetched when its count prop is a positive number.
 ### `<GitlabReadme>`
 
 Renders a project's README as themed HTML. Images and badges are downloaded and
-localized; links resolve back to GitLab.
+localized; relative links resolve back to GitLab (configurable — see
+[Link resolution](#link-resolution)).
 
 ```mdx
 <GitlabReadme project="group/repo" />
@@ -143,6 +146,8 @@ localized; links resolve back to GitLab.
 | `project` | string \| number | — | **Required.** |
 | `ref` | string | default branch | Branch, tag, or commit SHA |
 | `toc` | `"hidden" \| "inline" \| "sidebar"` | _auto_ | Where to render the table of contents |
+| `relativeLinks` | `"gitlab" \| "site" \| "keep"` | plugin option, else `"gitlab"` | Where relative links in the fetched markdown point — see [Link resolution](#link-resolution) |
+| `linkBase` | string | plugin option, else `""` | Site path prefix used by `relativeLinks="site"` |
 
 > **Table of contents:** if the README contains a GitLab `[[_TOC_]]` marker on its
 > own line, it is replaced at build time with a generated table of contents linking
@@ -186,6 +191,8 @@ A list of releases with notes, dates, and asset links.
 | `project` | string \| number | — | **Required.** |
 | `limit` | number | `10` | Max releases to show |
 | `includePrereleases` | boolean | `false` | Include upcoming/pre-releases |
+| `relativeLinks` | `"gitlab" \| "site" \| "keep"` | plugin option, else `"gitlab"` | Where relative links in the fetched markdown point — see [Link resolution](#link-resolution) |
+| `linkBase` | string | plugin option, else `""` | Site path prefix used by `relativeLinks="site"` |
 
 ### `<GitlabIssues>`
 
@@ -221,6 +228,8 @@ syntax-highlighted code block (via `prism-react-renderer`).
 | `path` | string | — | **Required.** File path within the repo |
 | `ref` | string | default branch | Branch, tag, or commit SHA |
 | `lines` | string | whole file | Line range for code files, e.g. `"10-25"` (1-based, inclusive) |
+| `relativeLinks` | `"gitlab" \| "site" \| "keep"` | plugin option, else `"gitlab"` | Where relative links in the fetched markdown point — see [Link resolution](#link-resolution) |
+| `linkBase` | string | plugin option, else `""` | Site path prefix used by `relativeLinks="site"` |
 
 ### `<GitlabTopics>`
 
@@ -434,6 +443,54 @@ markdown:
 - A failed include aborts the build in `strict` mode, or renders an inline
   warning otherwise.
 
+### Link resolution
+
+Relative links inside fetched GitLab markdown (`[guide](./docs/guide.md)`) are
+rewritten at build time. Without this, Docusaurus reads them as internal links
+relative to the page they landed on and **fails the build**:
+
+```text
+[ERROR] Docusaurus found broken links!
+Broken link on source page path = /projects/my-proj:
+   -> linkTo = /projects/CONTRIBUTING.md
+```
+
+That is why sites embedding GitLab markdown used to need `onBrokenLinks: "ignore"`.
+They no longer do.
+
+Three modes, set with the `relativeLinks` plugin option or the `relativeLinks`
+attribute on any component that renders markdown. The attribute wins.
+
+| mode | `./docs/x.md` becomes | use it when |
+|---|---|---|
+| `gitlab` _(default)_ | `https://gitlab.com/group/repo/-/blob/main/docs/x.md` | the site documents a repo it does not mirror |
+| `site` | `/repo/docs/x` (with `linkBase="/repo"`) | the site mirrors the repo's markdown tree and links should stay inside Docusaurus |
+| `keep` | `./docs/x.md` | you rewrite links yourself via `outProcessors` or `markdownRenderChain` |
+
+```mdx
+<GitlabReadme project="group/repo" relativeLinks="site" linkBase="/repo" />
+```
+
+Anchors (`#install`), absolute URLs, and `mailto:` links are never touched.
+A leading `/` is read as the **repository** root, matching how image paths
+resolve. Links target `/-/blob/<ref>/…`; GitLab redirects to the tree view when
+the path turns out to be a directory. Query strings and hashes are preserved,
+and `..` segments are clamped at the repository root.
+
+Each source resolves against its own ref: a README and a file at the ref you
+requested, a project description at the default branch, and a release note at
+its own tag.
+
+> **`site` mode links are checked by Docusaurus.** They are internal, so a wrong
+> `linkBase` fails the build under `onBrokenLinks: "throw"`. That is deliberate —
+> it reports a bad mapping instead of shipping dead links.
+
+<!-- -->
+
+> **The `{@includeGitlabReadme}` / `{@includeGitlabFile}` placeholders follow the
+> same rules**, driven by the `relativeLinks` and `linkBase` **plugin options** —
+> a placeholder has no attributes to override them with.
+
 ## Plugin options
 
 | Option | Type | Default | Description |
@@ -444,6 +501,9 @@ markdown:
 | `cache` | `{ ttl: number }` \| `false` | `{ ttl: 3600 }` | On-disk cache TTL (seconds), or `false` to disable |
 | `assetDir` | string | `static/gitlab-assets` | Where README images/badges are downloaded |
 | `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from |
+| `publicUrl` | string | value of `host` | Public GitLab base URL used when building links to repository files. Set it when the build-time API host differs from the user-facing URL. Changing it does not invalidate already-cached HTML — clear `node_modules/.cache` or wait out the TTL |
+| `relativeLinks` | `"gitlab" \| "site" \| "keep"` | `"gitlab"` | Where relative links in fetched markdown point. Overridable per component |
+| `linkBase` | string | `""` | Site path the mirrored docs tree is mounted at, used by `relativeLinks: "site"`. Overridable per component |
 | `fixAutolinks` | boolean | `true` | Rewrite CommonMark autolinks in included markdown to MDX-safe links (include placeholders only) |
 | `fixVoidTags` | boolean | `true` | Self-close HTML void elements (`<br>` → `<br/>`) in included markdown (include placeholders only) |
 | `fixInlineStyles` | boolean | `true` | Convert HTML string `style="…"` attributes to JSX style objects in included markdown |
