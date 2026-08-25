@@ -24,7 +24,9 @@ const config: Config = {
   url: "https://example.com",
   baseUrl: "/",
   favicon: undefined,
-  onBrokenLinks: "ignore",
+  // Real regression guard: this site renders live gitlab.com READMEs, so a
+  // relative link escaping into the HTML must fail the build.
+  onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "ignore",
   // The Docusaurus plugin powers the {@includeGitlabReadme} / {@includeGitlabFile}
   // placeholders; the remark plugin below powers the <Gitlab*> JSX components.
