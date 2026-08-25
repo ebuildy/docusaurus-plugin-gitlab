@@ -1,4 +1,4 @@
-# Design: absolute-ize relative links in fetched GitLab markdown
+# Design: resolving relative links in fetched GitLab markdown
 
 **Date:** 2026-08-25
 **Status:** Approved (brainstorming)
@@ -40,6 +40,12 @@ A new plugin option `publicUrl` makes the URL prefix configurable, defaulting to
 `host`, for deployments where the build-time API host differs from the
 user-facing GitLab URL.
 
+Pointing at GitLab is the right default, but not the only useful answer: a site
+that mirrors a repository's whole markdown tree wants those links to stay
+*inside* Docusaurus. A `relativeLinks` flag — settable per component and as a
+plugin-wide default — selects between the two, with `linkBase` prefixing the
+site-internal form. See [Link modes](#link-modes).
+
 **Scope: all four `renderMarkdown` call sites**, since a relative link breaks the
 build identically wherever it is rendered:
 
@@ -69,8 +75,12 @@ A new **pure module** `src/gitlab/links.ts`. It performs no I/O, touches no
 cache, and needs no mocking to test.
 
 ```ts
+export type LinkMode = "gitlab" | "keep" | "site";
+
 export interface RepoLinkContext {
-  /** Public GitLab base URL, no trailing slash. */
+  /** Where a relative link should point. Default: "gitlab". */
+  mode: LinkMode;
+  /** Public GitLab base URL, no trailing slash. Used by "gitlab" mode. */
   publicUrl: string;
   /** Project path with namespace, e.g. "group/project". */
   project: string;
@@ -79,6 +89,9 @@ export interface RepoLinkContext {
   /** Repo-relative path of the file being rendered, e.g. "docs/guide.md".
    *  Relative links resolve against its directory. */
   basePath?: string;
+  /** Site path the mirrored docs tree is mounted at, no trailing slash.
+   *  Used by "site" mode. Default: "" (site root). */
+  linkBase?: string;
 }
 
 export function resolveRepoLink(href: string, ctx: RepoLinkContext): string;
@@ -94,6 +107,62 @@ Rejected alternatives:
   `defaultMarkdownRenderChain` (where users overriding the chain would silently
   lose it) or require chain surgery per call site.
 
+## Link modes
+
+`relativeLinks` selects where a relative link points. It is a **plugin option**
+(the site-wide default) and an **attribute** on every component that renders
+markdown (the per-use override).
+
+| value | behaviour | when |
+|---|---|---|
+| `gitlab` *(default)* | absolute GitLab blob URL | the docs site shows a repository it does not mirror |
+| `site` | site-internal path, `.md`/`.mdx` stripped, prefixed with `linkBase` | the site mirrors the repo's markdown tree and you want to browse it in Docusaurus |
+| `keep` | href untouched | escape hatch: you handle mapping yourself via `outProcessors` or a custom `markdownRenderChain` |
+
+`linkBase` is the site path the mirrored tree is mounted at (`"/repo"`,
+`"/docs/gitlab"`). It is likewise both a plugin option and an attribute, defaults
+to `""` (site root), has trailing slashes stripped, and is **ignored outside
+`site` mode**.
+
+```mdx
+<GitlabReadme project="group/proj" relativeLinks="site" linkBase="/repo" />
+<GitlabFile project="group/proj" path="docs/a.md" relativeLinks="keep" />
+```
+
+```js
+// plugin options — site-wide default for a mirrored tree
+{ host: "https://gitlab.com", relativeLinks: "site", linkBase: "/repo" }
+```
+
+Resolution per render: `attrs.relativeLinks ?? options.relativeLinks ?? "gitlab"`,
+and the same shape for `linkBase`. An unrecognized value throws at build time with
+the message style `readTocMode` already uses in `fetchers.ts:246`:
+
+```text
+@ebuildy/docusaurus-plugin-gitlab: <GitlabReadme> "relativeLinks" must be one of
+"gitlab", "keep", "site"; got "internal".
+```
+
+In `keep` mode the fetchers omit `transformLinkHref` entirely rather than passing
+an identity function — no hast walking, no work.
+
+### Broken links in `site` mode
+
+`site` mode emits *internal* links, so Docusaurus checks them. A mirrored tree
+with a wrong `linkBase` will fail the build under `onBrokenLinks: "throw"` — and
+that is the intended behaviour: it tells you the mapping is wrong instead of
+shipping dead links. Worth calling out in the README so it is not mistaken for a
+regression of the very error this feature fixes.
+
+### Note on the include path
+
+`{@includeGitlabReadme:…}` / `{@includeGitlabFile:…}` (`src/include/transform.ts`)
+splice **markdown** into the MDX source, which Docusaurus compiles and whose
+`.md` links it resolves natively against its own doc tree. That path already
+behaves like `site` mode and needs no flag; `relativeLinks` applies to the
+component path only. The README should say so, since the two paths are otherwise
+interchangeable.
+
 ## Resolution rules
 
 Applied in order; the first match wins.
@@ -106,7 +175,10 @@ Applied in order; the first match wins.
 | 4 | protocol-relative, starts with `//` | unchanged |
 | 5 | anything else | rewritten (below) |
 
-Rewriting, for case 5:
+Rewriting, for case 5, happens in two stages: **normalize to a repo-root path**
+(shared by every mode), then **apply the mode's prefix**.
+
+Stage 1 — normalize:
 
 1. Split the href at the first `?` or `#`, whichever comes first, into a path
    part and a suffix. The suffix (`?query`, `#hash`, or `?query#hash`) is
@@ -117,10 +189,19 @@ Rewriting, for case 5:
      when `basePath` is absent the base is the repository root,
    - `..` segments that would escape the repository root are **clamped** at the
      root rather than emitting `..` into the URL.
-3. Emit `${publicUrl}/${project}/-/blob/${ref}/${path}${query}${hash}`.
+
+The result is always a clean repo-root-relative path, e.g. `docs/x.md`.
+
+Stage 2 — apply the mode:
+
+| mode | output |
+|---|---|
+| `gitlab` | `${publicUrl}/${project}/-/blob/${ref}/${path}${suffix}` |
+| `site` | `${linkBase}/${path minus .md/.mdx}${suffix}` |
+| `keep` | never reaches stage 1 — the href is returned untouched |
 
 Worked examples, with `publicUrl: "https://gitlab.com"`, `project:
-"group/proj"`, `ref: "main"`:
+"group/proj"`, `ref: "main"`, `mode: "gitlab"`:
 
 | `basePath` | href | output |
 |---|---|---|
@@ -130,6 +211,15 @@ Worked examples, with `publicUrl: "https://gitlab.com"`, `project:
 | `docs/a.md` | `b.md` | `https://gitlab.com/group/proj/-/blob/main/docs/b.md` |
 | `docs/a.md` | `../b.md` | `https://gitlab.com/group/proj/-/blob/main/b.md` |
 | `docs/a.md` | `../../../etc` | `https://gitlab.com/group/proj/-/blob/main/etc` |
+
+Same inputs with `mode: "site"` and `linkBase: "/repo"`:
+
+| `basePath` | href | output |
+|---|---|---|
+| `README.md` | `CONTRIBUTING.md` | `/repo/CONTRIBUTING` |
+| `README.md` | `./docs/x.md#install` | `/repo/docs/x#install` |
+| `docs/a.md` | `../b.md` | `/repo/b` |
+| `docs/a.md` | `assets/logo.png` | `/repo/docs/assets/logo.png` — extension kept, only `.md`/`.mdx` is stripped |
 
 ### Decisions worth recording
 
@@ -154,6 +244,20 @@ present in the emitted HTML, so they pass.
 **No re-encoding.** The href is passed through as authored and only prefixed, so
 an already-encoded `%20` is not double-encoded.
 
+**`site` mode emits site-absolute paths, not relative ones.** Stage 1 already
+normalizes every link to a repo-root path, so prefixing with `linkBase` is one
+line and the result does not depend on the current page's URL. Relative output
+would have been at the mercy of Docusaurus's trailing-slash behaviour, where
+`./x` resolves differently from `/page/` than from `/page`. This differs from
+what I sketched when we picked the modes (`./docs/x.md` → `./docs/x`); the
+`linkBase` prefix is what made site-absolute the simpler and more predictable
+form. Say so if you'd rather keep links relative.
+
+**`site` mode strips only `.md` and `.mdx`.** No `README` → directory-index
+mapping, no `index` special-casing: those depend on the docs plugin's routing
+config, and guessing wrong produces a broken link that is harder to diagnose than
+an honest `/repo/docs/README`.
+
 ## Wiring
 
 `src/gitlab/fetchers.ts`:
@@ -174,15 +278,31 @@ A small helper in `fetchers.ts` keeps the four call sites from repeating the
 context object:
 
 ```ts
-const linkResolver = (ctx: GitLabContext, project: string, ref: string, basePath?: string) =>
-  async (href: string) => resolveRepoLink(href, { publicUrl: ctx.options.publicUrl, project, ref, basePath });
+/** Returns the transformLinkHref hook, or undefined in "keep" mode. */
+function linkResolver(
+  ctx: GitLabContext,
+  attrs: Attrs,
+  project: string,
+  ref: string,
+  basePath?: string,
+): ((href: string) => Promise<string>) | undefined {
+  const mode = readLinkMode(attrs.relativeLinks, ctx.options.relativeLinks);
+  if (mode === "keep") return undefined;
+  const linkBase = readLinkBase(attrs.linkBase, ctx.options.linkBase);
+  return async (href) =>
+    resolveRepoLink(href, { mode, publicUrl: ctx.options.publicUrl, project, ref, basePath, linkBase });
+}
 ```
+
+`readLinkMode` validates and falls back (attribute → plugin option → `"gitlab"`),
+mirroring `readTocMode`; `readLinkBase` does the same plus trailing-slash
+stripping.
 
 `ctx.options` (the `GitLabContext` options bag built in `src/gitlab/context.ts`)
 gains `publicUrl: string`, so fetchers read it without threading `ResolvedOptions`
 through.
 
-## The `publicUrl` option
+## New plugin options
 
 ```ts
 // PluginOptions
@@ -190,14 +310,26 @@ through.
  *  `host`. Set it when the build-time API host differs from the user-facing URL
  *  (e.g. an internal hostname behind a reverse proxy). */
 publicUrl?: string;
+/** Where relative links in fetched markdown should point. Default: "gitlab".
+ *  Overridable per component with the `relativeLinks` attribute. */
+relativeLinks?: "gitlab" | "keep" | "site";
+/** Site path the mirrored docs tree is mounted at, used by `relativeLinks:
+ *  "site"`. Default: "" (site root). Overridable per component. */
+linkBase?: string;
 
 // ResolvedOptions
 publicUrl: string;
+relativeLinks: "gitlab" | "keep" | "site";
+linkBase: string;
 ```
 
-- Joi: `publicUrl: Joi.string().uri().optional()`.
+- Joi: `publicUrl: Joi.string().uri().optional()`,
+  `relativeLinks: Joi.string().valid("gitlab", "keep", "site").optional()`,
+  `linkBase: Joi.string().allow("").optional()`.
 - Resolution: `(opts.publicUrl ?? opts.host).replace(/\/+$/, "")` — same
-  trailing-slash normalization `host` already gets.
+  trailing-slash normalization `host` already gets; `relativeLinks ?? "gitlab"`;
+  `(opts.linkBase ?? "").replace(/\/+$/, "")`.
+- All three are forwarded through `buildContext` into `ctx.options`.
 - **Links only.** Asset downloads keep using `host`: they happen at build time
   against the API, where the internal hostname is the correct one.
 
@@ -212,31 +344,61 @@ Example:
 
 ## Cache interaction
 
-Rendered HTML is memoized on disk under keys like
-`readme:{project}:{ref}:{toc}`. Changing `publicUrl` therefore leaves previously
-cached HTML — and its links — stale until the TTL expires.
+Rendered HTML is memoized on disk under keys like `readme:{project}:{ref}:{toc}`.
+Making `relativeLinks` and `linkBase` per-component attributes turns cache keying
+from a staleness question into a **correctness** one:
 
-**Decision: do not add `publicUrl` to the memo key.** `assetBaseUrl` and
-`markdownRenderChain` already have exactly this property, the default TTL is one
-hour, and `node_modules/.cache` is disposable. The behaviour is documented in the
-README option description instead.
+```mdx
+<GitlabReadme project="group/proj" />
+<GitlabReadme project="group/proj" relativeLinks="site" linkBase="/repo" />
+```
+
+Both renders memoize under the same key today, so the second would serve the
+first's HTML — GitLab links where site links were asked for. The memo keys for
+`fetchReadme` and `fetchFile` therefore **must** gain the two values:
+
+```text
+readme:{project}:{ref}:{toc}:{relativeLinks}:{linkBase}
+file:{project}:{path}:{ref}:{lines}:{relativeLinks}:{linkBase}
+```
+
+`fetchProjectInfo` and `fetchReleases` need the same treatment for the same
+reason, since both accept the attributes too.
+
+`publicUrl` stays **out** of the keys: it is global, so it cannot vary within a
+build. Changing it leaves stale HTML until the TTL expires — exactly as
+`assetBaseUrl` and `markdownRenderChain` already do. The default TTL is one hour
+and `node_modules/.cache` is disposable; the README option description notes it.
 
 ## Testing
 
 TDD, in this order:
 
 1. **`src/gitlab/links.test.ts`** (new) — `resolveRepoLink` as a table:
-   pass-through cases (empty, `#anchor`, `https://`, `mailto:`, `//host`),
-   rewriting cases (bare, `./`, `/`-rooted, `../`, nested `basePath`),
-   query + hash preservation, `..` clamping at the root, and a `publicUrl`
-   carrying a trailing slash.
+   - pass-through: empty, `#anchor`, `https://`, `mailto:`, `//host`, and every
+     href under `mode: "keep"`;
+   - `gitlab` mode: bare, `./`, `/`-rooted, `../`, nested `basePath`, query +
+     hash preservation, `..` clamped at the root, `publicUrl` with a trailing
+     slash;
+   - `site` mode: `.md` and `.mdx` stripped, non-markdown extensions kept,
+     `linkBase` applied, `linkBase: ""` yielding a root-absolute path, trailing
+     slash on `linkBase` stripped, hash preserved after extension stripping.
 2. **`src/options.test.ts`** — `publicUrl` defaults to `host`, strips trailing
-   slashes, and is rejected when not a URI.
+   slashes, and is rejected when not a URI; `relativeLinks` defaults to
+   `"gitlab"` and rejects an unknown value; `linkBase` defaults to `""` and
+   strips trailing slashes.
 3. **`src/gitlab/fetchers.test.ts`** — one case per call site: a README whose
    relative link comes out absolute; a nested `<GitlabFile>` markdown file whose
    relative link resolves against its own directory; a project description
    resolved at the default branch; and a release note resolved at its tag, not
-   at the default branch.
+   at the default branch. Plus, for the flag:
+   - the attribute overrides the plugin option, and the plugin option applies
+     when the attribute is absent;
+   - an invalid `relativeLinks` value throws with the component name in the
+     message;
+   - **two `<GitlabReadme>` renders of the same project with different
+     `relativeLinks` produce different HTML** — the regression test for the memo
+     keys described in [Cache interaction](#cache-interaction).
 
 `src/gitlab/markdown.test.ts` already covers the `transformLinkHref` hook; no
 change needed there. No component changes: the components render the HTML they
@@ -258,17 +420,21 @@ to this feature.
 
 ## Documentation
 
-- README: a `publicUrl` row in the plugin options table, plus a short subsection
-  explaining relative-link rewriting, the `/-/blob/` target, and — since this is
-  the reason the feature exists — that sites no longer need
-  `onBrokenLinks: "ignore"` to render fetched GitLab markdown.
+- README: `publicUrl`, `relativeLinks`, and `linkBase` rows in the plugin options
+  table; `relativeLinks` / `linkBase` rows in the attribute table of each
+  component that renders markdown; and a subsection covering the three modes, the
+  `/-/blob/` target, the fact that sites no longer need `onBrokenLinks: "ignore"`
+  to render fetched GitLab markdown, that `site` mode's links *are* checked by
+  Docusaurus, and that the `{@includeGitlab…}` path needs no flag.
 - `examples/site/docs/components/` — note the behaviour on the `GitlabReadme`
-  page.
+  page, with a `relativeLinks="site"` example.
 
 ## Out of scope
 
-- Mapping links to `.md` files onto the Docusaurus site's own routes instead of
-  GitLab (a much larger feature: it needs a repo-path → doc-route mapping).
+- Route-aware mapping in `site` mode: reading the docs plugin's `routeBasePath`,
+  slugs, or front-matter `id`s to derive the real route instead of stripping the
+  extension and applying `linkBase`. If `linkBase` proves too blunt, that is the
+  follow-up.
 - Fixing relative **image** resolution for nested `<GitlabFile>` markdown —
   `AssetManager.localize` resolves image `src` against the repo root regardless
   of the file's directory. Same root cause, separate change.
