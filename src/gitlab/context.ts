@@ -49,6 +49,9 @@ export function buildContext(options: ResolvedOptions): GitLabContext {
     assets,
     options: {
       host: options.host,
+      publicUrl: options.publicUrl,
+      relativeLinks: options.relativeLinks,
+      linkBase: options.linkBase,
       strict: options.strict,
       allowedHosts: options.includeAllowedHosts,
       debug: options.debug,

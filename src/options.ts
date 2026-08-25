@@ -1,5 +1,6 @@
 import Joi from "joi";
 import type { PluggableList } from "unified";
+import type { LinkMode } from "./gitlab/links.js";
 import type { OutProcessor } from "./include/out-processors.js";
 
 export interface PluginOptions {
@@ -9,6 +10,19 @@ export interface PluginOptions {
   cache?: { ttl: number } | false;
   assetDir?: string;
   assetBaseUrl?: string;
+  /** Public GitLab base URL used to build links to repository files. Defaults to
+   *  `host`. Set it when the build-time API host differs from the user-facing
+   *  URL (e.g. an internal hostname behind a reverse proxy). */
+  publicUrl?: string;
+  /** Where relative links in fetched markdown should point: `"gitlab"` (absolute
+   *  blob URLs), `"site"` (site-internal paths, `.md` stripped, prefixed with
+   *  `linkBase`), or `"keep"` (untouched). Default: `"gitlab"`. Overridable per
+   *  component with the `relativeLinks` attribute. */
+  relativeLinks?: LinkMode;
+  /** Site path the mirrored docs tree is mounted at, used by
+   *  `relativeLinks: "site"`. Default: `""` (site root). Overridable per
+   *  component with the `linkBase` attribute. */
+  linkBase?: string;
   /** Convert CommonMark autolinks (`<https://…>`, `<a@b.com>`) in included markdown
    *  to MDX-safe links so they don't break the build. Default: `true`. */
   fixAutolinks?: boolean;
@@ -49,6 +63,9 @@ export interface ResolvedOptions {
   cache: { ttl: number } | false;
   assetDir: string;
   assetBaseUrl: string;
+  publicUrl: string;
+  relativeLinks: LinkMode;
+  linkBase: string;
   fixAutolinks: boolean;
   fixVoidTags: boolean;
   fixInlineStyles: boolean;
@@ -72,6 +89,9 @@ const schema = Joi.object({
   cache: Joi.alternatives(Joi.object({ ttl: Joi.number().min(0).required() }), Joi.boolean().valid(false)).optional(),
   assetDir: Joi.string().optional(),
   assetBaseUrl: Joi.string().optional(),
+  publicUrl: Joi.string().uri().optional(),
+  relativeLinks: Joi.string().valid("gitlab", "keep", "site").optional(),
+  linkBase: Joi.string().allow("").optional(),
   fixAutolinks: Joi.boolean().optional(),
   fixVoidTags: Joi.boolean().optional(),
   fixInlineStyles: Joi.boolean().optional(),
@@ -98,6 +118,9 @@ export function resolveOptions(
     cache: opts.cache === undefined ? { ttl: 3600 } : opts.cache,
     assetDir: opts.assetDir ?? "static/gitlab-assets",
     assetBaseUrl: (opts.assetBaseUrl ?? "/gitlab-assets").replace(/\/+$/, ""),
+    publicUrl: (opts.publicUrl ?? opts.host).replace(/\/+$/, ""),
+    relativeLinks: opts.relativeLinks ?? "gitlab",
+    linkBase: (opts.linkBase ?? "").replace(/\/+$/, ""),
     fixAutolinks: opts.fixAutolinks ?? true,
     fixVoidTags: opts.fixVoidTags ?? true,
     fixInlineStyles: opts.fixInlineStyles ?? true,

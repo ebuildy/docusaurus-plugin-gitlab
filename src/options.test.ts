@@ -131,4 +131,50 @@ describe("resolveOptions", () => {
     const o = resolveOptions({ host: "https://gitlab.com" }, "production");
     expect(o.markdownRenderChain).toBeUndefined();
   });
+
+  it("defaults publicUrl to host", () => {
+    const o = resolveOptions({ host: "https://gitlab.com" }, "production");
+    expect(o.publicUrl).toBe("https://gitlab.com");
+  });
+
+  it("uses an explicit publicUrl over host", () => {
+    const o = resolveOptions(
+      { host: "http://gitlab.internal:8080", publicUrl: "https://gitlab.example.com" },
+      "production",
+    );
+    expect(o.host).toBe("http://gitlab.internal:8080");
+    expect(o.publicUrl).toBe("https://gitlab.example.com");
+  });
+
+  it("strips a trailing slash from publicUrl", () => {
+    const o = resolveOptions({ host: "https://gitlab.com", publicUrl: "https://x.example.com/" }, "production");
+    expect(o.publicUrl).toBe("https://x.example.com");
+  });
+
+  it("rejects a publicUrl that is not a URI", () => {
+    expect(() => resolveOptions({ host: "https://gitlab.com", publicUrl: "not a url" }, "production")).toThrow(
+      /publicUrl/,
+    );
+  });
+
+  it("defaults relativeLinks to gitlab and linkBase to an empty string", () => {
+    const o = resolveOptions({ host: "https://gitlab.com" }, "production");
+    expect(o.relativeLinks).toBe("gitlab");
+    expect(o.linkBase).toBe("");
+  });
+
+  it("passes through relativeLinks and linkBase", () => {
+    const o = resolveOptions(
+      { host: "https://gitlab.com", relativeLinks: "site", linkBase: "/repo/" },
+      "production",
+    );
+    expect(o.relativeLinks).toBe("site");
+    expect(o.linkBase).toBe("/repo");
+  });
+
+  it("rejects an unknown relativeLinks value", () => {
+    expect(() =>
+      resolveOptions({ host: "https://gitlab.com", relativeLinks: "internal" as any }, "production"),
+    ).toThrow(/relativeLinks/);
+  });
 });

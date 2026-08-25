@@ -7,6 +7,7 @@ import { createIncludeLogger } from "../include/logger.js";
 import type { AssetManager } from "./assets";
 import type { FileCache } from "./cache";
 import type { GitLabClient, PageOptions } from "./client";
+import type { LinkMode } from "./links.js";
 import { renderMarkdown } from "./markdown.js";
 import { buildRoadmap, type BuildRoadmapOptions } from "./roadmap.js";
 import type { TocEntry, TocMode } from "./toc.js";
@@ -34,6 +35,12 @@ export interface GitLabContext {
   assets: AssetManager;
   options: {
     host: string;
+    /** Public GitLab base URL for generated links. Defaults to `host`. */
+    publicUrl?: string;
+    /** Site-wide default for the `relativeLinks` attribute. Default: "gitlab". */
+    relativeLinks?: LinkMode;
+    /** Site-wide default for the `linkBase` attribute. Default: "". */
+    linkBase?: string;
     /** Include-pipeline settings (populated by `buildContext`); optional so test
      *  fakes can omit them. Defaults applied where read. */
     strict?: boolean;
