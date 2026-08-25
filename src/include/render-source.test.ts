@@ -34,7 +34,6 @@ describe("codeRanges", () => {
 
 const helpers = {
   localizeImage: async (u: string) => `/gitlab-assets/${u.replace(/[^a-z0-9.]/gi, "_")}`,
-  absolutizeLink: (u: string) => `https://gl/g/p/-/blob/main/${u.replace(/^\.?\//, "")}`,
 };
 
 describe("escapeMdx", () => {
@@ -59,9 +58,9 @@ describe("transformProse", () => {
     expect(await transformProse("![x](https://h/i.png)", helpers))
       .toBe("![x](https://h/i.png)");
   });
-  it("absolutizes a repo-relative link", async () => {
+  it("leaves a repo-relative link untouched (link rewriting is owned by rewriteRelativeLinks)", async () => {
     expect(await transformProse("[c](./CONTRIBUTING.md)", helpers))
-      .toBe("[c](https://gl/g/p/-/blob/main/CONTRIBUTING.md)");
+      .toBe("[c](./CONTRIBUTING.md)");
   });
   it("leaves anchors and external links untouched", async () => {
     expect(await transformProse("[a](#sec) [b](https://x)", helpers))
@@ -122,5 +121,13 @@ describe("renderSource", () => {
     });
     expect(out).toContain("# Doc");
     expect(out).toContain("hi &#123;y&#125;");
+  });
+
+  it("leaves a relative link untouched while still localizing images (link rewriting happens later, via rewriteRelativeLinks)", async () => {
+    const out = await renderSource("![logo](./logo.png)\n\n[guide](../top.md)", {
+      ctx, project: "g/p", ref: "main", kind: "readme",
+    });
+    expect(out).toContain("[guide](../top.md)");
+    expect(out).toContain("/gitlab-assets/");
   });
 });

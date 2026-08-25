@@ -25,14 +25,11 @@ export function codeRanges(md: string): Array<[number, number]> {
 
 export interface ProseHelpers {
   localizeImage: (url: string) => Promise<string>;
-  absolutizeLink: (url: string) => string;
 }
 
 const IMG_EXTERNAL = /^(?:https?:|data:|\/\/)/i;
-const LINK_KEEP = /^(?:https?:|mailto:|tel:|#|\/\/)/i;
 
 const MD_IMAGE_RE = /!\[([^\]]*)\]\(\s*([^)\s]+)((?:\s+"[^"]*")?)\s*\)/g;
-const MD_LINK_RE = /(?<!!)\[([^\]]*)\]\(\s*([^)\s]+)((?:\s+"[^"]*")?)\s*\)/g;
 const HTML_IMG_SRC_RE = /(<img\b[^>]*?\ssrc=")([^"]*)(")/gi;
 
 async function replaceAsync(
@@ -90,11 +87,10 @@ export async function transformProse(text: string, h: ProseHelpers): Promise<str
     if (IMG_EXTERNAL.test(url)) return m[0];
     return `${pre}${await h.localizeImage(url)}${post}`;
   });
-  out = await replaceAsync(out, MD_LINK_RE, async (m) => {
-    const [, label, url, title] = m;
-    if (LINK_KEEP.test(url)) return m[0];
-    return `[${label}](${h.absolutizeLink(url)}${title})`;
-  });
+  // Link rewriting is owned by `rewriteRelativeLinks` (src/include/rewrite-links.ts),
+  // applied by `transformIncludes` right after `renderSource` for markdown sources.
+  // It resolves every relative link through `resolveRepoLink`, the single source of
+  // truth for `publicUrl`/`site`/`keep` mode — do not re-absolutize links here.
   return escapeMdx(out);
 }
 
@@ -103,13 +99,6 @@ const MD_EXT = /\.(?:md|mdx|markdown)$/i;
 /** Whether an include's content is treated as markdown (vs. a fenced code block). */
 export function isMarkdownSource(kind: "readme" | "file", path?: string): boolean {
   return kind === "readme" || (path != null && MD_EXT.test(path));
-}
-
-function absolutizeFactory(host: string, project: string, ref: string) {
-  return (url: string) => {
-    const clean = url.replace(/^\.?\//, "");
-    return `${host}/${project}/-/blob/${ref}/${clean}`;
-  };
 }
 
 /** Walk code ranges verbatim, transform prose between them. */
@@ -142,7 +131,6 @@ export async function renderSource(raw: string, o: RenderSourceOptions): Promise
     const body = stripFrontmatter(raw);
     return processMarkdownSource(body, {
       localizeImage: (u) => o.ctx.assets.localize(u, o.ref, o.project),
-      absolutizeLink: absolutizeFactory(o.ctx.options.host, o.project, o.ref),
     });
   }
   const sliced = applyLineRange(raw, o.lineRange);

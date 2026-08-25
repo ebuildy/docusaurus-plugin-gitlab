@@ -219,6 +219,68 @@ describe("transformIncludes", () => {
     expect(out).not.toContain("(./guide.md)");
   });
 
+  it("resolves a relative link with a '../' segment against the repo root", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "See [top](../top.md) for details.",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabFile: g/p/-/docs/a.md}", ctx, { strict: true });
+    // basePath is "docs/a.md" — "../top.md" resolves against its directory up to
+    // the repo root, something the old regex-based rewriter could never do.
+    expect(out).toContain("[top](https://gl/g/p/-/blob/main/top.md)");
+    expect(out).not.toContain("../top.md");
+  });
+
+  it("honours publicUrl over host when rewriting links", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "See [the guide](./guide.md) for details.",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl", publicUrl: "https://gitlab.example.com" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, { strict: true });
+    expect(out).toContain("[the guide](https://gitlab.example.com/g/p/-/blob/main/guide.md)");
+    expect(out).not.toContain("https://gl/g/p");
+  });
+
+  it("produces a site-internal link when relativeLinks is 'site' with a linkBase", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "See [the guide](./docs/guide.md) for details.",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl", relativeLinks: "site", linkBase: "/repo" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, { strict: true });
+    expect(out).toContain("[the guide](/repo/docs/guide)");
+    expect(out).not.toContain("https://gl");
+  });
+
+  it("rewrites a link whose label contains inline code", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "See [`SKILL.md`](skills/a/SKILL.md) for details.",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, { strict: true });
+    expect(out).toContain("[`SKILL.md`](https://gl/g/p/-/blob/main/skills/a/SKILL.md)");
+    expect(out).not.toContain("(skills/a/SKILL.md)");
+  });
+
   it("does not run processors on a code-file include", async () => {
     const ctx = {
       client: {
