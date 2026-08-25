@@ -60,6 +60,11 @@ describe("e2e: docusaurus build", () => {
     expect(html).toContain("Readme body");
   });
 
+  it("rewrites the README's relative links to absolute GitLab blob URLs", () => {
+    const html = readFileSync(join(siteDir, "build", "index.html"), "utf8");
+    expect(html).toContain("/-/blob/main/CONTRIBUTING.md");
+  });
+
   it("downloads and localizes README images into the gitlab-assets dir", () => {
     const assetDir = join(siteDir, "static", "gitlab-assets");
     const files = readdirSync(assetDir);
