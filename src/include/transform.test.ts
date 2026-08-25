@@ -204,6 +204,21 @@ describe("transformIncludes", () => {
     expect(out).not.toContain("::include");
   });
 
+  it("rewrites a relative link in a README include to an absolute GitLab URL", async () => {
+    const ctx = {
+      client: {
+        getProject: async () => ({ default_branch: "main" }),
+        getFileRaw: async () => "See [the guide](./guide.md) for details.",
+      },
+      cache: { get: async () => undefined, set: async () => {} },
+      assets: { localize: async (u: string) => u },
+      options: { host: "https://gl" },
+    } as any;
+    const out = await transformIncludes("{@includeGitlabReadme: g/p}", ctx, { strict: true });
+    expect(out).toContain("[the guide](https://gl/g/p/-/blob/main/guide.md)");
+    expect(out).not.toContain("(./guide.md)");
+  });
+
   it("does not run processors on a code-file include", async () => {
     const ctx = {
       client: {

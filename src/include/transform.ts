@@ -13,6 +13,7 @@ import {
   type OutProcessor,
 } from "./out-processors.js";
 import { isMarkdownSource, renderSource } from "./render-source.js";
+import { rewriteRelativeLinks } from "./rewrite-links.js";
 
 const PLACEHOLDER_RE = /\{@(includeGitlabReadme|includeGitlabFile):([^}]+)\}/g;
 
@@ -107,8 +108,28 @@ export async function transformIncludes(
           path: spec.path,
           lineRange: spec.lineRange,
         });
-        if (processors.length && isMarkdownSource(kind, spec.path)) {
-          body = await applyOutProcessors(body, processors);
+        if (isMarkdownSource(kind, spec.path)) {
+          const linkMode = ctx.options.relativeLinks ?? "gitlab";
+          // Rewrite relative links FIRST, before the other post-processors, so
+          // it operates on the markdown as fetched rather than on text the
+          // MDX-safety fixes below have already rewritten.
+          const linkProcessors: OutProcessor[] =
+            linkMode === "keep"
+              ? []
+              : [
+                  rewriteRelativeLinks({
+                    mode: linkMode,
+                    publicUrl: ctx.options.publicUrl ?? ctx.options.host,
+                    project: spec.project,
+                    ref,
+                    basePath: kind === "readme" ? "README.md" : spec.path,
+                    linkBase: ctx.options.linkBase ?? "",
+                  }),
+                ];
+          const allProcessors = [...linkProcessors, ...processors];
+          if (allProcessors.length) {
+            body = await applyOutProcessors(body, allProcessors);
+          }
         }
         log.debug(`rendered ${full} → ${body.length} chars of MDX`);
         replacements.set(full, `\n\n${body}\n\n`);
