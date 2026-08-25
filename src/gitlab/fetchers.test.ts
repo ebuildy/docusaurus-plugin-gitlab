@@ -554,6 +554,35 @@ describe("fetchFile", () => {
     const code = data as Extract<typeof data, { kind: "code" }>;
     expect(code.language).toBe("weird");
   });
+
+  it("resolves relative links against the file's own directory", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "[sibling](./b.md) [up](../top.md) [root](/LICENSE)"),
+    };
+    const data: any = await fetchFile(ctx(client), { project: "g/r", path: "docs/a.md" });
+    expect(data.kind).toBe("markdown");
+    expect(data.html).toContain('href="https://gitlab.com/g/r/-/blob/main/docs/b.md"');
+    expect(data.html).toContain('href="https://gitlab.com/g/r/-/blob/main/top.md"');
+    expect(data.html).toContain('href="https://gitlab.com/g/r/-/blob/main/LICENSE"');
+  });
+
+  it("keys the cache on relativeLinks so two modes do not collide", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "[sibling](./b.md)"),
+    };
+    const c = ctx(client);
+    const first: any = await fetchFile(c, { project: "g/r", path: "docs/a.md" });
+    const second: any = await fetchFile(c, {
+      project: "g/r",
+      path: "docs/a.md",
+      relativeLinks: "site",
+      linkBase: "/repo",
+    });
+    expect(first.html).toContain('href="https://gitlab.com/g/r/-/blob/main/docs/b.md"');
+    expect(second.html).toContain('href="/repo/docs/b"');
+  });
 });
 
 describe("fetchTopics", () => {

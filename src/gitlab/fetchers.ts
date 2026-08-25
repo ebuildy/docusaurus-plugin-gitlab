@@ -637,9 +637,10 @@ export async function fetchFile(ctx: GitLabContext, attrs: Attrs): Promise<FileD
   const path = String(attrs.path);
   const explicitRef = attrs.ref as string | undefined;
   const lines = attrs.lines as string | undefined;
+  const link = readLinkOpts(ctx, attrs, "GitlabFile");
   return memo(
     ctx,
-    `file:${String(project)}:${path}:${explicitRef ?? "default"}:${lines ?? ""}`,
+    `file:${String(project)}:${path}:${explicitRef ?? "default"}:${lines ?? ""}:${link.mode}:${link.linkBase}`,
     async () => {
       const ref = explicitRef ?? (await ctx.client.getProject(project)).default_branch;
       const raw = await ctx.client.getFileRaw(project, path, ref);
@@ -647,6 +648,7 @@ export async function fetchFile(ctx: GitLabContext, attrs: Attrs): Promise<FileD
         const expanded = await expandDirectives(ctx, String(project), ref, path, raw);
         const html = await renderMarkdown(expanded, {
           transformImageSrc: (src) => ctx.assets.localize(src, ref, String(project)),
+          transformLinkHref: linkHook(ctx, link, String(project), ref, path),
           renderChain: ctx.options.markdownRenderChain,
         });
         return { kind: "markdown", html, ref, path } satisfies FileData;
