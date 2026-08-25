@@ -9,6 +9,7 @@ export {
   stripTableOfContents,
 } from "./include/out-processors.js";
 export type { OutProcessor } from "./include/out-processors.js";
+export type { LinkMode } from "./gitlab/links.js";
 export type { PluginOptions, ResolvedOptions } from "./options.js";
 export type {
   ProjectInfoData,
