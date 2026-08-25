@@ -390,6 +390,82 @@ describe("fetchReadme", () => {
     expect(inline.html).toContain("gitlab-md-toc");
     expect(client.getFileRaw).toHaveBeenCalledTimes(2);
   });
+
+  it("rewrites relative links to absolute GitLab blob URLs", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "[contrib](./CONTRIBUTING.md) [top](#usage) [ext](https://x.dev)"),
+    };
+    const data = await fetchReadme(ctx(client), { project: "g/r" });
+    expect(data.html).toContain('href="https://gitlab.com/g/r/-/blob/main/CONTRIBUTING.md"');
+    expect(data.html).toContain('href="#usage"');
+    expect(data.html).toContain('href="https://x.dev"');
+  });
+
+  it("honors publicUrl over host when building links", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "[x](./x.md)"),
+    };
+    const c = ctx(client);
+    c.options.publicUrl = "https://public.example.com";
+    const data = await fetchReadme(c, { project: "g/r" });
+    expect(data.html).toContain('href="https://public.example.com/g/r/-/blob/main/x.md"');
+  });
+
+  it("uses the relativeLinks attribute over the plugin option", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "[x](./docs/x.md)"),
+    };
+    const c = ctx(client);
+    c.options.relativeLinks = "gitlab";
+    const data = await fetchReadme(c, { project: "g/r", relativeLinks: "site", linkBase: "/repo" });
+    expect(data.html).toContain('href="/repo/docs/x"');
+  });
+
+  it("falls back to the plugin option when the attribute is absent", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "[x](./docs/x.md)"),
+    };
+    const c = ctx(client);
+    c.options.relativeLinks = "site";
+    c.options.linkBase = "/mirror";
+    const data = await fetchReadme(c, { project: "g/r" });
+    expect(data.html).toContain('href="/mirror/docs/x"');
+  });
+
+  it("leaves links untouched in keep mode", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "[x](./docs/x.md)"),
+    };
+    const data = await fetchReadme(ctx(client), { project: "g/r", relativeLinks: "keep" });
+    expect(data.html).toContain('href="./docs/x.md"');
+  });
+
+  it("throws on an unknown relativeLinks value", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "body"),
+    };
+    await expect(fetchReadme(ctx(client), { project: "g/r", relativeLinks: "internal" })).rejects.toThrow(
+      /relativeLinks/,
+    );
+  });
+
+  it("keys the cache on relativeLinks so two modes do not collide", async () => {
+    const client: any = {
+      getProject: vi.fn(async () => ({ default_branch: "main" })),
+      getFileRaw: vi.fn(async () => "[x](./docs/x.md)"),
+    };
+    const c = ctx(client);
+    const first = await fetchReadme(c, { project: "g/r" });
+    const second = await fetchReadme(c, { project: "g/r", relativeLinks: "site", linkBase: "/repo" });
+    expect(first.html).toContain('href="https://gitlab.com/g/r/-/blob/main/docs/x.md"');
+    expect(second.html).toContain('href="/repo/docs/x"');
+  });
 });
 
 describe("fetchFile", () => {

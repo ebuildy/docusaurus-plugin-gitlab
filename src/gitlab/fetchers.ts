@@ -7,7 +7,7 @@ import { createIncludeLogger } from "../include/logger.js";
 import type { AssetManager } from "./assets";
 import type { FileCache } from "./cache";
 import type { GitLabClient, PageOptions } from "./client";
-import type { LinkMode } from "./links.js";
+import { resolveRepoLink, type LinkMode } from "./links.js";
 import { renderMarkdown } from "./markdown.js";
 import { buildRoadmap, type BuildRoadmapOptions } from "./roadmap.js";
 import type { TocEntry, TocMode } from "./toc.js";
@@ -256,26 +256,77 @@ function readTocMode(value: unknown): TocMode {
   );
 }
 
+interface LinkOpts {
+  mode: LinkMode;
+  linkBase: string;
+}
+
+/**
+ * Resolves the link-rewriting settings for one component render: attribute
+ * first, then the plugin option, then the default. Throws on an unknown mode so
+ * a typo fails the build instead of silently keeping relative links.
+ */
+function readLinkOpts(ctx: GitLabContext, attrs: Attrs, component: string): LinkOpts {
+  const mode = attrs.relativeLinks ?? ctx.options.relativeLinks ?? "gitlab";
+  if (mode !== "gitlab" && mode !== "keep" && mode !== "site") {
+    throw new Error(
+      `@ebuildy/docusaurus-plugin-gitlab: <${component}> "relativeLinks" must be one of ` +
+        `"gitlab", "keep", "site"; got ${JSON.stringify(attrs.relativeLinks)}.`,
+    );
+  }
+  const linkBase = String(attrs.linkBase ?? ctx.options.linkBase ?? "").replace(/\/+$/, "");
+  return { mode, linkBase };
+}
+
+/**
+ * Builds the `transformLinkHref` hook for `renderMarkdown`, or `undefined` in
+ * "keep" mode so no hrefs are visited at all.
+ */
+function linkHook(
+  ctx: GitLabContext,
+  link: LinkOpts,
+  project: string,
+  ref: string,
+  basePath?: string,
+): ((href: string) => Promise<string>) | undefined {
+  if (link.mode === "keep") return undefined;
+  return async (href: string) =>
+    resolveRepoLink(href, {
+      mode: link.mode,
+      publicUrl: ctx.options.publicUrl ?? ctx.options.host,
+      project,
+      ref,
+      basePath,
+      linkBase: link.linkBase,
+    });
+}
+
 export async function fetchReadme(ctx: GitLabContext, attrs: Attrs): Promise<ReadmeData> {
   const project = String(attrs.project);
   const explicitRef = attrs.ref as string | undefined;
   const tocMode = readTocMode(attrs.toc);
-  return memo(ctx, `readme:${project}:${explicitRef ?? "default"}:${tocMode}`, async () => {
-    const ref =
-      explicitRef ?? (await ctx.client.getProject(attrs.project as string | number)).default_branch;
-    const rawMd = await ctx.client.getFileRaw(attrs.project as string | number, "README.md", ref);
-    const md = await expandDirectives(ctx, project, ref, undefined, rawMd);
-    const collectToc: TocEntry[] = [];
-    const html = await renderMarkdown(md, {
-      tocMode,
-      collectToc,
-      transformImageSrc: (src) => ctx.assets.localize(src, ref, project),
-      renderChain: ctx.options.markdownRenderChain,
-    });
-    const result: ReadmeData = { ref, html };
-    if (tocMode === "sidebar") result.toc = collectToc;
-    return result;
-  });
+  const link = readLinkOpts(ctx, attrs, "GitlabReadme");
+  return memo(
+    ctx,
+    `readme:${project}:${explicitRef ?? "default"}:${tocMode}:${link.mode}:${link.linkBase}`,
+    async () => {
+      const ref =
+        explicitRef ?? (await ctx.client.getProject(attrs.project as string | number)).default_branch;
+      const rawMd = await ctx.client.getFileRaw(attrs.project as string | number, "README.md", ref);
+      const md = await expandDirectives(ctx, project, ref, undefined, rawMd);
+      const collectToc: TocEntry[] = [];
+      const html = await renderMarkdown(md, {
+        tocMode,
+        collectToc,
+        transformImageSrc: (src) => ctx.assets.localize(src, ref, project),
+        transformLinkHref: linkHook(ctx, link, project, ref, "README.md"),
+        renderChain: ctx.options.markdownRenderChain,
+      });
+      const result: ReadmeData = { ref, html };
+      if (tocMode === "sidebar") result.toc = collectToc;
+      return result;
+    },
+  );
 }
 
 function applyLineRange(text: string, lines?: string): string {
