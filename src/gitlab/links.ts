@@ -20,6 +20,9 @@ export interface RepoLinkContext {
 // A URI scheme: "https:", "mailto:", "tel:", "data:", …
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 
+// Markdown extensions stripped by "site" mode — Docusaurus routes carry none.
+const MARKDOWN_EXT_RE = /\.mdx?$/i;
+
 /** Splits "docs/x.md?plain=1#L4" into ["docs/x.md", "?plain=1#L4"]. */
 function splitSuffix(href: string): [path: string, suffix: string] {
   const i = href.search(/[?#]/);
@@ -64,6 +67,13 @@ export function resolveRepoLink(href: string, ctx: RepoLinkContext): string {
   if (!rawPath) return href;
 
   const path = normalizePath(rawPath, ctx.basePath);
+
+  if (ctx.mode === "site") {
+    const linkBase = (ctx.linkBase ?? "").replace(/\/+$/, "");
+    if (path === "") return linkBase || "/";
+    return `${linkBase}/${path.replace(MARKDOWN_EXT_RE, "")}${suffix}`;
+  }
+
   const publicUrl = ctx.publicUrl.replace(/\/+$/, "");
 
   // A path that normalizes to "" (e.g. "..", ".", "/") has nowhere to point
