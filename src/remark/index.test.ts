@@ -94,4 +94,56 @@ describe("remarkGitlab", () => {
     const found = findTocExport(tree)!;
     expect(readTocItems(found.declarator.init).map((i: any) => i.id)).toEqual(["intro"]);
   });
+
+  it("masks the internal host in injected data when gitlabPublicUrl is set", async () => {
+    const { fetchProjectInfo } = await import("../gitlab/fetchers.js");
+    (fetchProjectInfo as any).mockResolvedValueOnce({
+      id: 1,
+      path: "g/r",
+      name: "r",
+      webUrl: "http://gitlab.internal:8080/g/r",
+    });
+    const tree = await transform('<GitlabProjectInfo project="g/r" />', {
+      host: "http://gitlab.internal:8080",
+      gitlabPublicUrl: "https://gitlab.example.com",
+      strict: true,
+    });
+    const node = tree.children.find((c: any) => c.name === "GitlabProjectInfo");
+    const dataAttr = node.attributes.find((a: any) => a.name === "data");
+    expect(dataAttr.value.value).toContain("https://gitlab.example.com/g/r");
+    expect(dataAttr.value.value).not.toContain("gitlab.internal");
+  });
+
+  it("masks the internal host in an injected error prop", async () => {
+    const { fetchIssues } = await import("../gitlab/fetchers.js");
+    (fetchIssues as any).mockRejectedValueOnce(
+      new Error("connect ECONNREFUSED http://gitlab.internal:8080/api/v4/projects"),
+    );
+    const tree = await transform('<GitlabIssues project="g/r" />', {
+      host: "http://gitlab.internal:8080",
+      gitlabPublicUrl: "https://gitlab.example.com",
+      strict: false,
+    });
+    const node = tree.children.find((c: any) => c.name === "GitlabIssues");
+    const errAttr = node.attributes.find((a: any) => a.name === "error");
+    expect(errAttr.value.value).toContain("https://gitlab.example.com/api/v4/projects");
+    expect(errAttr.value.value).not.toContain("gitlab.internal");
+  });
+
+  it("leaves injected data untouched when gitlabPublicUrl is unset", async () => {
+    const { fetchProjectInfo } = await import("../gitlab/fetchers.js");
+    (fetchProjectInfo as any).mockResolvedValueOnce({
+      id: 1,
+      path: "g/r",
+      name: "r",
+      webUrl: "http://gitlab.internal:8080/g/r",
+    });
+    const tree = await transform('<GitlabProjectInfo project="g/r" />', {
+      host: "http://gitlab.internal:8080",
+      strict: true,
+    });
+    const node = tree.children.find((c: any) => c.name === "GitlabProjectInfo");
+    const dataAttr = node.attributes.find((a: any) => a.name === "data");
+    expect(dataAttr.value.value).toContain("http://gitlab.internal:8080/g/r");
+  });
 });
