@@ -12,8 +12,9 @@ const siteDir = join(process.cwd(), "examples/site");
  *
  * - `classic` is Docusaurus 3 defaults: webpack + Babel + cssnano. This is what
  *   every current user of the package runs.
- * - `v4` sets `future: { v4: true }` in examples/site/docusaurus.config.ts, which
- *   is the closest approximation of Docusaurus 4 available from a published
+ * - `v4` sets DOCUSAURUS_FUTURE_V4=1, which makes
+ *   examples/site/docusaurus.config.ts spread in `future: { v4: true }` — the
+ *   closest approximation of Docusaurus 4 available from a published
  *   release: Rspack, SWC, LightningCSS, CSS cascade layers, storage namespacing,
  *   and MDX-1 compatibility off.
  *
@@ -22,10 +23,21 @@ const siteDir = join(process.cwd(), "examples/site");
  * with `@swc/html` — and that changes how the final HTML is ENCODED, not just
  * how it is built. See `attr()` below.
  *
- * Each variant builds into its own --out-dir so the two runs cannot collide.
+ * Each variant builds into its own --out-dir, so the two builds' HTML output
+ * cannot overwrite each other. That alone is NOT full isolation: `.docusaurus/`,
+ * `static/gitlab-assets/` and `docs/generate/*` are shared paths, and the
+ * variants are kept apart there only by the clearing in `beforeAll`. The two
+ * variants must therefore run SEQUENTIALLY — do not add `describe.concurrent`
+ * or `sequence.shuffle` without giving those paths per-variant locations too.
  */
 const VARIANTS = [
-  { name: "classic", outDir: "build-classic", variantEnv: {} as NodeJS.ProcessEnv },
+  // `classic` pins DOCUSAURUS_FUTURE_V4 to "0" rather than omitting it: an empty
+  // variantEnv would inherit the ambient environment, so a developer or CI step
+  // with DOCUSAURUS_FUTURE_V4=1 exported would silently build v4 twice and the
+  // suite would still report all green with zero Docusaurus 3 coverage — the
+  // exact blind spot this matrix exists to prevent. The config compares
+  // `=== "1"`, so "0" reliably selects the classic path.
+  { name: "classic", outDir: "build-classic", variantEnv: { DOCUSAURUS_FUTURE_V4: "0" } },
   { name: "v4", outDir: "build-v4", variantEnv: { DOCUSAURUS_FUTURE_V4: "1" } },
 ] as const;
 
@@ -50,12 +62,19 @@ function cleanGeneratedPages() {
  * differs — so attribute assertions must accept both forms rather than being
  * pinned to one bundler's output.
  *
+ * The unquoted branch ends in a lookahead so the value cannot match as a mere
+ * prefix — without it `id=install` would also match `id=installation`, and a
+ * Docusaurus-deduped `id="install-1"` (a genuinely broken anchor) would keep
+ * this suite green. The quoted branch is self-terminating. The lookahead is
+ * zero-width, so the literal space in a multi-attribute pattern still separates
+ * the two attributes.
+ *
  * Returns a source fragment (not a RegExp) so multi-attribute matches compose:
  *   new RegExp(`${attr("class", "x")} ${attr("href", "y")}`)
  */
 function attr(name: string, value: string): string {
   const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return `${name}="?${escaped}"?`;
+  return `${name}=(?:"${escaped}"|${escaped}(?=[\\s>/]))`;
 }
 
 /**
