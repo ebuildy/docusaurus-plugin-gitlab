@@ -153,6 +153,25 @@ describe.each(VARIANTS)("e2e: docusaurus build ($name)", ({ outDir, variantEnv }
     expect(html).toContain("/gitlab-assets/");
   });
 
+  it("substitutes the {@includeGitlab...} placeholder into the built page", () => {
+    // The include loader is the one piece of this package that plugs directly into
+    // the bundler (configureWebpack -> buildIncludeLoaderRule), so it is the part
+    // most at risk from the webpack -> Rspack swap. The build aborting would already
+    // catch a loader that never registered ({@includeGitlabReadme: ...} is not valid
+    // MDX), but only this asserts the substituted content is actually correct.
+    const html = readFileSync(out("includes", "index.html"), "utf8");
+    expect(html).toContain("Readme body");
+    // The raw placeholder legitimately survives in <meta name="description"> /
+    // og:description: Docusaurus derives those from the raw MDX source before the
+    // include loader runs, in both variants. Scope the negative assertion to the
+    // rendered article body, where the loader's substitution is what actually matters.
+    const articleStart = html.indexOf("<article");
+    const articleEnd = html.indexOf("</article>", articleStart) + "</article>".length;
+    const article = html.slice(articleStart, articleEnd);
+    expect(article).toContain("Readme body");
+    expect(article).not.toContain("{@includeGitlabReadme");
+  });
+
   it("merges sidebar README headings into the page's right-hand TOC", () => {
     const html = readFileSync(out("index.html"), "utf8");
     // README headings appear as Docusaurus TOC links, not as an inline gitlab nav.
