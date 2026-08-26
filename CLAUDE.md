@@ -108,6 +108,10 @@ docusaurus build
   like `Cannot read properties of undefined (reading 'keys')`. `tsc`-only code
   (plugin/remark/`src/gitlab/*`) runs in Node and isn't affected, but prefer
   `Array.from` there too for consistency.
+  **This rule stays for as long as Docusaurus 3 is supported.** Docusaurus 4 (and
+  Docusaurus 3 with `future.faster`) transpiles with SWC instead of Babel and does
+  not have this bug — but the default Docusaurus 3 path still uses Babel, so the
+  constraint is not lifted.
 - **Code highlighting** uses `prism-react-renderer` (a normal, SSR-safe npm
   dependency), NOT `@theme/CodeBlock`. Importing Docusaurus theme aliases
   (`@theme/*`) from this pre-bundled package breaks the Docusaurus SSR build with

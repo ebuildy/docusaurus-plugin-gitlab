@@ -67,7 +67,8 @@ src/
 ├── options.ts          PluginOptions/ResolvedOptions, Joi schema, resolveOptions() defaults
 │
 ├── plugin/             Pipeline 1 entry — the Docusaurus plugin factory
-│   └── index.ts          hooks: getClientModules, extendCli, configureWebpack; runs generateOnce()
+│   └── index.ts          hooks: getClientModules, extendCli, configureWebpack (thin wrapper
+│                         over the pure buildIncludeLoaderRule()); runs generateOnce()
 │
 ├── generate/           Pipeline 1 — group → generated pages
 │   ├── directive.ts      parse {@generateGitlabPages ...} attributes
