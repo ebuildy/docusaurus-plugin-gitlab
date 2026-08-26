@@ -3,6 +3,10 @@ packages:
 
 # core-js's postinstall only prints a funding banner — no build needed.
 allowBuilds:
+  # @swc/core's postinstall only verifies the prebuilt native binary (already
+  # installed as an optionalDependency) loads, falling back to @swc/wasm if not.
+  # No compilation needed — same rationale as core-js below.
+  '@swc/core': false
   core-js: false
 
 # Security overrides for transitive deps (webpack tooling pulled in by Docusaurus).
