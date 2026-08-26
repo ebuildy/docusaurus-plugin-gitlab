@@ -49,6 +49,8 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
           if (options.strict) {
             throw new Error(`@ebuildy/docusaurus-plugin-gitlab: <${node.name}> failed at ${where} — ${message}`);
           }
+          // gitbeaker error messages embed the request URL, and Fallback renders
+          // `message` verbatim in non-strict mode — mask it like data, not incidentally.
           injectProp(node, "error", maskHostDeep({ message, project: String(attrs.project ?? "") }, mask));
         }
       }),

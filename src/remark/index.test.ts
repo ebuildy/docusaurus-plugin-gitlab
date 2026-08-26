@@ -146,4 +146,31 @@ describe("remarkGitlab", () => {
     const dataAttr = node.attributes.find((a: any) => a.name === "data");
     expect(dataAttr.value.value).toContain("http://gitlab.internal:8080/g/r");
   });
+
+  it("masks a sidebar README's data while the toc export still gets wired", async () => {
+    const { fetchReadme } = await import("../gitlab/fetchers.js");
+    (fetchReadme as any).mockResolvedValueOnce({
+      ref: "main",
+      html: '<h2 id="install">Install</h2><p><a href="http://gitlab.internal:8080/g/r">g/r</a></p>',
+      toc: [{ level: 2, id: "install", text: "Install" }],
+    });
+    const src = [
+      'export const toc = [{ value: "Intro", id: "intro", level: 2, children: [] }];',
+      "",
+      '<GitlabReadme project="g/r" toc="sidebar" />',
+    ].join("\n");
+    const tree = await transform(src, {
+      host: "http://gitlab.internal:8080",
+      gitlabPublicUrl: "https://gitlab.example.com",
+      strict: true,
+    });
+
+    const node = tree.children.find((c: any) => c.name === "GitlabReadme");
+    const dataAttr = node.attributes.find((a: any) => a.name === "data");
+    expect(dataAttr.value.value).toContain("https://gitlab.example.com/g/r");
+    expect(dataAttr.value.value).not.toContain("gitlab.internal");
+
+    const found = findTocExport(tree)!;
+    expect(readTocItems(found.declarator.init).map((i: any) => i.id)).toContain("install");
+  });
 });
