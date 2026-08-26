@@ -930,6 +930,37 @@ git commit -S -m "docs: document Docusaurus 3 and 4 dual support"
 
 ---
 
+## Execution findings (recorded 2026-08-26)
+
+Four things execution discovered that this plan did not predict. Kept here so the
+document matches what actually happened.
+
+1. **`@docusaurus/faster` is a separate package.** `future.faster.*` is not part of
+   `@docusaurus/core`; the site must declare the dependency or the build dies in bundler
+   setup. Became Task 5b.
+2. **v4 swaps the HTML minifier, not just the bundler.** `faster.swcHtmlMinifier` replaces
+   html-minifier-terser with `@swc/html`, which strips attribute quotes wherever HTML
+   permits (`href="repo"` → `href=repo`). Docusaurus passes no quote-preservation option
+   on that path. This broke four e2e assertions that were pinned to the quoted encoding —
+   **not** a plugin bug: the plugin's emitted markup is byte-identical between variants.
+   Task 6 handles it with the `attr()` helper.
+3. **The plugin needed no source changes at all.** Every predicted risk in the "Risks"
+   section came back clean under Rspack: the `include: [siteDir]` workaround is accepted
+   unchanged, the `enforce: "pre"` include loader still runs before the MDX loader,
+   LightningCSS minifies the CSS without complaint, and no MDX-1 migrations beyond Task 4
+   were needed.
+4. **The timing estimate was wrong.** This plan predicted the e2e would go from ~1 min to
+   ~2.5 min. Measured: the whole two-variant matrix runs in **~10 seconds** (the fixture is
+   tiny and Rspack is fast). The Task 6 Step 4 and Final verification notes below overstate
+   the cost.
+
+Also worth knowing for anyone touching the e2e later: the `classic` variant pins
+`DOCUSAURUS_FUTURE_V4: "0"` rather than omitting it. An ambient export of `=1` would
+otherwise make both variants build v4 while the suite still reported all-green — the exact
+failure the matrix exists to prevent.
+
+---
+
 ## Final verification
 
 - [ ] **Run the whole gate**
@@ -939,6 +970,7 @@ pnpm run lint && pnpm run typecheck && pnpm run build && pnpm exec vitest run
 ```
 
 Expected: all green, including **18 e2e tests** (9 assertions × 2 variants).
+The full suite runs in well under a minute.
 
 - [ ] **Confirm every commit is signed**
 
