@@ -157,6 +157,62 @@ describe("resolveOptions", () => {
     );
   });
 
+  it("defaults gitlabPublicUrl to an empty string", () => {
+    const o = resolveOptions({ host: "https://gitlab.com" }, "production");
+    expect(o.gitlabPublicUrl).toBe("");
+  });
+
+  it("does not default gitlabPublicUrl to host", () => {
+    const o = resolveOptions({ host: "http://gitlab.internal:8080" }, "production");
+    expect(o.gitlabPublicUrl).toBe("");
+  });
+
+  it("strips a trailing slash from gitlabPublicUrl", () => {
+    const o = resolveOptions(
+      { host: "https://gitlab.com", gitlabPublicUrl: "https://public.example.com/" },
+      "production",
+    );
+    expect(o.gitlabPublicUrl).toBe("https://public.example.com");
+  });
+
+  it("accepts an explicit empty gitlabPublicUrl", () => {
+    const o = resolveOptions({ host: "https://gitlab.com", gitlabPublicUrl: "" }, "production");
+    expect(o.gitlabPublicUrl).toBe("");
+  });
+
+  it("rejects a gitlabPublicUrl that is not a URI", () => {
+    expect(() =>
+      resolveOptions({ host: "https://gitlab.com", gitlabPublicUrl: "not a url" }, "production"),
+    ).toThrow(/gitlabPublicUrl/);
+  });
+
+  // Regression guard: these two options answer different questions. publicUrl
+  // may legitimately be the Docusaurus site URL, so gitlabPublicUrl must never
+  // feed it, and vice versa.
+  it("keeps publicUrl independent of gitlabPublicUrl", () => {
+    const o = resolveOptions(
+      { host: "http://gitlab.internal:8080", gitlabPublicUrl: "https://public.example.com" },
+      "production",
+    );
+    expect(o.publicUrl).toBe("http://gitlab.internal:8080");
+    expect(o.gitlabPublicUrl).toBe("https://public.example.com");
+  });
+
+  // The scenario the split exists for: publicUrl aimed at the docs site (not a
+  // GitLab URL at all) while gitlabPublicUrl masks the GitLab host.
+  it("keeps an explicit non-GitLab publicUrl independent of gitlabPublicUrl", () => {
+    const o = resolveOptions(
+      {
+        host: "http://gitlab.internal:8080",
+        publicUrl: "https://docs.example.com",
+        gitlabPublicUrl: "https://gitlab.example.com",
+      },
+      "production",
+    );
+    expect(o.publicUrl).toBe("https://docs.example.com");
+    expect(o.gitlabPublicUrl).toBe("https://gitlab.example.com");
+  });
+
   it("defaults relativeLinks to gitlab and linkBase to an empty string", () => {
     const o = resolveOptions({ host: "https://gitlab.com" }, "production");
     expect(o.relativeLinks).toBe("gitlab");

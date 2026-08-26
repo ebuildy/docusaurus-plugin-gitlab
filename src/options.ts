@@ -14,6 +14,13 @@ export interface PluginOptions {
    *  `host`. Set it when the build-time API host differs from the user-facing
    *  URL (e.g. an internal hostname behind a reverse proxy). */
   publicUrl?: string;
+  /** Public GitLab base URL substituted for `host` in every build output
+   *  string — component props, rendered HTML, and the plain text of every page.
+   *  Empty ⇒ no substitution. Distinct from `publicUrl`, which only decides
+   *  where relative links point and may be a non-GitLab URL. Output masking
+   *  only: the host still appears in build logs and in the on-disk cache.
+   *  Default: `""`. */
+  gitlabPublicUrl?: string;
   /** Where relative links in fetched markdown should point: `"gitlab"` (absolute
    *  blob URLs), `"site"` (site-internal paths, `.md` stripped, prefixed with
    *  `linkBase`), or `"keep"` (untouched). Default: `"gitlab"`. Overridable per
@@ -64,6 +71,7 @@ export interface ResolvedOptions {
   assetDir: string;
   assetBaseUrl: string;
   publicUrl: string;
+  gitlabPublicUrl: string;
   relativeLinks: LinkMode;
   linkBase: string;
   fixAutolinks: boolean;
@@ -90,6 +98,7 @@ const schema = Joi.object({
   assetDir: Joi.string().optional(),
   assetBaseUrl: Joi.string().optional(),
   publicUrl: Joi.string().uri().optional(),
+  gitlabPublicUrl: Joi.string().uri().allow("").optional(),
   relativeLinks: Joi.string().valid("gitlab", "keep", "site").optional(),
   linkBase: Joi.string().allow("").optional(),
   fixAutolinks: Joi.boolean().optional(),
@@ -119,6 +128,9 @@ export function resolveOptions(
     assetDir: opts.assetDir ?? "static/gitlab-assets",
     assetBaseUrl: (opts.assetBaseUrl ?? "/gitlab-assets").replace(/\/+$/, ""),
     publicUrl: (opts.publicUrl ?? opts.host).replace(/\/+$/, ""),
+    // Deliberately NOT `?? opts.host` — that would make the option a permanent
+    // no-op. Empty is the documented "off".
+    gitlabPublicUrl: (opts.gitlabPublicUrl ?? "").replace(/\/+$/, ""),
     relativeLinks: opts.relativeLinks ?? "gitlab",
     linkBase: (opts.linkBase ?? "").replace(/\/+$/, ""),
     fixAutolinks: opts.fixAutolinks ?? true,

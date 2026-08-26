@@ -94,4 +94,83 @@ describe("remarkGitlab", () => {
     const found = findTocExport(tree)!;
     expect(readTocItems(found.declarator.init).map((i: any) => i.id)).toEqual(["intro"]);
   });
+
+  it("masks the internal host in injected data when gitlabPublicUrl is set", async () => {
+    const { fetchProjectInfo } = await import("../gitlab/fetchers.js");
+    (fetchProjectInfo as any).mockResolvedValueOnce({
+      id: 1,
+      path: "g/r",
+      name: "r",
+      webUrl: "http://gitlab.internal:8080/g/r",
+    });
+    const tree = await transform('<GitlabProjectInfo project="g/r" />', {
+      host: "http://gitlab.internal:8080",
+      gitlabPublicUrl: "https://gitlab.example.com",
+      strict: true,
+    });
+    const node = tree.children.find((c: any) => c.name === "GitlabProjectInfo");
+    const dataAttr = node.attributes.find((a: any) => a.name === "data");
+    expect(dataAttr.value.value).toContain("https://gitlab.example.com/g/r");
+    expect(dataAttr.value.value).not.toContain("gitlab.internal");
+  });
+
+  it("masks the internal host in an injected error prop", async () => {
+    const { fetchIssues } = await import("../gitlab/fetchers.js");
+    (fetchIssues as any).mockRejectedValueOnce(
+      new Error("connect ECONNREFUSED http://gitlab.internal:8080/api/v4/projects"),
+    );
+    const tree = await transform('<GitlabIssues project="g/r" />', {
+      host: "http://gitlab.internal:8080",
+      gitlabPublicUrl: "https://gitlab.example.com",
+      strict: false,
+    });
+    const node = tree.children.find((c: any) => c.name === "GitlabIssues");
+    const errAttr = node.attributes.find((a: any) => a.name === "error");
+    expect(errAttr.value.value).toContain("https://gitlab.example.com/api/v4/projects");
+    expect(errAttr.value.value).not.toContain("gitlab.internal");
+  });
+
+  it("leaves injected data untouched when gitlabPublicUrl is unset", async () => {
+    const { fetchProjectInfo } = await import("../gitlab/fetchers.js");
+    (fetchProjectInfo as any).mockResolvedValueOnce({
+      id: 1,
+      path: "g/r",
+      name: "r",
+      webUrl: "http://gitlab.internal:8080/g/r",
+    });
+    const tree = await transform('<GitlabProjectInfo project="g/r" />', {
+      host: "http://gitlab.internal:8080",
+      strict: true,
+    });
+    const node = tree.children.find((c: any) => c.name === "GitlabProjectInfo");
+    const dataAttr = node.attributes.find((a: any) => a.name === "data");
+    expect(dataAttr.value.value).toContain("http://gitlab.internal:8080/g/r");
+  });
+
+  it("masks a sidebar README's data while the toc export still gets wired", async () => {
+    const { fetchReadme } = await import("../gitlab/fetchers.js");
+    (fetchReadme as any).mockResolvedValueOnce({
+      ref: "main",
+      html: '<h2 id="install">Install</h2><p><a href="http://gitlab.internal:8080/g/r">g/r</a></p>',
+      toc: [{ level: 2, id: "install", text: "Install" }],
+    });
+    const src = [
+      'export const toc = [{ value: "Intro", id: "intro", level: 2, children: [] }];',
+      "",
+      '<GitlabReadme project="g/r" toc="sidebar" />',
+    ].join("\n");
+    const tree = await transform(src, {
+      host: "http://gitlab.internal:8080",
+      gitlabPublicUrl: "https://gitlab.example.com",
+      strict: true,
+    });
+
+    const node = tree.children.find((c: any) => c.name === "GitlabReadme");
+    const dataAttr = node.attributes.find((a: any) => a.name === "data");
+    expect(dataAttr.value.value).toContain("https://gitlab.example.com/g/r");
+    expect(dataAttr.value.value).not.toContain("gitlab.internal");
+
+    const found = findTocExport(tree)!;
+    expect(readTocItems(found.declarator.init).map((i: any) => i.id)).toContain("install");
+  });
 });

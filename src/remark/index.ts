@@ -1,5 +1,6 @@
 import { visit } from "unist-util-visit";
 import { buildContext } from "../gitlab/context.js";
+import { createHostMask, maskHostDeep } from "../gitlab/mask-host.js";
 import { resolveOptions, type PluginOptions } from "../options.js";
 import { parseAttributes } from "./attributes.js";
 import { injectProp } from "./inject.js";
@@ -10,6 +11,10 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
   const mode = process.env.NODE_ENV === "production" ? "production" : "development";
   const options = resolveOptions(rawOptions, mode);
   const ctx = buildContext(options);
+  // Output masking, built once per plugin instance. Applied on the way OUT —
+  // after the fetchers' cache — so changing the option takes effect on the next
+  // build with no node_modules/.cache clear.
+  const mask = createHostMask(options.host, options.gitlabPublicUrl);
 
   return async function transformer(tree: any, file: any) {
     const jobs: { node: any }[] = [];
@@ -31,7 +36,7 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
         const filePath = file?.path ?? "unknown.mdx";
         const attrs = parseAttributes(node.attributes ?? [], filePath);
         try {
-          const data = await fetcher(ctx, attrs);
+          const data = maskHostDeep(await fetcher(ctx, attrs), mask);
           injectProp(node, "data", data);
           if (node.name === "GitlabReadme" && Array.isArray((data as any)?.toc)) {
             sidebarReadmes.push({ node, entries: (data as any).toc, order });
@@ -44,7 +49,9 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
           if (options.strict) {
             throw new Error(`@ebuildy/docusaurus-plugin-gitlab: <${node.name}> failed at ${where} — ${message}`);
           }
-          injectProp(node, "error", { message, project: String(attrs.project ?? "") });
+          // gitbeaker error messages embed the request URL, and Fallback renders
+          // `message` verbatim in non-strict mode — mask it like data, not incidentally.
+          injectProp(node, "error", maskHostDeep({ message, project: String(attrs.project ?? "") }, mask));
         }
       }),
     );
