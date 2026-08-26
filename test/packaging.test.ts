@@ -57,3 +57,27 @@ describe("packaging: plugin default export", () => {
     expect(plugin.name).toBe("@ebuildy/docusaurus-plugin-gitlab");
   });
 });
+
+describe("packaging: Docusaurus compatibility", () => {
+  const pkg = JSON.parse(
+    readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"),
+  );
+
+  it("accepts both Docusaurus 3 and Docusaurus 4 for the optional logger peer", () => {
+    // The logger is the package's ONLY @docusaurus/* dependency, it is optional,
+    // and it is imported lazily (src/gitlab/context.ts, src/include/logger.ts).
+    // Its range is therefore the single thing that decides whether a Docusaurus 4
+    // site can install this package without a peer-dependency warning.
+    expect(pkg.peerDependencies["@docusaurus/logger"]).toBe("^3.0.0 || ^4.0.0");
+  });
+
+  it("keeps the logger peer optional so a site without it still builds", () => {
+    expect(pkg.peerDependenciesMeta["@docusaurus/logger"].optional).toBe(true);
+  });
+
+  it("declares no @docusaurus/core peer", () => {
+    // The package never imports @docusaurus/core. Declaring a peer on it would
+    // add install friction and a second version range to keep in sync for no gain.
+    expect(pkg.peerDependencies["@docusaurus/core"]).toBeUndefined();
+  });
+});

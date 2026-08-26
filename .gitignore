@@ -17,6 +17,7 @@ coverage.out
 dist/
 coverage/
 examples/*/build/
+examples/*/build-*/
 examples/*/.docusaurus/
 examples/*/node_modules/
 examples/*/static/gitlab-assets/

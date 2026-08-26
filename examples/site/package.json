@@ -15,6 +15,7 @@
     "react-dom": "^18.3.0"
   },
   "devDependencies": {
+    "@docusaurus/faster": "^3.10.2",
     "@docusaurus/tsconfig": "^3.5.0",
     "typescript": "^5.4.0"
   }

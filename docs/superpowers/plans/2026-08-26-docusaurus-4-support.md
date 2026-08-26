@@ -487,6 +487,87 @@ git commit -S -m "test(examples): opt the fixture site into v4 future flags via 
 
 ---
 
+<<<<<<< HEAD
+=======
+## Task 5b: Add `@docusaurus/faster` to the fixture site
+
+**Added during execution (2026-08-26).** Not in the original plan — found by the Task 5
+smoke build.
+
+`future.faster.*` options do **not** ship inside `@docusaurus/core`. The bundler lazily
+imports a separate `@docusaurus/faster` package, and if the site has not declared it as a
+dependency the build dies with:
+
+```text
+Error: To enable Docusaurus Faster options, your site must add the
+@docusaurus/faster package as a dependency.
+  [cause]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@docusaurus/faster'
+```
+
+(Source: `@docusaurus/bundler/lib/importFaster.js`, `ensureFaster()`.)
+
+Because `future: { v4: true }` cascades `fasterByDefault` into every `faster.*` key, the
+`v4` e2e variant cannot run without this package. `@docusaurus/faster@3.10.2` is published
+and pulls in `@rspack/core`, `@swc/core`, `@swc/html`, and `lightningcss`.
+
+This is a **fixture-only** dependency. `examples/site` is a private workspace package that
+is never published, so this does not touch the shipped package's dependency surface.
+
+**Files:**
+- Modify: `examples/site/package.json`
+- Modify: `pnpm-lock.yaml` (by running the installer — do not hand-edit)
+
+- [ ] **Step 1: Add the dependency**
+
+In `examples/site/package.json`, add `@docusaurus/faster` to `devDependencies`, keeping
+the keys alphabetically sorted:
+
+```json
+  "devDependencies": {
+    "@docusaurus/faster": "^3.10.2",
+    "@docusaurus/tsconfig": "^3.5.0",
+    "typescript": "^5.4.0"
+  }
+```
+
+It belongs in `devDependencies`, not `dependencies`: it is only needed to *build* the
+fixture, never at runtime, and it mirrors how `@docusaurus/tsconfig` is already declared.
+
+- [ ] **Step 2: Install**
+
+Run: `pnpm install`
+
+Expected: the lockfile updates and `@docusaurus/faster` resolves. This is the one task in
+the plan permitted to modify `pnpm-lock.yaml`.
+
+- [ ] **Step 3: Prove the v4 bundler actually starts**
+
+```bash
+pnpm run build
+rm -rf examples/site/.docusaurus
+DOCUSAURUS_FUTURE_V4=1 pnpm --filter example-site exec docusaurus build --out-dir build-smoke-v4 2>&1 | tail -20
+rm -rf examples/site/build-smoke-v4 examples/site/.docusaurus
+```
+
+Expected: the build must get **past** bundler setup. A GitLab `404 Project Not Found` /
+`401 Unauthorized` failure is the success signal here — the fixture points at stub
+projects that do not exist on real gitlab.com, so reaching the fetch stage proves Rspack
+loaded. The `@docusaurus/faster` error must be **gone**.
+
+Clear `.docusaurus` before the run: a cache left by a previous non-v4 build is reused and
+masks the real bundler behaviour (this is how the Task 5 smoke check first produced a
+misleading pass).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add examples/site/package.json pnpm-lock.yaml
+git commit -S -m "test(examples): add @docusaurus/faster so the v4 variant can use Rspack"
+```
+
+---
+
+>>>>>>> b412ebc2ff3f479925f467d2472b27d5833d1748
 ## Task 6: Turn the e2e into a webpack/Rspack matrix
 
 This is the task that actually proves Docusaurus 4 compatibility. Expect it to be the one
@@ -716,6 +797,11 @@ predicted failure modes; diagnose against them before inventing a fourth:
 | Build succeeds but `{@includeGitlab...}` placeholders appear **literally** in the HTML | The `enforce: "pre"` loader did not run before Rspack's MDX loader | rule ordering in `buildIncludeLoaderRule` |
 | Build fails during **CSS minification** | LightningCSS is stricter than cssnano | `theme.css`, `src/components/styles.module.css` |
 | Assertions fail on missing markup only in `v4` | MDX-1 compat is off — some syntax in `examples/site/docs/` still needs migrating | re-run the Task 4 Step 2 greps |
+<<<<<<< HEAD
+=======
+| `Cannot find package '@docusaurus/faster'` | Task 5b was skipped or its install did not take | `examples/site/package.json` |
+| `v4` passes suspiciously fast, or behaves like `classic` | A stale `.docusaurus/` from the other variant is being reused | the `beforeAll` must clear `examples/site/.docusaurus` |
+>>>>>>> b412ebc2ff3f479925f467d2472b27d5833d1748
 
 Fix whatever you find, then re-run this step until green. If a fix touches
 `src/plugin/index.ts` or the CSS, re-run Step 2 as well — the fix must not regress
@@ -850,6 +936,37 @@ git commit -S -m "docs: document Docusaurus 3 and 4 dual support"
 
 ---
 
+## Execution findings (recorded 2026-08-26)
+
+Four things execution discovered that this plan did not predict. Kept here so the
+document matches what actually happened.
+
+1. **`@docusaurus/faster` is a separate package.** `future.faster.*` is not part of
+   `@docusaurus/core`; the site must declare the dependency or the build dies in bundler
+   setup. Became Task 5b.
+2. **v4 swaps the HTML minifier, not just the bundler.** `faster.swcHtmlMinifier` replaces
+   html-minifier-terser with `@swc/html`, which strips attribute quotes wherever HTML
+   permits (`href="repo"` → `href=repo`). Docusaurus passes no quote-preservation option
+   on that path. This broke four e2e assertions that were pinned to the quoted encoding —
+   **not** a plugin bug: the plugin's emitted markup is byte-identical between variants.
+   Task 6 handles it with the `attr()` helper.
+3. **The plugin needed no source changes at all.** Every predicted risk in the "Risks"
+   section came back clean under Rspack: the `include: [siteDir]` workaround is accepted
+   unchanged, the `enforce: "pre"` include loader still runs before the MDX loader,
+   LightningCSS minifies the CSS without complaint, and no MDX-1 migrations beyond Task 4
+   were needed.
+4. **The timing estimate was wrong.** This plan predicted the e2e would go from ~1 min to
+   ~2.5 min. Measured: the whole two-variant matrix runs in **~10 seconds** (the fixture is
+   tiny and Rspack is fast). The Task 6 Step 4 and Final verification notes below overstate
+   the cost.
+
+Also worth knowing for anyone touching the e2e later: the `classic` variant pins
+`DOCUSAURUS_FUTURE_V4: "0"` rather than omitting it. An ambient export of `=1` would
+otherwise make both variants build v4 while the suite still reported all-green — the exact
+failure the matrix exists to prevent.
+
+---
+
 ## Final verification
 
 - [ ] **Run the whole gate**
@@ -859,6 +976,7 @@ pnpm run lint && pnpm run typecheck && pnpm run build && pnpm exec vitest run
 ```
 
 Expected: all green, including **18 e2e tests** (9 assertions × 2 variants).
+The full suite runs in well under a minute.
 
 - [ ] **Confirm every commit is signed**
 
