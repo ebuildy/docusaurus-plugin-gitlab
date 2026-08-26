@@ -198,6 +198,21 @@ describe("resolveOptions", () => {
     expect(o.gitlabPublicUrl).toBe("https://public.example.com");
   });
 
+  // The scenario the split exists for: publicUrl aimed at the docs site (not a
+  // GitLab URL at all) while gitlabPublicUrl masks the GitLab host.
+  it("keeps an explicit non-GitLab publicUrl independent of gitlabPublicUrl", () => {
+    const o = resolveOptions(
+      {
+        host: "http://gitlab.internal:8080",
+        publicUrl: "https://docs.example.com",
+        gitlabPublicUrl: "https://gitlab.example.com",
+      },
+      "production",
+    );
+    expect(o.publicUrl).toBe("https://docs.example.com");
+    expect(o.gitlabPublicUrl).toBe("https://gitlab.example.com");
+  });
+
   it("defaults relativeLinks to gitlab and linkBase to an empty string", () => {
     const o = resolveOptions({ host: "https://gitlab.com" }, "production");
     expect(o.relativeLinks).toBe("gitlab");

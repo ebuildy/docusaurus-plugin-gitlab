@@ -14,7 +14,7 @@ export interface PluginOptions {
    *  `host`. Set it when the build-time API host differs from the user-facing
    *  URL (e.g. an internal hostname behind a reverse proxy). */
   publicUrl?: string;
-  /** Public GitLab base URL substituted for `host` in **every** build output
+  /** Public GitLab base URL substituted for `host` in every build output
    *  string — component props, rendered HTML, and the plain text of every page.
    *  Empty ⇒ no substitution. Distinct from `publicUrl`, which only decides
    *  where relative links point and may be a non-GitLab URL. Output masking
