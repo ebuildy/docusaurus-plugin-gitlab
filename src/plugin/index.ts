@@ -36,6 +36,59 @@ interface CliLike {
   command(name: string): CliCommandLike;
 }
 
+type ResolvedRuleOptions = ReturnType<typeof resolveOptions>;
+
+interface IncludeLoaderRule {
+  test: RegExp;
+  enforce: "pre";
+  include: string[];
+  use: { loader: string; options: { resolved: ResolvedRuleOptions; processorsId: string } }[];
+}
+
+/**
+ * Builds the webpack `module.rules` entry that registers the `{@includeGitlab...}`
+ * pre-loader.
+ *
+ * Kept as a pure function, separate from the `configureWebpack` hook, because
+ * Docusaurus v4 deprecates `configureWebpack(...args)` in favour of
+ * `configureBundler({...})`. When that signature is finally published, the swap
+ * is a new wrapper around this function rather than surgery on the hook body.
+ * See `docs/superpowers/specs/2026-08-25-docusaurus-4-support-design.md`.
+ */
+function buildIncludeLoaderRule(args: {
+  siteDir: string;
+  resolved: ResolvedRuleOptions;
+  processorsId: string;
+}): IncludeLoaderRule {
+  const { siteDir, resolved, processorsId } = args;
+  return {
+    test: /\.mdx?$/,
+    // Must run before Docusaurus's MDX loader: `{@includeGitlab ...}`
+    // is not valid MDX, so the placeholder has to be substituted in the
+    // raw source text before MDX parsing.
+    enforce: "pre" as const,
+    // `@docusaurus/core`'s synthetic MDX-fallback plugin
+    // (server/plugins/synthetic.js) scans every `.mdx?`-matching
+    // rule and flattens its `include` into the fallback rule's
+    // `exclude`. Without an explicit `include` here, that flatMap
+    // pushes a literal `undefined` into that array (our rule has no
+    // `include` of its own) — and the webpack-merge pass that wires
+    // the fallback plugin's result back into the config turns that
+    // `undefined` hole into `null`, which fails webpack's own
+    // config schema and aborts the build. Scoping `include` to the
+    // whole site dir keeps our rule's effective reach unchanged
+    // (still every `.md`/`.mdx` file in the project) while handing
+    // that flatMap a real path instead of `undefined`.
+    include: [siteDir],
+    use: [
+      {
+        loader: path.resolve(dirname, "../include/loader.js"),
+        options: { resolved, processorsId },
+      },
+    ],
+  };
+}
+
 export default async function gitlabPlugin(context: unknown, options: PluginOptions) {
   const mode = process.env.NODE_ENV === "production" ? "production" : "development";
   const resolved = resolveOptions(options, mode);
@@ -78,34 +131,7 @@ export default async function gitlabPlugin(context: unknown, options: PluginOpti
     configureWebpack(..._args: unknown[]) {
       return {
         module: {
-          rules: [
-            {
-              test: /\.mdx?$/,
-              // Must run before Docusaurus's MDX loader: `{@includeGitlab ...}`
-              // is not valid MDX, so the placeholder has to be substituted in the
-              // raw source text before MDX parsing.
-              enforce: "pre" as const,
-              // `@docusaurus/core`'s synthetic MDX-fallback plugin
-              // (server/plugins/synthetic.js) scans every `.mdx?`-matching
-              // rule and flattens its `include` into the fallback rule's
-              // `exclude`. Without an explicit `include` here, that flatMap
-              // pushes a literal `undefined` into that array (our rule has no
-              // `include` of its own) — and the webpack-merge pass that wires
-              // the fallback plugin's result back into the config turns that
-              // `undefined` hole into `null`, which fails webpack's own
-              // config schema and aborts the build. Scoping `include` to the
-              // whole site dir keeps our rule's effective reach unchanged
-              // (still every `.md`/`.mdx` file in the project) while handing
-              // that flatMap a real path instead of `undefined`.
-              include: [siteDir],
-              use: [
-                {
-                  loader: path.resolve(dirname, "../include/loader.js"),
-                  options: { resolved, processorsId },
-                },
-              ],
-            },
-          ],
+          rules: [buildIncludeLoaderRule({ siteDir, resolved, processorsId })],
         },
         // Docusaurus merges configureWebpack() results via webpack-merge's
         // default array strategy, which deep-merges `module.rules` by index

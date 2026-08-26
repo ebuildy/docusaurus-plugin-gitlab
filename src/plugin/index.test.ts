@@ -68,6 +68,30 @@ describe("gitlabPlugin", () => {
     expect((wp as any).mergeStrategy).toEqual({ "module.rules": "append" });
   });
 
+  it("registers exactly one loader rule", async () => {
+    // Guards against the loader being registered twice, which would run
+    // include-substitution twice over every .md(x) file in the site.
+    const plugin = await gitlabPlugin(ctx, opts);
+    const wp = plugin.configureWebpack!({} as any, false, {} as any);
+    expect((wp.module!.rules as any[]).length).toBe(1);
+  });
+
+  it("exposes configureWebpack and NOT configureBundler", async () => {
+    // TRIPWIRE — read before "fixing" this test.
+    //
+    // Docusaurus v4 deprecates configureWebpack(...args) in favour of
+    // configureBundler({...}), but v4 is unpublished and the signature is
+    // unknown. We deliberately ship only configureWebpack, which v4 still
+    // supports (deprecated != removed).
+    //
+    // If you add configureBundler, this test fails on purpose. Before deleting
+    // it, prove Docusaurus does not call BOTH hooks — if it does, the loader
+    // registers twice and every markdown file is processed twice.
+    const plugin = await gitlabPlugin(ctx, opts);
+    expect(typeof plugin.configureWebpack).toBe("function");
+    expect((plugin as Record<string, unknown>).configureBundler).toBeUndefined();
+  });
+
   it("contributes the theme stylesheet", async () => {
     const plugin = await gitlabPlugin(ctx, opts);
     const mods = plugin.getClientModules!();

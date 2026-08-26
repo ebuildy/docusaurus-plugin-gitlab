@@ -5,8 +5,8 @@
 ![NPM Version](https://img.shields.io/npm/v/%40ebuildy%2Fdocusaurus-plugin-gitlab)
 
 Embed **GitLab** resources — project info, README, releases, issues, and any
-file or code snippet — directly in your **Docusaurus 3** documentation using MDX
-components.
+file or code snippet — directly in your **Docusaurus 3 or 4** documentation using
+MDX components.
 
 ![Screenshot](./docs/screenshot1.png)
 
@@ -15,11 +15,47 @@ tokens or network calls ever reach the browser, and pages stay fast.
 
 - ✅ Works with **gitlab.com** and self-hosted GitLab (configurable host)
 - ✅ Authenticated (private projects) or public, via a build-time token
-- ✅ Five ready-to-use JSX components
+- ✅ Eleven ready-to-use JSX components
 - ✅ README images **and badges are downloaded and localized** (offline-safe, frozen at build time)
 - ✅ On-disk caching, theme-aware (Infima) styling, graceful error fallbacks
 
-> Requires Docusaurus **3.x** and Node **22.13+ or 24**.
+> Requires Docusaurus **3.x or 4.x** and Node **22.13+ or 24** (Docusaurus 4 itself
+> requires Node 24).
+
+## Docusaurus compatibility
+
+One published version supports both majors. The package touches only three plugin
+hooks (`getClientModules`, `extendCli`, `configureWebpack`) and one optional,
+lazily-imported `@docusaurus/logger`; everything else is plain remark/unified and
+React, which is version-agnostic.
+
+> **On Docusaurus 4 specifically:** Docusaurus 4 is not released yet. Support is
+> validated against the `future: { v4: true }` flags that Docusaurus 3.10 already
+> exposes — which is what switches on Rspack, SWC, LightningCSS and `@swc/html`.
+> That covers the bundler and toolchain changes, but it cannot cover APIs removed
+> in the final release or the Rspack v1 → v2 upgrade. Treat v4 support as
+> well-tested groundwork rather than a guarantee, and please open an issue if you
+> hit a gap once v4 ships.
+
+- **Bundler.** The `{@includeGitlab...}` pre-loader works under both webpack and
+  **Rspack**, which Docusaurus 4 uses by default. The e2e suite builds the fixture
+  site twice — once on Docusaurus 3 defaults and once with `future: { v4: true }`
+  (Rspack + SWC + LightningCSS) — so both paths stay covered.
+- **`configureWebpack` is retained on purpose.** Docusaurus 4 deprecates it in
+  favour of `configureBundler`, but deprecated is not removed. The package will not
+  adopt `configureBundler` until a Docusaurus 4 release publishes its signature,
+  because registering both hooks risks running include-substitution twice over every
+  markdown file.
+- **HTML output encoding differs under v4.** The Docusaurus Faster toolchain that
+  v4 turns on by default minifies HTML with `@swc/html` instead of
+  html-minifier-terser, and that strips attribute quotes
+  wherever HTML permits — this package's `class="gitlab-project-card" href="repo"`
+  is emitted as `class=gitlab-project-card href=repo`. The rendered markup is
+  otherwise byte-identical. This matters only if you string-match the generated
+  HTML (in tests or downstream tooling); browsers treat the two forms identically.
+- **Nothing else is version-gated.** No `@docusaurus/core` peer dependency is
+  declared, and `engines` deliberately still allows Node 22 so Docusaurus 3 users
+  are unaffected.
 
 ## Installation
 
@@ -621,9 +657,10 @@ pnpm test            # unit tests (Vitest)
 pnpm run typecheck   # tsc --noEmit
 ```
 
-The `examples/site/` directory contains a minimal Docusaurus 3 site used by the
-end-to-end test (`test/e2e/build.test.ts`), which builds the site against a
-mocked GitLab API and asserts the embeds are baked into the HTML.
+The `examples/site/` directory contains a minimal Docusaurus site used by the
+end-to-end test (`test/e2e/build.test.ts`), built twice — Docusaurus 3 defaults
+and the v4 future flags — against a mocked GitLab API, asserting the embeds are
+baked into the HTML in both variants.
 
 ## License
 

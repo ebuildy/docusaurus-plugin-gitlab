@@ -8,7 +8,7 @@ non-trivial change; it complements the agent-facing rules in
 
 ## What the package is
 
-A Docusaurus 3 plugin that embeds GitLab resources (project info, README,
+A Docusaurus 3 and 4 plugin that embeds GitLab resources (project info, README,
 releases, issues, files/snippets, topics, labels, project grids) into
 documentation pages.
 
@@ -67,7 +67,8 @@ src/
 ├── options.ts          PluginOptions/ResolvedOptions, Joi schema, resolveOptions() defaults
 │
 ├── plugin/             Pipeline 1 entry — the Docusaurus plugin factory
-│   └── index.ts          hooks: getClientModules, extendCli, configureWebpack; runs generateOnce()
+│   └── index.ts          hooks: getClientModules, extendCli, configureWebpack (thin wrapper
+│                         over the pure buildIncludeLoaderRule()); runs generateOnce()
 │
 ├── generate/           Pipeline 1 — group → generated pages
 │   ├── directive.ts      parse {@generateGitlabPages ...} attributes
