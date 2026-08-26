@@ -59,6 +59,28 @@ describe("createHostMask", () => {
     const m = createHostMask("https://gl.internal/", "https://gl.public/");
     expect(m("https://gl.internal/x")).toBe("https://gl.public/x");
   });
+
+  it("does not match a host that is a prefix of a longer hostname", () => {
+    const m = createHostMask("https://gitlab.internal", PUBLIC);
+    expect(m("see https://gitlab.internal2.otherdomain.com/x")).toBe(
+      "see https://gitlab.internal2.otherdomain.com/x",
+    );
+  });
+
+  it("does not match a path prefix that is a prefix of a longer path segment", () => {
+    const m = createHostMask("https://example.com/GitLab", PUBLIC);
+    expect(m("https://example.com/GitLabExtra/x")).toBe("https://example.com/GitLabExtra/x");
+  });
+
+  it("still matches at a legitimate boundary when the host includes a port", () => {
+    expect(mask(`${HOST}/x`)).toBe(`${PUBLIC}/x`);
+    expect(mask(`${HOST}`)).toBe(`${PUBLIC}`);
+  });
+
+  it("inserts a public url containing $& literally, not as a replacement token", () => {
+    const m = createHostMask(HOST, "https://pub.example.com/$&");
+    expect(m(`${HOST}/x`)).toBe("https://pub.example.com/$&/x");
+  });
 });
 
 describe("maskHostDeep", () => {

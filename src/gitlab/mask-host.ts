@@ -52,18 +52,40 @@ export function createHostMask(host: string | undefined, gitlabPublicUrl: string
   if (!from || !to || from === to) return IDENTITY;
 
   const [origin, rest] = splitOrigin(from);
-  const literal = new RegExp(expandCase(escapeRe(origin)) + escapeRe(rest), "g");
+  // Boundary guard: without it this is an unanchored substring match, so a
+  // configured host that is a strict prefix of a longer, unrelated hostname
+  // or path segment (`gitlab.internal` inside `gitlab.internal2.other.com`,
+  // or a path prefix `/GitLab` inside `/GitLabExtra`) would corrupt output.
+  // The negative lookahead blocks the match only when the next character
+  // could continue a hostname/path segment. Applied identically to both the
+  // literal and percent-encoded patterns: for the encoded form, a legitimate
+  // continuation there is `%2F` (an encoded `/`), and `%` is not in the
+  // blocked set, so `…gitlab.internal%2Fx` still matches correctly.
+  // Accepted limitation (not fixed here): a host configured without a port
+  // still matches text carrying one (`gitlab.internal` matches inside
+  // `gitlab.internal:8080/x`), since `:` is deliberately not in the blocked
+  // set — blocking it would break a host whose own path legitimately
+  // precedes a colon in prose. We err toward masking: a missed match leaks
+  // the internal host, which is the one failure mode this feature exists to
+  // prevent.
+  const boundary = "(?![A-Za-z0-9.-])";
+  const literal = new RegExp(expandCase(escapeRe(origin)) + escapeRe(rest) + boundary, "g");
   // Badge and shield URLs nest the instance URL inside a query string, where it
   // arrives percent-encoded. encodeURIComponent works per character, so
   // encoding the two halves separately equals encoding the whole. Running
   // expandCase over the encoded form also tolerates lowercase hex (%3a vs %3A).
   const encoded = new RegExp(
-    expandCase(escapeRe(encodeURIComponent(origin))) + escapeRe(encodeURIComponent(rest)),
+    expandCase(escapeRe(encodeURIComponent(origin))) + escapeRe(encodeURIComponent(rest)) + boundary,
     "g",
   );
   const encodedTo = encodeURIComponent(to);
 
-  const mask = (value: string) => value.replace(literal, to).replace(encoded, encodedTo);
+  // Function-form replacements: `String.prototype.replace` treats `$&`, `` $` ``,
+  // `$'`, `$$`, `$1` etc. specially in a string replacement even with no capture
+  // groups in the pattern. `$` is a legal URI sub-delim (Joi's `.uri()` doesn't
+  // reject it), so a `gitlabPublicUrl` containing `$` would otherwise be
+  // silently mangled. The function form bypasses special-pattern parsing.
+  const mask = (value: string) => value.replace(literal, () => to).replace(encoded, () => encodedTo);
   return Object.assign(mask, { disabled: false as const });
 }
 
