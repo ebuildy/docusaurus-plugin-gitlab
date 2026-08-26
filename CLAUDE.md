@@ -6,7 +6,7 @@ Guidance for AI agents working in this repository.
 
 `@ebuildy/docusaurus-plugin-gitlab` — a set of MDX extensions that embed GitLab resources
 (project info, README, releases, issues, and arbitrary files/code snippets) into
-**Docusaurus 3** documentation pages as JSX components.
+**Docusaurus 3 and 4** documentation pages as JSX components.
 
 All GitLab data is fetched **at build time** by a remark plugin and baked into the
 static HTML. The browser never holds a token or calls the GitLab API.
@@ -21,9 +21,14 @@ static HTML. The browser never holds a token or calls the GitLab API.
   `commit.gpgsign=true`, so this happens automatically; if signing is ever
   stripped, pass `git commit -S` and verify with `git log --format="%G?"`
   (expect `G`).
-- **Docusaurus 3 only** (MDX v3, unified ESM, native `fetch`). **Node 22 or 24**
+- **Docusaurus 3 and 4** (MDX v3, unified ESM, native `fetch`). **Node 22 or 24**
   (engines: `^22.13.0 || >=24.0.0` — pnpm 11 requires ≥22.13; Node 20 is no
-  longer supported).
+  longer supported). Docusaurus 4 is not published yet: v4 support is validated
+  against the `future: { v4: true }` flags Docusaurus 3.10 exposes (Rspack, SWC,
+  LightningCSS, `@swc/html`, MDX-1 compat off), which `test/e2e/build.test.ts`
+  exercises as a second build variant. Keep `configureWebpack` — do NOT add
+  `configureBundler` until a v4 release publishes its signature; a tripwire test
+  in `src/plugin/index.test.ts` enforces this.
 - Prefer the latest versions of libraries.
 - ESM-first. Intra-package imports use explicit `.js` extensions
   (e.g. `import { Fallback } from "./Fallback.js"`) — required by the

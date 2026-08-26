@@ -8,7 +8,7 @@ non-trivial change; it complements the agent-facing rules in
 
 ## What the package is
 
-A Docusaurus 3 plugin that embeds GitLab resources (project info, README,
+A Docusaurus 3 and 4 plugin that embeds GitLab resources (project info, README,
 releases, issues, files/snippets, topics, labels, project grids) into
 documentation pages.
 
