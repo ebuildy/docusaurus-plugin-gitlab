@@ -1,4 +1,5 @@
 import { rewriteGeneratePages } from "../generate/rewrite.js";
+import { createHostMask } from "../gitlab/mask-host.js";
 import type { ResolvedOptions } from "../options.js";
 import { getContext } from "./context.js";
 import { getOutProcessors } from "./out-processors.js";
@@ -16,8 +17,13 @@ export default function gitlabIncludeLoader(this: LoaderThis, source: string): v
   // include path's `strict` degrade): a malformed directive is an authoring bug.
   const rewritten = rewriteGeneratePages(source);
 
+  // Output masking for ALL page text. This is the only place every .md/.mdx in
+  // the site passes through as a string, so it must wrap BOTH callbacks — the
+  // fast path below skips transformIncludes entirely, and that is most files.
+  const mask = createHostMask(resolved.host, resolved.gitlabPublicUrl);
+
   if (!rewritten.includes("{@includeGitlab")) {
-    callback(null, rewritten);
+    callback(null, mask(rewritten));
     return;
   }
 
@@ -33,7 +39,7 @@ export default function gitlabIncludeLoader(this: LoaderThis, source: string): v
     outProcessors: processorsId ? getOutProcessors(processorsId) : [],
   };
   transformIncludes(rewritten, getContext(resolved), options).then(
-    (out) => callback(null, out),
+    (out) => callback(null, mask(out)),
     (err) => callback(err instanceof Error ? err : new Error(String(err))),
   );
 }

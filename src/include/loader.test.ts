@@ -40,4 +40,37 @@ describe("gitlab include loader", () => {
     expect(out).toContain("<GitlabProjectGrid ");
     expect(out).not.toContain("{@generateGitlabPages");
   });
+
+  it("masks the internal host on the no-placeholder fast path", async () => {
+    const out = await run("clone from http://gitlab.internal:8080/g/r.git", {
+      strict: true,
+      host: "http://gitlab.internal:8080",
+      gitlabPublicUrl: "https://gitlab.example.com",
+      cache: false,
+    });
+    expect(out).toBe("clone from https://gitlab.example.com/g/r.git");
+  });
+
+  it("masks the internal host on the transformIncludes path", async () => {
+    // The surrounding prose is copied through transformIncludes verbatim, so a
+    // mask applied only inside that function would miss it. Deliberately does
+    // NOT assert on the failure message's own text, which is network-dependent.
+    const out = await run("see http://127.0.0.1:1/g/p\n\n{@includeGitlabReadme: g/p}", {
+      strict: false,
+      host: "http://127.0.0.1:1",
+      gitlabPublicUrl: "https://gitlab.example.com",
+      token: undefined,
+      cache: false,
+      assetDir: "static/gitlab-assets",
+      assetBaseUrl: "/gitlab-assets",
+    });
+    expect(out).toContain("> ⚠️"); // proves we took the transformIncludes path
+    expect(out).toContain("see https://gitlab.example.com/g/p");
+  });
+
+  it("leaves the source untouched when gitlabPublicUrl is unset", async () => {
+    const src = "clone from http://gitlab.internal:8080/g/r.git";
+    const out = await run(src, { strict: true, host: "http://gitlab.internal:8080", cache: false });
+    expect(out).toBe(src);
+  });
 });
