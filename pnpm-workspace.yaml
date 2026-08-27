@@ -11,6 +11,12 @@ allowBuilds:
   # core-js's postinstall only prints a funding banner — no build needed.
   core-js: false
 
+# pnpm 11 quarantines freshly published versions by default. These are exempt
+# because they are security patches we want before the cooling-off period ends.
+minimumReleaseAgeExclude:
+  # Patches GHSA-5p4m-2wfm-xmqj (see the js-yaml override below).
+  - js-yaml@4.3.2
+
 # Security overrides for transitive deps (webpack tooling pulled in by Docusaurus).
 # serialize-javascript <=7.0.2 has an RCE (GHSA-5c6j-r48x-rmvq, patched 7.0.3)
 # and <7.0.5 a DoS (CVE-2026-34043, patched 7.0.5); webpack plugins still ask for ^6.
@@ -19,3 +25,19 @@ allowBuilds:
 overrides:
   serialize-javascript: ^7.0.7
   uuid: ^11.1.1
+  # js-yaml <4.3.1 has quadratic CPU consumption resolving !!omap
+  # (GHSA-5p4m-2wfm-xmqj); @11ty/gray-matter (via @docusaurus/utils) asks for
+  # ^4.1.0. The 5.x branch is patched by the markdownlint-cli2 bump instead.
+  js-yaml@^4: ^4.3.2
+  # fast-uri <3.1.5 parses a backslash as an authority delimiter, so a URI can
+  # be confused about its host (GHSA-v2hh-gcrm-f6hx, GHSA-7p8r-x3mc-p8w7).
+  # Only consumer is ajv ^3.0.1, pulled in by babel-loader/schema-utils.
+  fast-uri: ^3.1.5
+  # undici <7.29.0 carries five advisories, worst of them cross-user cache
+  # disclosure (GHSA-4cwx-7wf7-3272); jsdom asks for ^7.25.0. jsdom 30 would
+  # move to undici 8, but that is a major bump against vitest's jsdom peer.
+  undici: ^7.29.0
+  # postcss <=8.5.22 follows an attacker-controlled sourceMappingURL and reads
+  # arbitrary .map files when `from` is unset (GHSA-fxqj-rqcc-2cmp); consumers
+  # are postcss-preset-env and friends under @docusaurus/bundler, all on ^8.
+  postcss: ^8.5.23
