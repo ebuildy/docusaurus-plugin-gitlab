@@ -12,10 +12,11 @@ import {
   fetchUsers,
   type GitLabContext,
 } from "../gitlab/fetchers.js";
+import { lookupTable } from "../lookup.js";
 
 export type Fetcher = (ctx: GitLabContext, attrs: Record<string, unknown>) => Promise<unknown>;
 
-export const COMPONENT_REGISTRY: Record<string, Fetcher> = {
+export const COMPONENT_REGISTRY: Record<string, Fetcher> = lookupTable({
   GitlabProjectInfo: fetchProjectInfo,
   GitlabReadme: fetchReadme,
   GitlabReleases: fetchReleases,
@@ -27,4 +28,4 @@ export const COMPONENT_REGISTRY: Record<string, Fetcher> = {
   GitlabRoadmap: fetchRoadmap,
   GitlabUser: fetchUser,
   GitlabUsers: fetchUsers,
-};
+});
