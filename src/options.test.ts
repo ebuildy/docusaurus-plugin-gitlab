@@ -234,3 +234,15 @@ describe("resolveOptions", () => {
     ).toThrow(/relativeLinks/);
   });
 });
+
+describe("baseUrl", () => {
+  it("is undefined when unset, so the value the Docusaurus plugin detected wins", () => {
+    expect(resolveOptions({ host: "https://gitlab.com" }).baseUrl).toBeUndefined();
+  });
+
+  it("normalizes an explicit value the way Docusaurus stores it", () => {
+    expect(resolveOptions({ host: "https://gitlab.com", baseUrl: "/my-docs/" }).baseUrl).toBe("/my-docs");
+    expect(resolveOptions({ host: "https://gitlab.com", baseUrl: "/" }).baseUrl).toBe("");
+    expect(resolveOptions({ host: "https://gitlab.com", baseUrl: "" }).baseUrl).toBe("");
+  });
+});

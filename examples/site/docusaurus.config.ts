@@ -19,7 +19,10 @@ const futureV4 = process.env.DOCUSAURUS_FUTURE_V4 === "1";
 const config: Config = {
   title: "GitLab MDX Example",
   url: "https://example.com",
-  baseUrl: "/",
+  // Deliberately NOT "/": localized GitLab assets are emitted site-root-relative
+  // (`/gitlab-assets/…`), so a non-root baseUrl is the only thing that catches
+  // them 404ing. See src/gitlab/base-url.ts and the asset-path e2e assertion.
+  baseUrl: "/docs-base/",
   favicon: undefined,
   onBrokenLinks: "ignore",
   markdown: { hooks: { onBrokenMarkdownLinks: "ignore" } },

@@ -1,5 +1,6 @@
 import Joi from "joi";
 import type { PluggableList } from "unified";
+import { normalizeBaseUrl } from "./gitlab/base-url.js";
 import type { LinkMode } from "./gitlab/links.js";
 import type { OutProcessor } from "./include/out-processors.js";
 
@@ -10,6 +11,12 @@ export interface PluginOptions {
   cache?: { ttl: number } | false;
   assetDir?: string;
   assetBaseUrl?: string;
+  /** The site's Docusaurus `baseUrl`, prefixed onto every localized-asset URL so
+   *  images resolve on a site that is not served from `/`. Auto-detected from
+   *  the Docusaurus plugin's `LoadContext`; set it explicitly only when
+   *  `remarkGitlab` is registered WITHOUT the Docusaurus plugin. Default: the
+   *  detected value, else `"/"`. */
+  baseUrl?: string;
   /** Public GitLab base URL used to build links to repository files. Defaults to
    *  `host`. Set it when the build-time API host differs from the user-facing
    *  URL (e.g. an internal hostname behind a reverse proxy). */
@@ -70,6 +77,9 @@ export interface ResolvedOptions {
   cache: { ttl: number } | false;
   assetDir: string;
   assetBaseUrl: string;
+  /** `undefined` ⇒ not set by the author; fall back to the value the Docusaurus
+   *  plugin reported. Normalized: no trailing slash, `""` at the site root. */
+  baseUrl: string | undefined;
   publicUrl: string;
   gitlabPublicUrl: string;
   relativeLinks: LinkMode;
@@ -97,6 +107,7 @@ const schema = Joi.object({
   cache: Joi.alternatives(Joi.object({ ttl: Joi.number().min(0).required() }), Joi.boolean().valid(false)).optional(),
   assetDir: Joi.string().optional(),
   assetBaseUrl: Joi.string().optional(),
+  baseUrl: Joi.string().allow("").optional(),
   publicUrl: Joi.string().uri().optional(),
   gitlabPublicUrl: Joi.string().uri().allow("").optional(),
   relativeLinks: Joi.string().valid("gitlab", "keep", "site").optional(),
@@ -127,6 +138,7 @@ export function resolveOptions(
     cache: opts.cache === undefined ? { ttl: 3600 } : opts.cache,
     assetDir: opts.assetDir ?? "static/gitlab-assets",
     assetBaseUrl: (opts.assetBaseUrl ?? "/gitlab-assets").replace(/\/+$/, ""),
+    baseUrl: opts.baseUrl === undefined ? undefined : normalizeBaseUrl(opts.baseUrl),
     publicUrl: (opts.publicUrl ?? opts.host).replace(/\/+$/, ""),
     // Deliberately NOT `?? opts.host` — that would make the option a permanent
     // no-op. Empty is the documented "off".

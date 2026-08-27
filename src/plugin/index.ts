@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateAll } from "../generate/index.js";
+import { setSiteBaseUrl } from "../gitlab/base-url.js";
 import { buildContext } from "../gitlab/context.js";
 import { registerOutProcessors } from "../include/out-processors.js";
 import { resolveOptions, type PluginOptions } from "../options.js";
@@ -28,6 +29,9 @@ async function generateOnce(
 
 interface PluginContextLike {
   siteDir?: string;
+  /** Docusaurus's `LoadContext.baseUrl` — the i18n-LOCALIZED base url, which is
+   *  what pages are actually served under (`siteConfig.baseUrl` is not). */
+  baseUrl?: string;
 }
 
 interface CliCommandLike {
@@ -95,8 +99,15 @@ function buildIncludeLoaderRule(args: {
 export default async function gitlabPlugin(context: unknown, options: PluginOptions) {
   const mode = process.env.NODE_ENV === "production" ? "production" : "development";
   const resolved = resolveOptions(options, mode);
-  const providedSiteDir = (context as PluginContextLike | undefined)?.siteDir;
+  const loadContext = context as PluginContextLike | undefined;
+  const providedSiteDir = loadContext?.siteDir;
   const siteDir = providedSiteDir ?? process.cwd();
+
+  // Publish the site's baseUrl for the remark plugin, which is handed no
+  // LoadContext of its own. Plugin loading runs strictly before MDX
+  // compilation, so the value is in place by the time a transformer reads it.
+  // See src/gitlab/base-url.ts.
+  if (loadContext?.baseUrl !== undefined) setSiteBaseUrl(loadContext.baseUrl);
 
   // User `outProcessors` are functions, which can't survive webpack's
   // serialization of loader options. Register them in-process under a plain

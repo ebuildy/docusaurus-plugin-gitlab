@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { resetSiteBaseUrl, setSiteBaseUrl } from "../gitlab/base-url.js";
 import loader from "./loader.js";
 
 function run(source: string, resolved: any): Promise<string> {
@@ -72,5 +73,37 @@ describe("gitlab include loader", () => {
     const src = "clone from http://gitlab.internal:8080/g/r.git";
     const out = await run(src, { strict: true, host: "http://gitlab.internal:8080", cache: false });
     expect(out).toBe(src);
+  });
+});
+
+describe("localized asset URLs and the site baseUrl", () => {
+  // The include path never renders through our React components, so `useBaseUrl`
+  // could not fix it even in principle — the prefix has to be baked in here.
+  const resolved = {
+    strict: true,
+    host: "https://gl",
+    cache: false,
+    assetBaseUrl: "/gitlab-assets",
+  };
+
+  it("prefixes asset URLs in page text with the reported baseUrl", async () => {
+    resetSiteBaseUrl();
+    setSiteBaseUrl("/my-docs/");
+    const out = await run("![logo](/gitlab-assets/abc.png)", resolved);
+    expect(out).toBe("![logo](/my-docs/gitlab-assets/abc.png)");
+  });
+
+  it("leaves asset URLs alone at the site root", async () => {
+    resetSiteBaseUrl();
+    setSiteBaseUrl("/");
+    const out = await run("![logo](/gitlab-assets/abc.png)", resolved);
+    expect(out).toBe("![logo](/gitlab-assets/abc.png)");
+  });
+
+  it("lets an explicit baseUrl option override the reported one", async () => {
+    resetSiteBaseUrl();
+    setSiteBaseUrl("/from-plugin/");
+    const out = await run("![logo](/gitlab-assets/abc.png)", { ...resolved, baseUrl: "/explicit" });
+    expect(out).toBe("![logo](/explicit/gitlab-assets/abc.png)");
   });
 });
