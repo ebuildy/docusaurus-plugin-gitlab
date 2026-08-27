@@ -148,9 +148,14 @@ describe.each(VARIANTS)("e2e: docusaurus build ($name)", ({ outDir, variantEnv }
     expect(files.some((f) => f.endsWith(".png"))).toBe(true);
   });
 
-  it("references the localized asset path from the built html", () => {
+  it("references the localized asset path from the built html, under the site baseUrl", () => {
+    // The fixture is served from `/docs-base/`, so a bare `/gitlab-assets/…`
+    // src points at nothing: the file is written to `<out>/gitlab-assets/`,
+    // which the site serves from `/docs-base/gitlab-assets/`. Guards the
+    // baseUrl prefix applied in src/gitlab/base-url.ts.
     const html = readFileSync(out("index.html"), "utf8");
-    expect(html).toContain("/gitlab-assets/");
+    expect(html).toContain("/docs-base/gitlab-assets/");
+    expect(html).not.toMatch(/["'(]\/gitlab-assets\//);
   });
 
   it("substitutes the {@includeGitlab...} placeholder into the built page", () => {

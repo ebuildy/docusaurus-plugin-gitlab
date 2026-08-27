@@ -1,4 +1,5 @@
 import { rewriteGeneratePages } from "../generate/rewrite.js";
+import { createAssetBaseUrlPrefixer, siteBaseUrl } from "../gitlab/base-url.js";
 import { createHostMask } from "../gitlab/mask-host.js";
 import type { ResolvedOptions } from "../options.js";
 import { getContext } from "./context.js";
@@ -21,9 +22,14 @@ export default function gitlabIncludeLoader(this: LoaderThis, source: string): v
   // the site passes through as a string, so it must wrap BOTH callbacks — the
   // fast path below skips transformIncludes entirely, and that is most files.
   const mask = createHostMask(resolved.host, resolved.gitlabPublicUrl);
+  // Same choke point, same reasoning, for localized-asset URLs: `AssetManager`
+  // emits them site-root-relative, so a site with a non-root `baseUrl` needs
+  // the prefix baked in. See src/gitlab/base-url.ts.
+  const prefixAssets = createAssetBaseUrlPrefixer(resolved.assetBaseUrl, resolved.baseUrl ?? siteBaseUrl() ?? "");
+  const out = (text: string) => prefixAssets(mask(text));
 
   if (!rewritten.includes("{@includeGitlab")) {
-    callback(null, mask(rewritten));
+    callback(null, out(rewritten));
     return;
   }
 
@@ -39,7 +45,7 @@ export default function gitlabIncludeLoader(this: LoaderThis, source: string): v
     outProcessors: processorsId ? getOutProcessors(processorsId) : [],
   };
   transformIncludes(rewritten, getContext(resolved), options).then(
-    (out) => callback(null, mask(out)),
+    (text) => callback(null, out(text)),
     (err) => callback(err instanceof Error ? err : new Error(String(err))),
   );
 }

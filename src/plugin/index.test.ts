@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, vi } from "vitest";
+import { resetSiteBaseUrl, siteBaseUrl } from "../gitlab/base-url.js";
 import { getOutProcessors } from "../include/out-processors.js";
 import gitlabPlugin from "./index.js";
 
@@ -169,5 +170,25 @@ describe("gitlabPlugin", () => {
     const target = join(dir, "static", "gitlab-assets");
     await gitlabPlugin(ctx, { ...opts, assetDir: target });
     expect(existsSync(join(target, ".gitkeep"))).toBe(true);
+  });
+});
+
+describe("the site baseUrl hand-off to the remark plugin", () => {
+  it("publishes the LoadContext baseUrl, normalized", async () => {
+    resetSiteBaseUrl();
+    await gitlabPlugin({ siteDir: "/site", baseUrl: "/my-docs/" } as any, opts);
+    expect(siteBaseUrl()).toBe("/my-docs");
+  });
+
+  it("publishes the site root as an empty prefix", async () => {
+    resetSiteBaseUrl();
+    await gitlabPlugin({ siteDir: "/site", baseUrl: "/" } as any, opts);
+    expect(siteBaseUrl()).toBe("");
+  });
+
+  it("stays unset when Docusaurus handed over no baseUrl", async () => {
+    resetSiteBaseUrl();
+    await gitlabPlugin({ siteDir: "/site" } as any, opts);
+    expect(siteBaseUrl()).toBeUndefined();
   });
 });
