@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 
@@ -53,7 +55,16 @@ describe("packaging: plugin default export", () => {
       default: (context: unknown, options: unknown) => Promise<{ name: string }>;
     };
     expect(typeof mod.default).toBe("function");
-    const plugin = await mod.default({}, { host: "https://gitlab.example.com", cache: false });
+    // assetDir: the factory prepares it eagerly (see AssetManager.sync), so point
+    // it at a temp dir instead of creating `static/gitlab-assets` in the repo.
+    const plugin = await mod.default(
+      {},
+      {
+        host: "https://gitlab.example.com",
+        cache: false,
+        assetDir: mkdtempSync(join(tmpdir(), "glpackaging-")),
+      },
+    );
     expect(plugin.name).toBe("@ebuildy/docusaurus-plugin-gitlab");
   });
 });
