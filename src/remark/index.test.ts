@@ -5,6 +5,7 @@ import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { describe, it, expect, vi } from "vitest";
+import { resetSiteBaseUrl, setSiteBaseUrl } from "../gitlab/base-url.js";
 import { findTocExport, readTocItems } from "./toc-export";
 import remarkGitlab from "./index";
 
@@ -195,5 +196,51 @@ describe("remarkGitlab", () => {
       assetDir,
     });
     expect(existsSync(join(assetDir, ".gitkeep"))).toBe(true);
+  });
+});
+
+describe("localized asset URLs and the site baseUrl", () => {
+  const withAvatar = async () => {
+    const { fetchProjectInfo } = await import("../gitlab/fetchers.js");
+    (fetchProjectInfo as any).mockResolvedValueOnce({
+      id: 1,
+      path: "g/r",
+      name: "r",
+      avatarUrl: "/gitlab-assets/abc.png",
+      readmeHtml: '<img src="/gitlab-assets/def.png">',
+    });
+  };
+  const injected = (tree: any) => {
+    const node = tree.children.find((c: any) => c.name === "GitlabProjectInfo");
+    return node.attributes.find((a: any) => a.name === "data").value.value as string;
+  };
+
+  it("prefixes the baseUrl the Docusaurus plugin reported", async () => {
+    resetSiteBaseUrl();
+    setSiteBaseUrl("/my-docs/");
+    await withAvatar();
+    const value = injected(await transform('<GitlabProjectInfo project="g/r" />', { host: "https://gitlab.com" }));
+    expect(value).toContain("/my-docs/gitlab-assets/abc.png");
+    // the image inside rendered README html, which no React hook could reach
+    expect(value).toContain("/my-docs/gitlab-assets/def.png");
+  });
+
+  it("lets an explicit baseUrl option override the reported one", async () => {
+    resetSiteBaseUrl();
+    setSiteBaseUrl("/from-plugin/");
+    await withAvatar();
+    const value = injected(
+      await transform('<GitlabProjectInfo project="g/r" />', { host: "https://gitlab.com", baseUrl: "/explicit/" }),
+    );
+    expect(value).toContain("/explicit/gitlab-assets/abc.png");
+    expect(value).not.toContain("/from-plugin/");
+  });
+
+  it("leaves asset URLs alone at the site root", async () => {
+    resetSiteBaseUrl();
+    setSiteBaseUrl("/");
+    await withAvatar();
+    const value = injected(await transform('<GitlabProjectInfo project="g/r" />', { host: "https://gitlab.com" }));
+    expect(value).toContain("/gitlab-assets/abc.png");
   });
 });

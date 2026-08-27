@@ -8,6 +8,8 @@
  * docs/superpowers/specs/2026-08-26-public-url-host-masking-design.md.
  */
 
+import { escapeRegExp, mapStringsDeep } from "./string-rewrite.js";
+
 export interface HostMask {
   (value: string): string;
   /** True when the mask is a no-op: no host, no public url, or the two are equal. */
@@ -15,11 +17,6 @@ export interface HostMask {
 }
 
 const IDENTITY: HostMask = Object.assign((value: string) => value, { disabled: true as const });
-
-/** Escapes regex metacharacters. Introduces no letters, so `expandCase` is safe to run after it. */
-function escapeRe(literal: string): string {
-  return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 /**
  * Rewrites every ASCII letter as a two-case character class. This buys
@@ -69,13 +66,13 @@ export function createHostMask(host: string | undefined, gitlabPublicUrl: string
   // the internal host, which is the one failure mode this feature exists to
   // prevent.
   const boundary = "(?![A-Za-z0-9.-])";
-  const literal = new RegExp(expandCase(escapeRe(origin)) + escapeRe(rest) + boundary, "g");
+  const literal = new RegExp(expandCase(escapeRegExp(origin)) + escapeRegExp(rest) + boundary, "g");
   // Badge and shield URLs nest the instance URL inside a query string, where it
   // arrives percent-encoded. encodeURIComponent works per character, so
   // encoding the two halves separately equals encoding the whole. Running
   // expandCase over the encoded form also tolerates lowercase hex (%3a vs %3A).
   const encoded = new RegExp(
-    expandCase(escapeRe(encodeURIComponent(origin))) + escapeRe(encodeURIComponent(rest)) + boundary,
+    expandCase(escapeRegExp(encodeURIComponent(origin))) + escapeRegExp(encodeURIComponent(rest)) + boundary,
     "g",
   );
   const encodedTo = encodeURIComponent(to);
@@ -89,36 +86,6 @@ export function createHostMask(host: string | undefined, gitlabPublicUrl: string
   return Object.assign(mask, { disabled: false as const });
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") return false;
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-}
-
-function walk(value: unknown, mask: HostMask): unknown {
-  if (typeof value === "string") return mask(value);
-  if (Array.isArray(value)) {
-    let changed = false;
-    const out = value.map((item) => {
-      const next = walk(item, mask);
-      if (next !== item) changed = true;
-      return next;
-    });
-    return changed ? out : value;
-  }
-  if (isPlainObject(value)) {
-    let changed = false;
-    const out: Record<string, unknown> = {};
-    for (const [key, item] of Object.entries(value)) {
-      const next = walk(item, mask);
-      if (next !== item) changed = true;
-      out[key] = next;
-    }
-    return changed ? out : value;
-  }
-  return value;
-}
-
 /**
  * Structural walk over strings, arrays, and plain objects. Anything else
  * (Date, Map, class instances) passes through by reference. Returns the input
@@ -127,5 +94,5 @@ function walk(value: unknown, mask: HostMask): unknown {
  */
 export function maskHostDeep<T>(value: T, mask: HostMask): T {
   if (mask.disabled) return value;
-  return walk(value, mask) as T;
+  return mapStringsDeep(value, mask);
 }

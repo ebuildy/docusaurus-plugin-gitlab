@@ -551,7 +551,8 @@ its own tag.
 | `strict` | boolean | `true` in prod, `false` in dev | On a failed fetch: `true` aborts the build; `false` renders a fallback |
 | `cache` | `{ ttl: number }` \| `false` | `{ ttl: 3600 }` | On-disk cache TTL (seconds), or `false` to disable |
 | `assetDir` | string | `static/gitlab-assets` | Where README images/badges are downloaded (see [Downloaded assets](#downloaded-assets)) |
-| `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from |
+| `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from, relative to the site `baseUrl` |
+| `baseUrl` | string | auto-detected | The site's Docusaurus `baseUrl`, prefixed onto every asset URL. Only needed when `remarkGitlab` is registered without the Docusaurus plugin (see [Sites not served from `/`](#sites-not-served-from-)) |
 | `publicUrl` | string | value of `host` | Public GitLab base URL used when building links to repository files. Set it when the build-time API host differs from the user-facing URL. Changing it does not invalidate already-cached HTML — clear `node_modules/.cache` or wait out the TTL |
 | `relativeLinks` | `"gitlab" \| "site" \| "keep"` | `"gitlab"` | Where relative links in fetched markdown point. Overridable per component |
 | `linkBase` | string | `""` | Site path the mirrored docs tree is mounted at, used by `relativeLinks: "site"`. Overridable per component |
@@ -600,6 +601,32 @@ export default {
 
 Static directories are copied preserving their layout, so the assets still land
 at `/gitlab-assets/…` and `assetBaseUrl` stays correct.
+
+#### Sites not served from `/`
+
+`assetBaseUrl` is relative to the site's `baseUrl`. A site with
+`baseUrl: "/my-docs/"` serves the assets from `/my-docs/gitlab-assets/…`, and the
+plugin emits exactly that — including inside rendered README HTML and
+`{@includeGitlab…}` output, which no React hook such as `useBaseUrl` could reach.
+
+The base URL is detected from Docusaurus automatically, so **registering the
+Docusaurus plugin needs no extra configuration**. If you register only the remark
+plugin, tell it where the site is mounted:
+
+```ts
+// docusaurus.config.ts
+const config = {
+  baseUrl: "/my-docs/",
+  presets: [
+    ["classic", {
+      docs: {
+        // No `plugins: [[gitlabPlugin, …]]` to detect it from — pass it through.
+        remarkPlugins: [[remarkGitlab, { host: "https://gitlab.com", baseUrl: "/my-docs/" }]],
+      },
+    }],
+  ],
+};
+```
 
 > **First build of a bare site.** Docusaurus decides whether to copy `static/`
 > when it creates the webpack config, before any markdown is compiled. If

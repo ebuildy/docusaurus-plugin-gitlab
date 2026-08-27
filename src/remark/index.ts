@@ -1,4 +1,5 @@
 import { visit } from "unist-util-visit";
+import { createAssetBaseUrlPrefixer, prefixAssetUrlsDeep, siteBaseUrl } from "../gitlab/base-url.js";
 import { buildContext } from "../gitlab/context.js";
 import { createHostMask, maskHostDeep } from "../gitlab/mask-host.js";
 import { resolveOptions, type PluginOptions } from "../options.js";
@@ -24,9 +25,19 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
   // site that localizes nothing must not fail to build over an unwritable dir.
   let materialized: Promise<void> | undefined;
 
+  // Localized assets are emitted site-ROOT-relative (`/gitlab-assets/…`), which
+  // only resolves on a site served from `/`. Prefix the site's baseUrl on the
+  // way OUT, after the fetchers' cache — like the host mask above — so the
+  // cached value stays baseUrl-agnostic. Built on first transform, not here:
+  // the Docusaurus plugin reports the detected baseUrl during plugin loading,
+  // which may not have happened yet when this factory runs.
+  let prefixAssets: ReturnType<typeof createAssetBaseUrlPrefixer> | undefined;
+
   return async function transformer(tree: any, file: any) {
     materialized ??= ctx.assets.sync().catch(() => {});
     await materialized;
+    prefixAssets ??= createAssetBaseUrlPrefixer(options.assetBaseUrl, options.baseUrl ?? siteBaseUrl() ?? "");
+    const prefix = prefixAssets;
 
     const jobs: { node: any }[] = [];
     visit(tree, (node: any) => {
@@ -47,7 +58,7 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
         const filePath = file?.path ?? "unknown.mdx";
         const attrs = parseAttributes(node.attributes ?? [], filePath);
         try {
-          const data = maskHostDeep(await fetcher(ctx, attrs), mask);
+          const data = prefixAssetUrlsDeep(maskHostDeep(await fetcher(ctx, attrs), mask), prefix);
           injectProp(node, "data", data);
           if (node.name === "GitlabReadme" && Array.isArray((data as any)?.toc)) {
             sidebarReadmes.push({ node, entries: (data as any).toc, order });
