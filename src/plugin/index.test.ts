@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, vi } from "vitest";
@@ -11,7 +11,8 @@ vi.mock("../generate/index.js", () => ({
 import { generateAll } from "../generate/index.js";
 
 const ctx = { siteDir: "/site" } as any;
-const opts = { host: "https://gitlab.example.com", cache: false } as any;
+const assetDir = mkdtempSync(join(tmpdir(), "glplugin-assets-"));
+const opts = { host: "https://gitlab.example.com", cache: false, assetDir } as any;
 
 const ruleOptions = async (o: any) => {
   const plugin = await gitlabPlugin(ctx, o);
@@ -120,7 +121,7 @@ describe("gitlabPlugin", () => {
 
   it("registers user outProcessors under the loader's processorsId", async () => {
     const user = (md: string) => md;
-    const o = { host: "https://gl.custom.example.com", cache: false, outProcessors: [user] } as any;
+    const o = { host: "https://gl.custom.example.com", cache: false, assetDir, outProcessors: [user] } as any;
     const { processorsId } = await ruleOptions(o);
     expect(typeof processorsId).toBe("string");
     expect(getOutProcessors(processorsId)).toEqual([user]);
@@ -155,5 +156,18 @@ describe("gitlabPlugin", () => {
     (generateAll as unknown as { mockClear: () => void }).mockClear();
     await gitlabPlugin({} as any, opts);
     expect(generateAll).not.toHaveBeenCalled();
+  });
+
+  it("creates the asset dir before Docusaurus snapshots the static directories", async () => {
+    // Docusaurus decides whether to copy `static/` when it BUILDS the webpack
+    // config (StaticDirectoriesCopyPlugin skips a missing or empty dir), while
+    // our assets are only written later, during compilation. On a first build of
+    // a site with no other static files that meant the localized README images
+    // never reached `build/`. Creating the dir + marker in the plugin factory —
+    // which Docusaurus awaits during plugin loading — closes that window.
+    const dir = mkdtempSync(join(tmpdir(), "glplugin-early-"));
+    const target = join(dir, "static", "gitlab-assets");
+    await gitlabPlugin(ctx, { ...opts, assetDir: target });
+    expect(existsSync(join(target, ".gitkeep"))).toBe(true);
   });
 });

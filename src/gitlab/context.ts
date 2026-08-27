@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { PluggableList } from "unified";
 import type { ResolvedOptions } from "../options.js";
 import { AssetManager } from "./assets.js";
@@ -35,6 +36,7 @@ export function buildContext(options: ResolvedOptions): GitLabContext {
     client,
     cache,
     assetDir: options.assetDir,
+    storeDir: join(CACHE_DIR, "assets"),
     assetBaseUrl: options.assetBaseUrl,
     host: options.host,
   });

@@ -2,6 +2,12 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+// Bumped when the meaning of a cached value changes. v2: assets localized into
+// `static/` are now backed by a byte store in this same cache dir, and a cached
+// fetcher result is only usable alongside it — entries written before the store
+// existed reference image files that nothing would ever restore. See issue #45.
+const CACHE_VERSION = "v2";
+
 interface Entry<T> {
   expiresAt: number | null;
   value: T;
@@ -18,7 +24,7 @@ export class FileCache {
   }
 
   private file(key: string): string {
-    return join(this.dir, `${FileCache.hash([key])}.json`);
+    return join(this.dir, `${FileCache.hash([CACHE_VERSION, key])}.json`);
   }
 
   async get<T>(key: string): Promise<T | undefined> {

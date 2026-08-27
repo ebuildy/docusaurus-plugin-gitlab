@@ -1,4 +1,5 @@
 import { mkdtempSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, beforeEach } from "vitest";
@@ -37,5 +38,17 @@ describe("FileCache", () => {
   it("hashes keys deterministically", () => {
     expect(FileCache.hash(["a", "b"])).toBe(FileCache.hash(["a", "b"]));
     expect(FileCache.hash(["a", "b"])).not.toBe(FileCache.hash(["a", "c"]));
+  });
+
+  it("ignores entries written by an older cache version", async () => {
+    // An upgrade must not keep serving pre-v2 entries: they point at localized
+    // image files that the (then non-existent) byte store cannot restore, so the
+    // site would render <img> tags for files nobody will ever write. See #45.
+    const c = new FileCache(dir, { ttl: 3600 });
+    const legacy = join(dir, `${FileCache.hash(["readme:g/r"])}.json`);
+    await mkdir(dir, { recursive: true });
+    await writeFile(legacy, JSON.stringify({ expiresAt: Date.now() + 60_000, value: "stale" }));
+
+    expect(await c.get("readme:g/r")).toBeUndefined();
   });
 });

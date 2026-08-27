@@ -1,3 +1,6 @@
+import { existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
@@ -21,8 +24,15 @@ vi.mock("../gitlab/fetchers.js", () => ({
   fetchUsers: vi.fn(),
 }));
 
+// Keep the transformer's asset-dir materialization inside a temp dir instead of
+// creating `static/gitlab-assets` in the repo root on every test run.
+const tmpAssetDir = () => join(mkdtempSync(join(tmpdir(), "glremark-")), "gitlab-assets");
+
 function processor(opts: any) {
-  return unified().use(remarkParse).use(remarkMdx).use(remarkGitlab, opts);
+  return unified()
+    .use(remarkParse)
+    .use(remarkMdx)
+    .use(remarkGitlab, { assetDir: tmpAssetDir(), ...opts });
 }
 
 async function transform(src: string, opts: any) {
@@ -172,5 +182,18 @@ describe("remarkGitlab", () => {
 
     const found = findTocExport(tree)!;
     expect(readTocItems(found.declarator.init).map((i: any) => i.id)).toContain("install");
+  });
+
+  it("materializes the asset dir before transforming a page", async () => {
+    // The documented setup registers only the remark plugin, so this is the
+    // single hook that runs on every build. Localized README images live under
+    // `static/`, which Docusaurus copies wholesale — and it refuses to copy a
+    // directory whose `static/**/*` glob matches no file. See issue #45.
+    const assetDir = tmpAssetDir();
+    await transform('<GitlabProjectInfo project="g/r" />', {
+      host: "https://gitlab.com",
+      assetDir,
+    });
+    expect(existsSync(join(assetDir, ".gitkeep"))).toBe(true);
   });
 });

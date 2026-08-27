@@ -16,7 +16,18 @@ export default function remarkGitlab(rawOptions: PluginOptions) {
   // build with no node_modules/.cache clear.
   const mask = createHostMask(options.host, options.gitlabPublicUrl);
 
+  // `static/gitlab-assets` is a disposable, gitignored build artifact, but the
+  // fetchers' cache hands back HTML that already points into it — so a cache hit
+  // renders <img src="/gitlab-assets/…"> without ever calling localize(). Restore
+  // the directory from the byte store once, before the first page is rendered,
+  // rather than leaving it to a download that will not happen. Best-effort: a
+  // site that localizes nothing must not fail to build over an unwritable dir.
+  let materialized: Promise<void> | undefined;
+
   return async function transformer(tree: any, file: any) {
+    materialized ??= ctx.assets.sync().catch(() => {});
+    await materialized;
+
     const jobs: { node: any }[] = [];
     visit(tree, (node: any) => {
       if (

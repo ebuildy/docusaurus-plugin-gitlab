@@ -71,7 +71,7 @@ npm install @ebuildy/docusaurus-plugin-gitlab
 
 ## Setup
 
-Two one-time steps in your Docusaurus site.
+Three one-time steps in your Docusaurus site.
 
 ### 1. Register the remark plugin
 
@@ -116,6 +116,21 @@ export default { ...MDXComponents, ...Gitlab };
 ```
 
 Now write the components in any `.mdx` page — no per-page imports needed.
+
+### 3. Ignore the downloaded assets
+
+Images and badges referenced by fetched GitLab markdown are downloaded at build
+time into `assetDir` (`static/gitlab-assets` by default), because the site has to
+serve them over HTTP — in `docusaurus start` as well as from `build/`. That makes
+the directory a build artifact, not source. Add it to `.gitignore`:
+
+```gitignore
+static/gitlab-assets/
+```
+
+Deleting it is safe: the bytes are also kept in `node_modules/.cache`, so the
+next build restores the directory without re-downloading anything. See
+[Downloaded assets](#downloaded-assets) for the details.
 
 ## Components
 
@@ -535,7 +550,7 @@ its own tag.
 | `token` | string | — | Personal/Project Access Token. Optional for public reads. Build-time only |
 | `strict` | boolean | `true` in prod, `false` in dev | On a failed fetch: `true` aborts the build; `false` renders a fallback |
 | `cache` | `{ ttl: number }` \| `false` | `{ ttl: 3600 }` | On-disk cache TTL (seconds), or `false` to disable |
-| `assetDir` | string | `static/gitlab-assets` | Where README images/badges are downloaded |
+| `assetDir` | string | `static/gitlab-assets` | Where README images/badges are downloaded (see [Downloaded assets](#downloaded-assets)) |
 | `assetBaseUrl` | string | `/gitlab-assets` | URL path the downloaded assets are served from |
 | `publicUrl` | string | value of `host` | Public GitLab base URL used when building links to repository files. Set it when the build-time API host differs from the user-facing URL. Changing it does not invalidate already-cached HTML — clear `node_modules/.cache` or wait out the TTL |
 | `relativeLinks` | `"gitlab" \| "site" \| "keep"` | `"gitlab"` | Where relative links in fetched markdown point. Overridable per component |
@@ -552,6 +567,56 @@ its own tag.
 
 The token is read at build time only. Provide it via an environment variable
 (`GITLAB_TOKEN`) — never commit it.
+
+### Downloaded assets
+
+Images and badges referenced by fetched GitLab markdown are downloaded at build
+time into `assetDir` (`static/gitlab-assets` by default) so the site can serve
+them itself, and [step 3](#3-ignore-the-downloaded-assets) of the setup gitignores
+that directory.
+
+Deleting it is safe. The bytes are also kept in `node_modules/.cache`, so the
+next build restores the directory without re-downloading anything, and a
+`.gitkeep` marker keeps it from ever being an empty directory (Docusaurus fails
+the build with `unable to locate 'static/**/*' glob` when a static directory
+contains no files).
+
+Assets have to live somewhere the site exposes over HTTP, which in development
+means a directory Docusaurus serves — it has no `build/` at that point. Point
+`assetDir` elsewhere if you would rather keep the repo untouched entirely:
+
+```ts
+// docusaurus.config.ts
+const gitlabOptions = {
+  host: "https://gitlab.com",
+  assetDir: "node_modules/.cache/gitlab-static/gitlab-assets",
+};
+
+export default {
+  staticDirectories: ["static", "node_modules/.cache/gitlab-static"],
+  // …
+};
+```
+
+Static directories are copied preserving their layout, so the assets still land
+at `/gitlab-assets/…` and `assetBaseUrl` stays correct.
+
+> **First build of a bare site.** Docusaurus decides whether to copy `static/`
+> when it creates the webpack config, before any markdown is compiled. If
+> `static/` does not exist yet at that moment — a fresh clone of a site that
+> keeps nothing else in it — the assets this build downloads land one build too
+> late and are missing from `build/`; the next build is correct. To avoid the
+> lag entirely, either commit a `static/.gitkeep`, or also register the
+> Docusaurus plugin, which prepares the directory during plugin loading:
+>
+> ```js
+> import gitlabPlugin from "@ebuildy/docusaurus-plugin-gitlab";
+>
+> export default {
+>   plugins: [[gitlabPlugin, { host: "https://gitlab.com" }]],
+>   // …
+> };
+> ```
 
 ### Customizing the markdown render chain
 
