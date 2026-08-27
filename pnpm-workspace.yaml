@@ -41,3 +41,6 @@ overrides:
   # arbitrary .map files when `from` is unset (GHSA-fxqj-rqcc-2cmp); consumers
   # are postcss-preset-env and friends under @docusaurus/bundler, all on ^8.
   postcss: ^8.5.23
+
+patchedDependencies:
+  hast-util-from-parse5@8.0.3: patches/hast-util-from-parse5@8.0.3.patch

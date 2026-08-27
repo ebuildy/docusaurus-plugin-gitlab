@@ -71,6 +71,29 @@ describe("renderMarkdown", () => {
   });
 });
 
+describe("renderMarkdown foreign-content templates", () => {
+  // Regression: a `<template>` inside SVG/MathML foreign content is an ordinary
+  // element with no content fragment, but hast-util-from-parse5 recursed into
+  // `reference.content` unconditionally and threw
+  // `TypeError: Cannot read properties of undefined (reading 'nodeName')`.
+  // With `strict: true` (the production default) that aborted the whole
+  // Docusaurus build on any README containing such markup.
+  // Guarded by patches/hast-util-from-parse5@8.0.3.patch — remove the patch and
+  // this test starts failing again.
+  it.each([
+    "<svg><template>x</template></svg>",
+    "<svg>\n<template>x</template>",
+    "<math><template>x</template>",
+    "<svg><animate onbegin=alert(1) attributeName=x dur=1s>\n<template><script>alert(1)</script></template>",
+  ])("renders instead of crashing: %j", async (md) => {
+    const html = await renderMarkdown(md, {});
+    expect(typeof html).toBe("string");
+    expect(html).not.toContain("<script");
+    expect(html).not.toContain("onbegin");
+    expect(html).not.toContain("<template");
+  });
+});
+
 describe("chainHasSanitize", () => {
   it("is true when rehype-sanitize is present (bare, tuple, or default chain)", () => {
     expect(chainHasSanitize(defaultMarkdownRenderChain)).toBe(true);

@@ -2,7 +2,9 @@ export function applyLineRange(text: string, lines?: string): string {
   if (!lines) return text;
   const match = /^(\d+)(?:-(\d+))?$/.exec(lines.trim());
   if (!match) return text;
-  const start = Number(match[1]);
+  // Clamp to the first line: line numbers are 1-based, so a `0` start would
+  // make `start - 1` negative and `Array.slice` would wrap to the file's tail.
+  const start = Math.max(Number(match[1]), 1);
   const end = match[2] ? Number(match[2]) : start;
   const allLines = text.split("\n");
   return allLines.slice(start - 1, end).join("\n");

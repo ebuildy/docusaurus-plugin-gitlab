@@ -105,6 +105,16 @@ docusaurus build
   `dangerouslySetInnerHTML`. There is an XSS regression test in
   `src/gitlab/markdown.test.ts` — keep it green.
 - **CSS modules** are typed via `src/css.d.ts`.
+- **`patches/hast-util-from-parse5@8.0.3.patch`** (wired up via
+  `patchedDependencies` in `pnpm-workspace.yaml`) fixes an upstream crash:
+  `<template>` inside SVG/MathML foreign content has no `content` fragment, but
+  the library recursed into it anyway and threw `TypeError: Cannot read
+  properties of undefined (reading 'nodeName')` — aborting the whole Docusaurus
+  build on any README containing such markup. The patch is only active for *this*
+  repo's installs; consumers of the published package still hit the upstream bug
+  until it is fixed there. Drop the patch once upstream ships a release with the
+  guard; the regression test in `src/gitlab/markdown.test.ts` will tell you if it
+  is still needed.
 - **In `src/components/*` (browser-bundled), never spread a `Map`/`Set` iterator**
   — use `Array.from(map.values())`, not `[...map.values()]` (same for `.keys()` /
   `.entries()`). Docusaurus bundles these files with Babel, whose loose /
@@ -147,6 +157,16 @@ docusaurus build
 - Tests verify behavior (React Testing Library queries by role/text; client and
   fetchers use mocked gitbeaker / fake clients; cache and assets use real temp
   dirs). Do not add MSW.
+- **Property-based tests** (`*.property.test.ts`) use `fast-check` via
+  `@fast-check/vitest` (`test.prop([...])(name, fn)`). They cover the pure
+  string→string surfaces that process untrusted GitLab content: the include
+  grammar, line ranges, the markdown sanitizer, the MDX out-processors, and host
+  masking. They are the project's fuzzing story and are what OSSF Scorecard's
+  `Fuzzing` check detects — keep at least one `@fast-check/vitest` import in a
+  `.ts` file or the check drops from 10 to 0. `src/include/redos.test.ts` holds
+  the backtracking budget for the regexes that run over README text.
+  Note: `fc.stringMatching` rejects the `i` flag, and `eslint-plugin-regexp` will
+  push you toward it — build character generators compositionally instead.
 - The design spec and implementation plan live in `docs/superpowers/`.
 - Use the /commit command to create a signed commit
 
