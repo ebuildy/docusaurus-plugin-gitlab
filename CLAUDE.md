@@ -65,8 +65,10 @@ static HTML. The browser never holds a token or calls the GitLab API.
   `mise run setup | lint | lint:fix | typecheck | test | build`, plus
   `mise run release` (runs the full gate locally and shows the pending
   release-please PR — never publishes) and example-site tasks that rebuild
-  `dist/` first: `gitlab:build`/`gitlab:start` (showcase site, live gitlab.com
-  data) and `site:build`/`site:start` (`examples/site` is the e2e fixture —
+  `dist/` first: `gitlab:build`/`gitlab:start`/`gitlab:typecheck` (showcase site,
+  live gitlab.com data; `gitlab:typecheck` checks the site against the built
+  `dist/` the way a consumer would, and also runs in CI)
+  and `site:build`/`site:start` (`examples/site` is the e2e fixture —
   its stub projects 404 against real gitlab.com, so `site:build` only works
   with `GITLAB_HOST` pointing at a stub; `site:start` renders Fallbacks in dev).
 

@@ -96,20 +96,18 @@ function buildIncludeLoaderRule(args: {
   };
 }
 
-// `context`/`rawOptions` are `unknown` rather than Docusaurus's `LoadContext` /
-// our own `PluginOptions` so that this function stays assignable to
-// `PluginModule`, whose signature is `(context: LoadContext, options: unknown)`.
-// Parameters are checked contravariantly: a narrower `options: PluginOptions`
-// does NOT satisfy `options: unknown`, which is why Docusaurus's own plugins
-// (declared `options: PluginOptions`) cannot be passed as functions to a typed
-// config. Keeping both wide is what makes the documented
-// `plugins: [[gitlabPlugin, opts]]` form type-check. Guarded by
-// `src/plugin/types.test.ts`; the narrowing back to PluginOptions happens on the
-// first line, where `resolveOptions` validates the shape with Joi anyway.
-export default async function gitlabPlugin(context: unknown, rawOptions: unknown) {
-  const options = (rawOptions ?? {}) as PluginOptions;
+// Both parameters stay `unknown` so this stays assignable to Docusaurus's
+// `PluginModule` — `(context: LoadContext, options: unknown)`. Parameters are
+// checked contravariantly, so a narrower `options: PluginOptions` breaks the
+// documented `plugins: [[gitlabPlugin, opts]]` form (it is why Docusaurus's own
+// plugins cannot be registered that way). Guarded by ./types.test.ts.
+// `?? {}` is load-bearing: without it `resolveOptions(undefined)` sails past
+// Joi's object schema and dies on `opts.host` with a raw TypeError instead of
+// the branded `invalid options — "host" is required`.
+export default async function gitlabPlugin(context: unknown, options: unknown) {
+  const pluginOptions = (options ?? {}) as PluginOptions;
   const mode = process.env.NODE_ENV === "production" ? "production" : "development";
-  const resolved = resolveOptions(options, mode);
+  const resolved = resolveOptions(pluginOptions, mode);
   const loadContext = context as PluginContextLike | undefined;
   const providedSiteDir = loadContext?.siteDir;
   const siteDir = providedSiteDir ?? process.cwd();
@@ -126,7 +124,7 @@ export default async function gitlabPlugin(context: unknown, rawOptions: unknown
   // driven separately by the serializable `resolved.fixAutolinks` boolean, so it
   // never depends on this registry.)
   const processorsId = `gitlab-out-${processorSeq++}`;
-  registerOutProcessors(processorsId, options.outProcessors ?? []);
+  registerOutProcessors(processorsId, pluginOptions.outProcessors ?? []);
 
   const ctx = buildContext(resolved);
 
