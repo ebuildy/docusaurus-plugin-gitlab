@@ -29,6 +29,17 @@ static HTML. The browser never holds a token or calls the GitLab API.
   exercises as a second build variant. Keep `configureWebpack` — do NOT add
   `configureBundler` until a v4 release publishes its signature; a tripwire test
   in `src/plugin/index.test.ts` enforces this.
+- **The default export must stay assignable to Docusaurus's `PluginModule`.**
+  README and `examples/gitlab` register the plugin in its *function* form
+  (`plugins: [[gitlabPlugin, opts]]`), which Docusaurus type-checks against
+  `PluginConfig` — so both parameters must stay `unknown` (a narrower
+  `options: PluginOptions` fails contravariantly, which is why Docusaurus's own
+  plugins cannot be passed this way) and the returned object must satisfy
+  `Plugin`. `src/plugin/types.test.ts` is the compile-time guard;
+  `examples/gitlab`'s `typecheck` script is the consumer-side one.
+  `@docusaurus/types` is a **devDependency only** — never import it from a file
+  that reaches `dist/`, because pnpm consumers cannot resolve it from their own
+  `node_modules` (`examples/gitlab` has to declare it explicitly).
 - Prefer the latest versions of libraries.
 - ESM-first. Intra-package imports use explicit `.js` extensions
   (e.g. `import { Fallback } from "./Fallback.js"`) — required by the

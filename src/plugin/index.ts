@@ -96,7 +96,18 @@ function buildIncludeLoaderRule(args: {
   };
 }
 
-export default async function gitlabPlugin(context: unknown, options: PluginOptions) {
+// `context`/`rawOptions` are `unknown` rather than Docusaurus's `LoadContext` /
+// our own `PluginOptions` so that this function stays assignable to
+// `PluginModule`, whose signature is `(context: LoadContext, options: unknown)`.
+// Parameters are checked contravariantly: a narrower `options: PluginOptions`
+// does NOT satisfy `options: unknown`, which is why Docusaurus's own plugins
+// (declared `options: PluginOptions`) cannot be passed as functions to a typed
+// config. Keeping both wide is what makes the documented
+// `plugins: [[gitlabPlugin, opts]]` form type-check. Guarded by
+// `src/plugin/types.test.ts`; the narrowing back to PluginOptions happens on the
+// first line, where `resolveOptions` validates the shape with Joi anyway.
+export default async function gitlabPlugin(context: unknown, rawOptions: unknown) {
+  const options = (rawOptions ?? {}) as PluginOptions;
   const mode = process.env.NODE_ENV === "production" ? "production" : "development";
   const resolved = resolveOptions(options, mode);
   const loadContext = context as PluginContextLike | undefined;
@@ -166,7 +177,10 @@ export default async function gitlabPlugin(context: unknown, options: PluginOpti
         // instead of concatenating — `append` makes it plain-concat so other
         // plugins' rule objects pass through unchanged rather than being
         // merged with ours.
-        mergeStrategy: { "module.rules": "append" },
+        // `as const` is load-bearing: without it the literal widens to `string`,
+        // which is not a webpack-merge `CustomizeRuleString`, and the whole
+        // return value stops being a valid `ConfigureWebpackResult`.
+        mergeStrategy: { "module.rules": "append" as const },
       };
     },
   };
