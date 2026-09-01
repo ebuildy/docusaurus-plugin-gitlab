@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { copyFile, mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { lookupTable } from "../lookup.js";
 import type { FileCache } from "./cache";
 import type { GitLabClient } from "./client";
 
@@ -13,13 +14,13 @@ import type { GitLabClient } from "./client";
 // checks pass no matter when they run. See issue #45.
 const MARKER = ".gitkeep";
 
-const EXT_BY_TYPE: Record<string, string> = {
+const EXT_BY_TYPE: Record<string, string> = lookupTable({
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/gif": "gif",
   "image/webp": "webp",
   "image/svg+xml": "svg",
-};
+});
 
 export interface AssetManagerConfig {
   client: GitLabClient;

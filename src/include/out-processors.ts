@@ -107,15 +107,9 @@ function isTocHeading(text: string): boolean {
   return TOC_TITLES.has(text.toLowerCase().replace(/[*_`:]/g, "").trim());
 }
 
-/**
- * Built-in processor: remove a redundant "Table of Contents" section (the heading
- * and everything up to the next heading of the same or higher level) and any bare
- * `[[_TOC_]]` marker. Headings inside code blocks are ignored (mdast never parses
- * them as headings). Opt-in via the `stripToc` option.
- */
-export const stripTableOfContents: OutProcessor = (md) => {
-  const out = md.replace(TOC_MARKER_RE, "");
-  const tree = unified().use(remarkParse).use(remarkGfm).parse(out) as Root;
+/** Remove the first TOC section: its heading and everything up to the next heading of the same or higher level. */
+function stripFirstTocSection(md: string): string {
+  const tree = unified().use(remarkParse).use(remarkGfm).parse(md) as Root;
 
   const headings: Array<{ depth: number; line: number }> = [];
   visit(tree, "heading", (node) => {
@@ -124,11 +118,11 @@ export const stripTableOfContents: OutProcessor = (md) => {
     }
   });
 
-  const lines = out.split("\n");
+  const lines = md.split("\n");
   const tocIdx = headings.findIndex((h) =>
     isTocHeading((lines[h.line - 1] ?? "").replace(/^#{1,6}\s+/, "")),
   );
-  if (tocIdx === -1) return out;
+  if (tocIdx === -1) return md;
 
   const toc = headings[tocIdx];
   const next = headings.slice(tocIdx + 1).find((h) => h.depth <= toc.depth);
@@ -136,6 +130,24 @@ export const stripTableOfContents: OutProcessor = (md) => {
   const end = next ? next.line - 1 : lines.length;
   lines.splice(start, end - start);
   return lines.join("\n");
+}
+
+/**
+ * Built-in processor: remove every redundant "Table of Contents" section (the
+ * heading and everything up to the next heading of the same or higher level) and
+ * any bare `[[_TOC_]]` marker. Headings inside code blocks are ignored (mdast never
+ * parses them as headings). Opt-in via the `stripToc` option.
+ */
+export const stripTableOfContents: OutProcessor = (md) => {
+  let out = md.replace(TOC_MARKER_RE, "");
+  // A README can carry more than one TOC section (e.g. a per-chapter one).
+  // Strip every one, which also makes this processor idempotent. Each pass
+  // removes at least the heading line it matched, so this terminates.
+  for (;;) {
+    const next = stripFirstTocSection(out);
+    if (next === out) return out;
+    out = next;
+  }
 };
 
 // GitLab/GitHub alert blockquotes (`> [!note]`) map onto Docusaurus admonitions.

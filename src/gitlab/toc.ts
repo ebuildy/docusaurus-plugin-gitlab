@@ -2,6 +2,7 @@ import GithubSlugger from "github-slugger";
 import type { Root, Element, RootContent } from "hast";
 import { toString } from "hast-util-to-string";
 import { visit } from "unist-util-visit";
+import { lookupTable } from "../lookup.js";
 
 /**
  * Token we substitute for a standalone `[[_TOC_]]` line BEFORE markdown parsing.
@@ -13,7 +14,7 @@ export const TOC_PLACEHOLDER = "GITLAB_MD_TOC_PLACEHOLDER";
 /** Where the README's table of contents is rendered. */
 export type TocMode = "auto" | "inline" | "sidebar" | "hidden";
 
-const HEADING_LEVELS: Record<string, number> = { h2: 2, h3: 3, h4: 4, h5: 5 };
+const HEADING_LEVELS: Record<string, number> = lookupTable({ h2: 2, h3: 3, h4: 4, h5: 5 });
 
 function findFirstHeadingPosition(tree: Root): { parent: Root; index: number } | null {
   for (let index = 0; index < tree.children.length; index++) {

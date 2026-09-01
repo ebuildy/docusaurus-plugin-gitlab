@@ -74,7 +74,13 @@ export default tseslint.config(
   {
     files: ["**/*.test.{ts,tsx}", "test/**/*.{ts,tsx}"],
     plugins: { vitest },
-    rules: { ...vitest.configs.recommended.rules },
+    rules: {
+      ...vitest.configs.recommended.rules,
+      // `@fast-check/vitest` declares property tests as `test.prop([...])(name, fn)`,
+      // which the plugin does not recognize as a test block, so every `expect`
+      // inside one is reported as standalone.
+      "vitest/no-standalone-expect": ["error", { additionalTestBlockFunctions: ["test.prop", "it.prop"] }],
+    },
     languageOptions: { globals: { ...globals.node } },
   },
   prettier,

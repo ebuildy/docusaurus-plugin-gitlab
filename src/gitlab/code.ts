@@ -1,14 +1,17 @@
+import { lookupTable } from "../lookup.js";
 export function applyLineRange(text: string, lines?: string): string {
   if (!lines) return text;
   const match = /^(\d+)(?:-(\d+))?$/.exec(lines.trim());
   if (!match) return text;
-  const start = Number(match[1]);
+  // Clamp to the first line: line numbers are 1-based, so a `0` start would
+  // make `start - 1` negative and `Array.slice` would wrap to the file's tail.
+  const start = Math.max(Number(match[1]), 1);
   const end = match[2] ? Number(match[2]) : start;
   const allLines = text.split("\n");
   return allLines.slice(start - 1, end).join("\n");
 }
 
-export const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+export const LANGUAGE_BY_EXTENSION: Record<string, string> = lookupTable({
   ts: "ts",
   tsx: "tsx",
   js: "js",
@@ -43,11 +46,13 @@ export const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   swift: "swift",
   xml: "xml",
   dockerfile: "dockerfile",
-};
+});
 
 export function languageFromPath(path: string): string {
   const base = path.split("/").pop() ?? path;
   const dotIndex = base.lastIndexOf(".");
   const ext = (dotIndex === -1 ? base : base.slice(dotIndex + 1)).toLowerCase();
-  return LANGUAGE_BY_EXTENSION[ext] ?? ext ?? "text";
+  // `|| "text"`, not `?? "text"`: a path with no extension yields an empty
+  // string, which `??` would happily return as the language.
+  return (LANGUAGE_BY_EXTENSION[ext] ?? ext) || "text";
 }

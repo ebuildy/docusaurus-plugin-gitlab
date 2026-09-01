@@ -1,0 +1,19 @@
+diff --git a/lib/index.js b/lib/index.js
+index 79f9186ede80232644b8b8f82bf1adbe80801cbd..3fc9af6e65a27a9b464721dd426eb8070786d13d 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -194,7 +194,13 @@ function element(state, node) {
+   patch(state, node, result)
+ 
+   // Switch content.
+-  if (result.tagName === 'template') {
++  // A `template` in foreign content (SVG/MathML) is an ordinary element with no
++  // content document fragment, so `reference.content` is undefined there and
++  // recursing into it throws. Only switch content for real HTML templates.
++  if (
++    result.tagName === 'template' &&
++    /** @type {DefaultTreeAdapterMap['template']} */ (node).content
++  ) {
+     const reference = /** @type {DefaultTreeAdapterMap['template']} */ (node)
+     const pos = reference.sourceCodeLocation
+     const startTag = pos && pos.startTag && position(pos.startTag)
