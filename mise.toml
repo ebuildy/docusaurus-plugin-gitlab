@@ -47,6 +47,11 @@ description = "Build the full GitLab showcase site (examples/gitlab)"
 depends = ["build"]
 run = "pnpm --filter example-gitlab run build"
 
+[tasks."gitlab:typecheck"]
+description = "Type-check the GitLab showcase site against the built dist/, as a consumer would (examples/gitlab)"
+depends = ["build"]
+run = "pnpm --filter example-gitlab run typecheck"
+
 [tasks."gitlab:start"]
 description = "Run the GitLab showcase site dev server (examples/gitlab)"
 depends = ["build"]

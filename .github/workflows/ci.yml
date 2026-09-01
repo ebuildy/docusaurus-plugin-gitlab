@@ -46,6 +46,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build package (needed by the example site workspace link)
         run: pnpm run build
+      - name: Type-check the showcase site as a consumer would
+        run: pnpm --filter example-gitlab run typecheck
       - name: Run tests (unit + e2e docusaurus build)
         run: pnpm test
 

@@ -96,9 +96,18 @@ function buildIncludeLoaderRule(args: {
   };
 }
 
-export default async function gitlabPlugin(context: unknown, options: PluginOptions) {
+// Both parameters stay `unknown` so this stays assignable to Docusaurus's
+// `PluginModule` — `(context: LoadContext, options: unknown)`. Parameters are
+// checked contravariantly, so a narrower `options: PluginOptions` breaks the
+// documented `plugins: [[gitlabPlugin, opts]]` form (it is why Docusaurus's own
+// plugins cannot be registered that way). Guarded by ./types.test.ts.
+// `?? {}` is load-bearing: without it `resolveOptions(undefined)` sails past
+// Joi's object schema and dies on `opts.host` with a raw TypeError instead of
+// the branded `invalid options — "host" is required`.
+export default async function gitlabPlugin(context: unknown, options: unknown) {
+  const pluginOptions = (options ?? {}) as PluginOptions;
   const mode = process.env.NODE_ENV === "production" ? "production" : "development";
-  const resolved = resolveOptions(options, mode);
+  const resolved = resolveOptions(pluginOptions, mode);
   const loadContext = context as PluginContextLike | undefined;
   const providedSiteDir = loadContext?.siteDir;
   const siteDir = providedSiteDir ?? process.cwd();
@@ -115,7 +124,7 @@ export default async function gitlabPlugin(context: unknown, options: PluginOpti
   // driven separately by the serializable `resolved.fixAutolinks` boolean, so it
   // never depends on this registry.)
   const processorsId = `gitlab-out-${processorSeq++}`;
-  registerOutProcessors(processorsId, options.outProcessors ?? []);
+  registerOutProcessors(processorsId, pluginOptions.outProcessors ?? []);
 
   const ctx = buildContext(resolved);
 
@@ -166,7 +175,10 @@ export default async function gitlabPlugin(context: unknown, options: PluginOpti
         // instead of concatenating — `append` makes it plain-concat so other
         // plugins' rule objects pass through unchanged rather than being
         // merged with ours.
-        mergeStrategy: { "module.rules": "append" },
+        // `as const` is load-bearing: without it the literal widens to `string`,
+        // which is not a webpack-merge `CustomizeRuleString`, and the whole
+        // return value stops being a valid `ConfigureWebpackResult`.
+        mergeStrategy: { "module.rules": "append" as const },
       };
     },
   };

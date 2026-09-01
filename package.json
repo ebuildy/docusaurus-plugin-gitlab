@@ -1,6 +1,6 @@
 {
   "name": "@ebuildy/docusaurus-plugin-gitlab",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "MDX extensions to embed GitLab resources in Docusaurus 3 and 4 docs",
   "license": "MIT",
   "publishConfig": {
@@ -85,6 +85,7 @@
   },
   "devDependencies": {
     "@docusaurus/logger": "^3.10.2",
+    "@docusaurus/types": "^3.10.2",
     "@eslint/js": "^9",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.4.0",

@@ -1,0 +1,18 @@
+{
+  // This site registers the plugin in its FUNCTION form
+  // (`plugins: [[gitlabPlugin, gitlabOptions]]`), which is the form Docusaurus
+  // actually type-checks against `PluginConfig`. Without a tsconfig here the
+  // `const config: Config` annotation in docusaurus.config.ts was never checked,
+  // so a plugin that did not satisfy `PluginModule` still looked fine.
+  //
+  // Requires a built `dist/` (the workspace link resolves to it):
+  //   pnpm --filter @ebuildy/docusaurus-plugin-gitlab run build
+  "extends": "@docusaurus/tsconfig",
+  "compilerOptions": {
+    "strict": true
+  },
+  // Scoped to the config: `src/theme/*` swizzles import `@theme-original/*`,
+  // a webpack alias that only resolves against a generated `.docusaurus/` dir,
+  // so pulling it in here would demand a full site build just to type-check.
+  "include": ["docusaurus.config.ts", "sidebars.ts"]
+}
