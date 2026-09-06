@@ -12,14 +12,14 @@
     "@docusaurus/core": "^3.5.0",
     "@docusaurus/preset-classic": "^3.5.0",
     "@ebuildy/docusaurus-plugin-gitlab": "workspace:*",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@docusaurus/plugin-content-docs": "^3.10.2",
     "@docusaurus/tsconfig": "^3.5.0",
     "@docusaurus/types": "^3.10.2",
-    "typescript": "^5.4.0"
+    "typescript": "^7.0.2"
   }
 }
