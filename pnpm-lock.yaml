@@ -48,7 +48,7 @@ importers:
         version: 3.0.1
       joi:
         specifier: ^18.2.3
-        version: 18.2.3
+        version: 18.2.9
       prism-react-renderer:
         specifier: ^2.4.1
         version: 2.4.1(react@19.2.7)
@@ -4572,8 +4572,8 @@ packages:
   joi@17.13.4:
     resolution: {integrity: sha512-1RuuER6kmt8K8I3nIWvPZKi5RQCb568ZPyY4Pwjlua+yo+63ZTmIwxLZH0heBmiKN4uxjvCiarDrjaeH84xicQ==}
 
-  joi@18.2.3:
-    resolution: {integrity: sha512-N5A3KTWQpPWT4ExxxPlUx7WmykGXRzhNidWhV41d6Abu9YfI2NyWCJuxdPnslJCPWtbRpSVOWSnSS6GakLM/Rg==}
+  joi@18.2.9:
+    resolution: {integrity: sha512-2mD929bUVKUhOLQQEVhlf6EZ0Mlo0DeRb5MO7cViR9AXLtBauuccEtB1py9Ocxpo/P7ucnh442iY/iOwrh3IQw==}
     engines: {node: '>= 20'}
 
   js-tokens@4.0.0:
@@ -14333,7 +14333,7 @@ snapshots:
       '@sideway/formula': 3.0.1
       '@sideway/pinpoint': 2.0.0
 
-  joi@18.2.3:
+  joi@18.2.9:
     dependencies:
       '@hapi/address': 5.1.1
       '@hapi/formula': 3.0.2
@@ -15253,13 +15253,13 @@ snapshots:
       '@swc/html': 1.16.1
       lightningcss: 1.32.0
 
-  minimizer-webpack-plugin@5.6.1(@swc/core@1.16.1)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.26))(html-minifier-terser@7.2.0)(postcss@8.5.26)(webpack@5.108.4(@swc/core@1.16.1)(postcss@8.5.26)):
+  minimizer-webpack-plugin@5.6.1(@swc/core@1.16.1)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.26))(html-minifier-terser@7.2.0)(postcss@8.5.26)(webpack@5.108.4(@swc/core@1.16.1)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
       schema-utils: 4.3.3
       terser: 5.49.0
-      webpack: 5.108.4(@swc/core@1.16.1)(postcss@8.5.26)
+      webpack: 5.108.4(@swc/core@1.16.1)
     optionalDependencies:
       '@swc/core': 1.16.1
       clean-css: 5.3.3
@@ -17675,7 +17675,7 @@ snapshots:
       graceful-fs: 4.2.11
       loader-runner: 4.3.2
       mime-db: 1.54.0
-      minimizer-webpack-plugin: 5.6.1(@swc/core@1.16.1)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.26))(html-minifier-terser@7.2.0)(postcss@8.5.26)(webpack@5.108.4(@swc/core@1.16.1)(postcss@8.5.26))
+      minimizer-webpack-plugin: 5.6.1(@swc/core@1.16.1)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.26))(html-minifier-terser@7.2.0)(postcss@8.5.26)(webpack@5.108.4(@swc/core@1.16.1))
       neo-async: 2.6.2
       schema-utils: 4.3.3
       tapable: 2.3.3
